@@ -1,0 +1,6 @@
+.lake/
+*.olean
+wt/
+logs/
+*.json
+.DS_Store

@@ -1,0 +1,116 @@
+\section{The singular part and the conclusion}
+\label{sec:local-singular}
+The good event makes the singular factor perturbative through the number of particles in each interacting pair of boxes.  The moment estimate used below is proved in Lemma~\ref{lem:canonical-array-exponential}.
+\begin{lemma}[Short-range estimate under a local count bound]
+\label{lem:physical-local-count-bound}
+For every $0<t_0<\infty$, there are $0<\delta_0<1$ and an integer $J_0\ge3$ such that, for each fixed $0<\delta\le\delta_0$ and integer $J\ge J_0$, with $r=(2J)^{-1}$,
+\begin{equation}
+ \sup_{N\ge1}\sup_{0\le t\le t_0}
+ \E\Big[\one_{\mathcal A_{N,J,\delta}}
+ e^{\frac t2\mathsf W_N(\widetilde s_r)}\Big]<\infty.
+ \label{eq:physical-local-count-conclusion}
+\end{equation}
+The constant may depend on $J,\delta,t_0$; these parameters are independent of $N$.
+\end{lemma}
+
+\begin{proof}
+Fix $0\le t\le t_0$.  We separate off the box averages, then use \eqref{eq:partition-occupancy-sum} to estimate the remaining integral for each good occupancy vector.
+
+\textbf{1. Split the kernel and apply H\"older.}
+Apply the box average $Q_J$ in each variable and write
+\begin{equation}
+ \widetilde s_r=a_r+h_r,
+ \qquad h_r=(I-Q_{J,x})(I-Q_{J,y})s_r,
+ \qquad a_r=Q_{J,x}s_r+Q_{J,y}s_r-Q_{J,x}Q_{J,y}s_r-c_r.
+ \label{eq:physical-local-centering}
+\end{equation}
+By construction, $h_r$ has zero average in each variable over every box; this is the centering needed in Step~3.  Both $a_r$ and $h_r$ also have zero average in each variable under $\muunif$, which is the centering needed in Step~2.  The particle sum splits exactly as
+\begin{equation}
+ \frac t2\mathsf W_N(\widetilde s_r)
+ =\frac tN\sum_{i<j}a_r(X_i,X_j)
+  +\frac tN\sum_{i<j}h_r(X_i,X_j).
+ \label{eq:physical-particle-sum-splitting}
+\end{equation}
+Cauchy--Schwarz therefore gives
+\begin{equation}
+ \E\big[\one_{\mathcal A_{N,J,\delta}}e^{\frac t2\mathsf W_N(\widetilde s_r)}\big]
+ \le
+ \Big(\E\big[e^{t\mathsf W_N(a_r)}\big]\Big)^{1/2}
+ \Big(\E\big[\one_{\mathcal A_{N,J,\delta}}e^{t\mathsf W_N(h_r)}\big]\Big)^{1/2}.
+ \label{eq:physical-local-holder}
+\end{equation}
+We bound the first factor by taking $r$ small and the second by taking $\delta$ small. 
+
+\textbf{2. The averaging term is perturbative.}
+Every box average of the nonnegative kernel $s_r$ is at most $Mc_r$.  Since $c_r\le Cr^\d$ and $Mr^\d=2^{-\d}$, we have
+\begin{equation}
+ \|a_r\|_\infty\le C,
+ \qquad
+ \sup_x\int|a_r(x,y)|\,\dd\muunif(y)\le4c_r\le Cr^\d.
+ \label{eq:physical-average-smallness}
+\end{equation}
+The second estimate follows because each averaging term has integral $c_r$ in either variable.  These bounds imply
+$\sup_x\int(e^{|a_r(x,y)|/\kappa}-1)\,\dd\muunif(y)
+\le Cr^\d(e^{C/\kappa}-1)$.
+Taking $\kappa(r)=C'/\log(1/r)$ with $C'$ large enough makes the right side at most one for small $r$.  Expanding the exponential and using symmetry gives, for every integer $p\ge1$,
+\begin{equation}
+ \sup_x\int|a_r(x,y)|^p\,\dd\muunif(y)
+ +\sup_y\int|a_r(x,y)|^p\,\dd\muunif(x)
+ \le2\kappa(r)^p p!,
+ \qquad \kappa(r)\longrightarrow0.
+ \label{eq:physical-average-factorial}
+\end{equation}
+Apply Lemma~\ref{lem:canonical-array-exponential} with $m=N$, $\kappa=\kappa(r)$, and $\theta=2t$:
+\begin{equation}
+ \E\big[e^{t\mathsf W_N(a_r)}\big]
+ =\E\Big[e^{\frac{2t}{N}\sum_{i<j}a_r(X_i,X_j)}\Big]
+ \le\frac{2}{1-(2tC_{\mathrm u}\kappa(r))^2}
+ \le\frac83,
+ \qquad 0\le t\le t_0,
+ \label{eq:physical-average-exponential-bound}
+\end{equation}
+provided $J\ge J_0$, with $J_0$ chosen so that $2t_0C_{\mathrm u}\kappa((2J_0)^{-1})\le1/2$.
+
+\textbf{3. Few particles make the singular term perturbative.}
+Under the box-uniform measures $\nu_a$, there is a constant $\kappa_*$, independent of $J$, such that, for every integer $p\ge1$,
+\begin{equation}
+ \sup_{y\in A_b}\int_{A_a}|h_r(x,y)|^p\,\dd\nu_a(x)
+ +\sup_{x\in A_a}\int_{A_b}|h_r(x,y)|^p\,\dd\nu_b(y)
+ \le2\kappa_*^p p!,
+ \qquad p\ge1.
+ \label{eq:physical-singular-factorial}
+\end{equation}
+Indeed, Cauchy--Schwarz gives $0\le\phi\le\phi(0)$ in \eqref{eq:compact-positive-log-split}, so $s_r(z)\le(\log(r/\operatorname{dist}_{\T^\d}(z,0)))_+$.  Thus
+$M\int s_r^p\,\dd\muunif\le M|B_r|p!/\d^p\le C^p p!$.
+The averages subtracted to form $h_r$ are bounded by $Mc_r\le C$, which proves the same estimate for $h_r$ with a larger constant.
+
+The occupancy decomposition gives exactly
+\begin{equation}
+ \E\big[\one_{\mathcal A_{N,J,\delta}}e^{t\mathsf W_N(h_r)}\big]
+ =\sum_{\substack{n\in\N_0^M,\ \sum_a n_a=N\\\max_a n_a\le\delta N}}
+   \pi_N(n)\,\E_n\big[e^{t\mathsf W_N(h_r)}\big].
+ \label{eq:physical-good-occupancy-sum}
+\end{equation}
+Fix one vector in this sum.  Under $\E_n$, its particles form $M$ independent groups, one per box, each of size at most $\delta N$, and the particles in box $A_a$ have law $\nu_a$.  The kernel $h_r$ is centered under $\nu_a$ in each variable, which is the hypothesis \eqref{eq:canonical-array-centering}, and its moments satisfy \eqref{eq:canonical-array-kernel-moments} with $\kappa=\kappa_*$ by \eqref{eq:physical-singular-factorial}.  Only particles in the same or in adjacent boxes interact: $s_r$ vanishes on other box products, and box averaging preserves this property for $h_r$.  Thus each group interacts with at most $K-1$ others, where $K=3^\d$.
+
+Apply the grouped conclusion \eqref{eq:canonical-grouped-exponential} of Lemma~\ref{lem:canonical-array-exponential} with $m=N$, $m_*=\max_a n_a$, and $u=2t$, since $\mathsf W_N(h_r)=2N^{-1}\sum_{i<j}h_r(X_i,X_j)$.  Choose $\delta_0$ so that $8K C_{\mathrm u}\kappa_*t_0\delta_0\le1/2$.  Then
+\begin{equation}
+ 4K C_{\mathrm u}\kappa_*(2t)\frac{m_*}{N}
+ \le8K C_{\mathrm u}\kappa_*t_0\delta\le\frac12,
+ \qquad
+ \E_n\big[e^{t\mathsf W_N(h_r)}\big]\le\left(\frac83\right)^M.
+ \label{eq:physical-local-effective-coupling}
+\end{equation}
+This is uniform over all good occupancy vectors.  Their multinomial weights sum to at most one, so \eqref{eq:physical-good-occupancy-sum} yields
+\begin{equation}
+ \sup_{N\ge1}\sup_{0\le t\le t_0}
+ \E\big[\one_{\mathcal A_{N,J,\delta}}e^{t\mathsf W_N(h_r)}\big]
+ \le\left(\frac83\right)^M<\infty.
+ \label{eq:physical-centered-local-bound}
+\end{equation}
+Finally, insert this estimate and \eqref{eq:physical-average-exponential-bound} into \eqref{eq:physical-local-holder}.  The result is at most $(8/3)^{(M+1)/2}$, uniformly in $N\ge1$ and $0\le t\le t_0$.  Both $J_0$ and $\delta_0$ are chosen independently of $N$.
+\end{proof}
+
+\begin{proof}[Conclusion of Theorem~\ref{thm:principal}]
+The case $\be_0=0$ is immediate.  Otherwise, choose $p,q$ as in \eqref{eq:physical-cutoff-holder}, and take $\delta\le\delta_0$ from Lemma~\ref{lem:physical-local-count-bound} with $t_0=q\be_0$.  Next, choose $J\ge J_0$ large enough that $J^{-\d}<\delta$ and \eqref{eq:physical-bad-gibbs-bound} decays exponentially, and set $r=(2J)^{-1}$.  The singular factor is bounded by Lemma~\ref{lem:physical-local-count-bound}, and the bulk factor by \eqref{eq:physical-continuous-bulk-bound}.  Inserting these bounds into \eqref{eq:physical-cutoff-holder} proves \eqref{eq:principal-order-one}.
+\end{proof}

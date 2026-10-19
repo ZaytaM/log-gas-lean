@@ -1,0 +1,126 @@
+\section{A perturbative estimate for centered arrays}
+\label{sec:canonical-arrays}
+The variables in a local block have different box-uniform laws.  The following estimate requires independence and centering, but not identical distributions.
+
+\begin{lemma}[Canonical-array exponential estimate]
+\label{lem:canonical-array-exponential}
+There is a universal $C_{\mathrm u}<\infty$ with the following property.  Let $m\ge1$, let $Y_1,\ldots,Y_m$ be independent, and let $h_{ij}$, $i<j$, be real measurable kernels centered in both variables:
+\begin{equation}
+ \E[h_{ij}(Y_i,y)]=0,\qquad \E[h_{ij}(x,Y_j)]=0
+ \quad\text{for almost every }y,x.
+ \label{eq:canonical-array-centering}
+\end{equation}
+Suppose, for some $\kappa>0$, every integer $p\ge1$, and every $i<j$,
+\begin{equation}
+ \esssup_y\E[|h_{ij}(Y_i,y)|^p]
+ +\esssup_x\E[|h_{ij}(x,Y_j)|^p]\le2\kappa^p p!.
+ \label{eq:canonical-array-kernel-moments}
+\end{equation}
+For $S=\sum_{i<j}h_{ij}(Y_i,Y_j)$, every integer $k\ge1$, and real $\theta$, one has
+\begin{equation}
+ \E[|S|^{2k}]\le(C_{\mathrm u}\kappa m)^{2k}(2k)!,
+ \qquad
+ \E[e^{\theta S/m}]
+ \le\frac2{1-(C_{\mathrm u}\kappa|\theta|)^2}
+ \quad\text{if }C_{\mathrm u}\kappa|\theta|<1.
+ \label{eq:canonical-array-exponential}
+\end{equation}
+Zero kernels are allowed.  We will use the following grouped form.  Partition the $m$ variables into $M$ groups, each containing at most $m_*$ variables.  Suppose each group interacts with at most $K-1$ other groups, where $K\ge1$ is an integer: kernels between all remaining pairs of groups vanish.  Then, for $u\in\R$,
+\begin{equation}
+ \E[e^{uS/m}]\le\left(\frac83\right)^M
+ \quad\text{if}\quad
+ 4K C_{\mathrm u}\kappa|u|\frac{m_*}{m}\le\frac12.
+ \label{eq:canonical-grouped-exponential}
+\end{equation}
+In both bounds, $m$ is the total number of variables, and the normalization $S/m$ is that of $\mathsf W_N$ in \eqref{eq:homogeneous-partition-function} with $m=N$ particles.  The one-block bound \eqref{eq:canonical-array-exponential} needs $\kappa|\theta|$ small.  The grouped bound instead needs $\kappa|u|\,m_*/m$ small: it trades smallness of the coupling for smallness of the largest group, which is how the occupancy bound $n_a\le\delta N$ enters in Section~\ref{sec:local-singular}.
+\end{lemma}
+
+\begin{proof}
+We give the counting argument.  Extend the kernels by $h_{ji}(y,x)=h_{ij}(x,y)$.  Independently of the variables $Y_i$, place each index in $I$ independently with probability $1/2$, and put
+$D_I=\sum_{i\in I,j\notin I}h_{ij}(Y_i,Y_j)$.
+Keep the $Y_i$ fixed and average only over the choice of $I$, denoting this average by $\E_I$.  The transpose convention gives
+\begin{equation}
+ \begin{aligned}
+ D_I&=\sum_{i<j}
+ \big(\one_{\{i\in I,\,j\notin I\}}+\one_{\{j\in I,\,i\notin I\}}\big)
+ h_{ij}(Y_i,Y_j),\\
+ \E_I[D_I]&=\sum_{i<j}\left(\frac14+\frac14\right)h_{ij}(Y_i,Y_j)
+ =\frac12 S.
+ \end{aligned}
+ \label{eq:array-split-identity}
+\end{equation}
+Each of the two disjoint ways to separate a pair has probability $(1/2)(1/2)=1/4$.  Thus $S=2\E_I[D_I]$ for every fixed sample.  Jensen's inequality, followed by expectation over the $Y_i$, now gives
+\begin{equation}
+ \E[|S|^{2k}]\le2^{2k}\E_I\E[|D_I|^{2k}].
+ \label{eq:array-random-split}
+\end{equation}
+Fix $I$ and expand $D_I^{2k}$.  Each term is indexed by a row word
+$\mathbf i=(i_1,\ldots,i_{2k})$ and a column word
+$\mathbf j=(j_1,\ldots,j_{2k})$.
+If some label occurs exactly once in either word, the expectation vanishes: condition on all other variables and integrate out that one using \eqref{eq:canonical-array-centering}.  Call a pair of words surviving otherwise; each of its two words then uses at most $k$ distinct labels.
+
+For each label $\ell\in\{1,\ldots,m\}$, let
+\begin{equation}
+ a_\ell=\#\{v\in\{1,\ldots,2k\}:i_v=\ell\}
+ \label{eq:row-multiplicity}
+\end{equation}
+be the multiplicity of $\ell$ in the row word $\mathbf i$, so that $\sum_\ell a_\ell=2k$.  In a surviving word every $a_\ell\ne1$, so the active labels, those with $a_\ell\ge2$, number at most $k$; labels with $a_\ell=0$ contribute trivial factors to the products below.  Write $T=\prod_{v=1}^{2k}h_{i_vj_v}(Y_{i_v},Y_{j_v})$ and condition on the column variables, $\mathcal C=\sigma(Y_j:j\notin I)$.  Every row index lies in $I$ and every column index outside $I$, so the row variables are independent of $\mathcal C$ and of one another, and the factors sharing the row label $\ell$ form a group of $a_\ell$ functions of $Y_\ell$ alone.  Hence the conditional expectation factors over row labels:
+\begin{equation}
+ \E[T\mid\mathcal C]
+ =\prod_\ell\Phi_\ell(Y_{j_v}:j_v\notin I),
+ \qquad
+ \Phi_\ell(y)=\E\Big[\prod_{v:\,i_v=\ell}h_{\ell j_v}(Y_\ell,y_{j_v})\Big].
+ \label{eq:array-conditional-factor}
+\end{equation}
+H\"older with all exponents equal to $a_\ell$ and the moment hypothesis \eqref{eq:canonical-array-kernel-moments} give, uniformly in the frozen column values $y$,
+\begin{equation}
+ |\Phi_\ell(y)|
+ \le\prod_{v:\,i_v=\ell}\E\big[|h_{\ell j_v}(Y_\ell,y_{j_v})|^{a_\ell}\big]^{1/a_\ell}
+ \le\big(2\kappa^{a_\ell}a_\ell!\big)^{a_\ell/a_\ell}
+ =2\kappa^{a_\ell}a_\ell!.
+ \label{eq:array-holder-group}
+\end{equation}
+Since at most $k$ labels are active and $\sum_\ell a_\ell=2k$, the tower property gives $|\E[T]|\le\E\big[|\E[T\mid\mathcal C]|\big]\le\prod_\ell2\kappa^{a_\ell}a_\ell!$, that is,
+\begin{equation}
+ \left|\E\left[\prod_{v=1}^{2k}
+ h_{i_vj_v}(Y_{i_v},Y_{j_v})\right]\right|
+ \le 2^k\kappa^{2k}\prod_\ell a_\ell!.
+ \label{eq:array-word-moment}
+\end{equation}
+There are $(2k)!/\prod_\ell a_\ell!$ row words with these multiplicities, so the factorials cancel.  Write $A$ for the number of multiplicity vectors $(a_\ell)_{\ell\le m}$ with $\sum_\ell a_\ell=2k$ and no entry equal to $1$, and $B_k$ for the number of column words of length $2k$ on $m$ labels in which no label occurs exactly once.  Summing absolute values over all surviving pairs of words yields
+\begin{equation}
+ \E[|D_I|^{2k}]\le2^k\kappa^{2k}(2k)!\,A B_k.
+ \label{eq:array-count-reduction}
+\end{equation}
+
+It remains to bound $A B_k$.  If $m<2k$, counting all weak compositions gives
+$A\le\binom{2k+m-1}{m-1}\le2^{4k}$, and $B_k\le m^{2k}$.
+If $m\ge2k$, the active labels of a surviving word form a set of at most $k$ labels.  There are $\sum_{n=0}^k\binom mn\le(em/k)^k$ such sets, and a given set carries at most $4^k$ positive multiplicity vectors and at most $k^{2k}$ words.  Hence
+\begin{equation}
+ A\le4^k(em/k)^k,\qquad
+ B_k\le k^{2k}(em/k)^k,\qquad
+ A B_k\le(4e^2)^k m^{2k}.
+ \label{eq:array-combinatorial-bound}
+\end{equation}
+Both cases, together with \eqref{eq:array-random-split}--\eqref{eq:array-count-reduction}, prove the moment bound after enlarging a universal constant.
+
+Finally, $e^x\le2\cosh x$ and the even-moment bound imply
+\begin{equation}
+ \E[e^{\theta S/m}]
+ \le2\sum_{k=0}^\infty
+ \frac{|\theta|^{2k}\E[|S|^{2k}]}{m^{2k}(2k)!}
+ \le2\sum_{k=0}^\infty(C_{\mathrm u}\kappa|\theta|)^{2k}.
+ \label{eq:array-exponential-series}
+\end{equation}
+Tonelli justifies the nonnegative series.
+
+For the grouped conclusion, draw an edge between each interacting pair of groups.  The graph has degree at most $K-1$.  Greedily color its edges with at most $2K-1$ colors so that edges sharing a group have different colors; place all within-group terms in one further class.  This writes $S=\sum_{c=1}^{2K}\sum_b S_{c,b}$, allowing empty classes.  Within each class, the blocks $S_{c,b}$ use disjoint groups, so they are independent, and at most $M$ of them are nonempty.  A block $S_{c,b}$ involves some number $m_b\le2m_*$ of variables, so \eqref{eq:canonical-array-exponential} applies to it with $m_b$ in place of $m$; taking $\theta=2Kum_b/m$ there gives $\E[e^{2KuS_{c,b}/m}]\le8/3$, because $C_{\mathrm u}\kappa|\theta|=2KC_{\mathrm u}\kappa|u|m_b/m\le4KC_{\mathrm u}\kappa|u|m_*/m\le1/2$.  H\"older over the $2K$ classes then yields
+\begin{equation}
+ \E[e^{uS/m}]
+ \le\prod_{c=1}^{2K}
+      \left(\prod_b\E[e^{2KuS_{c,b}/m}]\right)^{1/(2K)}
+ \le\left(\frac83\right)^M,
+ \label{eq:array-grouped-holder}
+\end{equation}
+which is \eqref{eq:canonical-grouped-exponential}.
+\end{proof}

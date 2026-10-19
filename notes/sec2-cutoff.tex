@@ -1,0 +1,46 @@
+\section{Separate the bulk and the diagonal}
+\label{sec:physical-cutoff-proof}
+With $r=(2J)^{-1}$ as above, choose a nonzero, nonnegative, radial $\chi\in C_c^\infty(B_{1/2})$ and set $\phi=\chi*\chi$.  Define
+\begin{equation}
+ \begin{aligned}
+ s_r(x)&=\frac1{\phi(0)}\sum_{m\in\Z^\d}\int_0^r
+                  \phi\!\left(\frac{x+m}{t}\right)\frac{\dd t}{t},\\
+ c_r&=\int s_r\,\dd\muunif,\qquad
+ \widetilde s_r=s_r-c_r,\qquad b_r=\g-\widetilde s_r.
+ \end{aligned}
+ \label{eq:compact-positive-log-split}
+\end{equation}
+The raw kernel $s_r$ is nonnegative, supported in $\{\operatorname{dist}_{\T^\d}(x,0)\le r\}$, and $c_r=O(r^\d)$.  Since $\wh\phi=|\wh\chi|^2\ge0$, radial Fourier inversion gives, for $k\ne0$,
+\begin{equation}
+ 0\le\wh{\widetilde s_r}(k)
+ =\frac1{\phi(0)}\int_0^r t^{\d-1}\wh\phi(tk)\,\dd t
+ \le\frac1{\phi(0)}\int_0^\infty t^{\d-1}\wh\phi(tk)\,\dd t
+ =\wh\g(k).
+ \label{eq:compact-split-fourier-order}
+\end{equation}
+Thus both centered parts are positive semidefinite.  The Fourier coefficients of $b_r$, given by the integral from $r$ to infinity, decay rapidly, so $b_r$ is smooth; it is also even and has mean zero.  Its energy form is bounded by that of $\g$, so it satisfies \eqref{eq:strict-subcritical-macroscopic-inequality} with the same $B$.
+
+Group the label vectors $L$ by their occupancies $n=(n_a)$.  For a fixed $n$, retag the particles as $Y_{a,1},\ldots,Y_{a,n_a}$ in box $A_a$, and let $\E_n$ denote expectation under their independent product law, with each $Y_{a,p}$ distributed according to $\nu_a$.  Since the energy is symmetric in the particles,
+\begin{equation}
+ Z_{N,\be}
+ =\sum_{\substack{n\in\N_0^M\\\sum_a n_a=N}}
+   \pi_N(n)\,\E_n\big[e^{\frac\be2\mathsf W_N(\g)}\big],
+ \qquad
+ \pi_N(n)=\frac{N!}{M^N\prod_a n_a!}.
+ \label{eq:partition-occupancy-sum}
+\end{equation}
+Here, $\mathsf W_N$ is evaluated on the retagged particles in any order, and the multinomial weights $\pi_N(n)$ sum to one.  Split this sum into good vectors, with $\max_a n_a\le\delta N$, and the remaining bad vectors.  Fix $0<\be_0<B$ and conjugate $p,q>1$ with $p\be_0<B$.  H\"older on the good contribution gives
+\begin{equation}
+ \begin{aligned}
+ Z_{N,\be}
+ &\le
+ \Big(\E\big[e^{\frac{p\be}{2}\mathsf W_N(b_r)}\big]\Big)^{1/p}
+ \Big(\E\big[\one_{\mathcal A_{N,J,\delta}}
+        e^{\frac{q\be}{2}\mathsf W_N(\widetilde s_r)}\big]\Big)^{1/q}\\
+ &\qquad+\E\big[\one_{\mathcal B_{N,J,\delta}}
+                     e^{\frac\be2\mathsf W_N(\g)}\big],
+ \qquad 0\le\be\le\be_0.
+ \end{aligned}
+ \label{eq:physical-cutoff-holder}
+\end{equation}
+The indicator stays on the singular factor, whose coupling $q\be$ can be large.  The next three sections bound the bad event, the bulk, and the singular factor.

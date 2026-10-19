@@ -1,0 +1,39 @@
+\section{Discard overcrowded boxes}
+\label{subsec:proof-bad-set}
+We first need a rough bound on the full Gibbs weight.  For $0<b<2\d$, let
+$A_b=\int e^{b\g/2}\,\dd\muunif<\infty$.
+Convexity of the exponential, followed by integration conditional on $X_i$, gives
+\begin{equation}
+ \begin{aligned}
+ Z_{N,b}
+ &=\E\left[\exp\left\{\frac1N\sum_{i=1}^N
+                   \frac b2\sum_{j\ne i}\g(X_i-X_j)\right\}\right]\\
+ &\le\frac1N\sum_{i=1}^N
+       \E\left[e^{\frac b2\sum_{j\ne i}\g(X_i-X_j)}\right]
+ =A_b^{N-1}.
+ \end{aligned}
+ \label{eq:rough-partition-bound}
+\end{equation}
+This uses only the local logarithmic singularity.  Moreover, $A_b\ge1$ by Jensen, and H\"older gives $Z_{N,\gamma}\le Z_{N,b}^{\gamma/b}\le A_b^{N-1}$ for $0\le\gamma\le b$.
+
+Each $n_a$ is binomial with parameters $N,M^{-1}$.  For $M^{-1}<\delta$, Chernoff's inequality and a union bound give
+\begin{equation}
+ \begin{aligned}
+ \Pb(\mathcal B_{N,J,\delta})
+ &\le M e^{-N\mathsf D(\delta\Vert M^{-1})},\\
+ \mathsf D(\delta\Vert M^{-1})
+ &=\delta\log(\delta M)
+   +(1-\delta)\log\frac{1-\delta}{1-M^{-1}}
+ \longrightarrow\infty\quad(J\to\infty).
+ \end{aligned}
+ \label{eq:physical-bad-probability}
+\end{equation}
+Choose $s>1$ with $b=s\be_0<2\d$ and $s'=s/(s-1)$.  H\"older and \eqref{eq:rough-partition-bound} yield
+\begin{equation}
+ \E\big[\one_{\mathcal B_{N,J,\delta}}e^{\frac\be2\mathsf W_N(\g)}\big]
+ \le M^{1/s'}\exp\left\{N
+ \left(\frac{\log A_b}{s}
+       -\frac{\mathsf D(\delta\Vert M^{-1})}{s'}\right)\right\}.
+ \label{eq:physical-bad-gibbs-bound}
+\end{equation}
+For fixed $\delta>0$, choose $J$ large enough to make the exponent negative, then keep this grid fixed as $N$ varies.

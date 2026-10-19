@@ -1,0 +1,125 @@
+\documentclass[11pt,reqno]{amsart}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amssymb,amsmath,amsfonts,amsthm,mathtools,mathrsfs}
+\usepackage{aliascnt}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage[shortlabels]{enumitem}
+\usepackage{booktabs,tabularx,array}
+\usepackage{tikz}
+\usepackage[colorlinks=true]{hyperref}
+\hypersetup{
+  linkcolor=blue!45!black,
+  citecolor=magenta,
+  urlcolor=blue!45!black,
+  pdftitle={An entropy bound for the attractive logarithmic gas},
+  pdfauthor={Matias G. Delgadino, Rishabh Gvalani, Matthew Rosenzweig}
+}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}
+
+\raggedbottom
+\allowdisplaybreaks
+\numberwithin{equation}{section}
+\emergencystretch=3em
+\setlist{listparindent=\parindent,parsep=0pt}
+\setlist[itemize]{topsep=4pt,itemsep=2pt,parsep=1pt,leftmargin=1.8em}
+\setlist[enumerate]{topsep=4pt,itemsep=3pt,parsep=1pt,leftmargin=2.2em}
+
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newaliascnt{prop}{thm}
+\newtheorem{prop}[prop]{Proposition}
+\aliascntresetthe{prop}
+\newaliascnt{lemma}{thm}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newaliascnt{cor}{thm}
+\newtheorem{cor}[cor]{Corollary}
+\aliascntresetthe{cor}
+\newaliascnt{assumption}{thm}
+\newtheorem{assumption}[assumption]{Assumption}
+\aliascntresetthe{assumption}
+\theoremstyle{definition}
+\newaliascnt{mydef}{thm}
+\newtheorem{mydef}[mydef]{Definition}
+\aliascntresetthe{mydef}
+\newaliascnt{remark}{thm}
+\newtheorem{remark}[remark]{Remark}
+\aliascntresetthe{remark}
+\newaliascnt{conj}{thm}
+\newtheorem{conj}[conj]{Conjecture}
+\aliascntresetthe{conj}
+
+\Crefname{thm}{Theorem}{Theorems}
+\Crefname{prop}{Proposition}{Propositions}
+\Crefname{lemma}{Lemma}{Lemmas}
+\Crefname{cor}{Corollary}{Corollaries}
+\Crefname{assumption}{Assumption}{Assumptions}
+\Crefname{mydef}{Definition}{Definitions}
+\Crefname{remark}{Remark}{Remarks}
+\Crefname{conj}{Conjecture}{Conjectures}
+\crefformat{equation}{(#2#1#3)}
+
+\DeclarePairedDelimiter{\pa}{\lparen}{\rparen}
+\DeclarePairedDelimiter{\brak}{\lbrack}{\rbrack}
+\DeclarePairedDelimiter{\brac}{\lbrace}{\rbrace}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\ip}{\langle}{\rangle}
+
+\renewcommand{\d}{\mathsf d}
+\newcommand{\dd}{\mathop{}\!\mathrm d}
+\newcommand{\T}{\mathbb T}
+\newcommand{\R}{\mathbb R}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\N}{\mathbb N}
+\newcommand{\E}{\mathbb E}
+\newcommand{\Pb}{\mathbb P}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\Id}{\operatorname{Id}}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\TV}{\operatorname{TV}}
+\DeclareMathOperator{\sgn}{sgn}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\HS}{\mathrm{HS}}
+\newcommand{\op}{\mathrm{op}}
+\newcommand{\diag}{\Delta}
+\newcommand{\one}{\mathbf 1}
+\newcommand{\be}{\beta}
+\newcommand{\al}{\alpha}
+\newcommand{\vep}{\varepsilon}
+\newcommand{\g}{\mathsf g}
+\newcommand{\K}{\mathsf K}
+\newcommand{\Fr}{\mathsf F}
+\newcommand{\Hr}{\mathsf H}
+\newcommand{\Er}{\mathsf E}
+\newcommand{\Ec}{\mathcal E}
+\newcommand{\Pc}{\mathcal P}
+\newcommand{\Ent}{\operatorname{Ent}}
+\newcommand{\Gcal}{\mathcal G}
+\newcommand{\Ecal}{\mathcal E}
+\newcommand{\pcspip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\tl}{\widetilde}
+\newcommand{\f}{\mathsf f}
+\newcommand{\wh}{\widehat}
+\newcommand{\muunif}{\mu_{\mathrm{unif}}}
+\newcommand{\gm}{\mathrm{gm}}
+\newcommand{\pf}{\mathrm{pf}}
+\newcommand{\spec}{\mathrm{s}}
+\newcommand{\coll}{\mathrm{c}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\XN}{X_N}
+\newcommand{\Part}{\mathfrak P}
+\DeclareMathOperator*{\esssup}{ess\,sup}
+\DeclareMathOperator{\diver}{div}
+\newcommand{\step}[1]{\par\medskip\noindent\textbf{#1}}
+
+
+\title[An entropy bound for the attractive logarithmic gas]{An entropy bound for the attractive logarithmic gas}
+\author{M. G. Delgadino, R. Gvalani, and M. Rosenzweig}
+\date{\today}

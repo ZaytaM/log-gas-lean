@@ -1,0 +1,28 @@
+\section{The continuous bulk}
+\label{sec:continuous-localized-reduction}
+The next lemma is a continuous-kernel entropy--energy partition bound.  It is a special case of the bounded-interaction torus result of Ren and Wang \cite[Corollary~4 and Remark~3]{RenWang2025}: in their notation, take $W_+=0$, $W_-=\be K$, reference measure $\muunif$, and $\lambda=0$, with $0<\varepsilon\le1/2$ and $(1+\varepsilon)\be<B$; the diagonal terms included in their energy contribute at most $\be\|K\|_\infty/2$ to the exponent.  For completeness, Appendix~\ref{app:continuous-proof} gives a self-contained proof using cell averages, an energy projection, and the estimate of Section~\ref{sec:canonical-arrays}.
+
+\begin{lemma}[Continuous kernels controlled by entropy]
+\label{lem:continuous-entropy-partition}
+Let $K\in C(\T^\d\times\T^\d)$ be real and symmetric, with $\int K(x,y)\,\dd\muunif(y)=0$.  Suppose its integral operator $T_K$ is nonnegative and, for some $B>0$,
+\begin{equation}
+ \Hr(\rho\muunif\mid\muunif)
+ \ge\frac B2\ip{\rho-1,T_K(\rho-1)}
+ \quad\text{for every finite-entropy probability density }\rho.
+ \label{eq:continuous-entropy-assumption}
+\end{equation}
+Then, for every $0\le\be_0<B$,
+\begin{equation}
+ \sup_{N\ge1}\sup_{0\le\be\le\be_0}
+ \E\big[e^{\frac\be2\mathsf W_N(K)}\big]<\infty.
+ \label{eq:continuous-partition-conclusion}
+\end{equation}
+\end{lemma}
+
+For $K(x,y)=b_r(x-y)$, the hypotheses were verified in Section~\ref{sec:physical-cutoff-proof}: $b_r$ is smooth, even, and mean zero, its operator is nonnegative by \eqref{eq:compact-split-fourier-order}, and it satisfies \eqref{eq:continuous-entropy-assumption} with the $B$ of \eqref{eq:strict-subcritical-macroscopic-inequality}.  Since $p\be_0<B$, the lemma gives
+\begin{equation}
+ \sup_{N\ge1}\sup_{0\le\be\le\be_0}
+ \E\big[e^{\frac{p\be}{2}\mathsf W_N(b_r)}\big]<\infty
+ \qquad\text{for every fixed }0<r<1/4.
+ \label{eq:physical-continuous-bulk-bound}
+\end{equation}

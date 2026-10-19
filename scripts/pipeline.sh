@@ -37,6 +37,20 @@ except Exception: print(0)' "$1"; }
 cost_total(){ awk '{s+=$1} END{printf "%.2f", s}' $COST_FILE; }
 over_cap(){ awk -v c="$(cost_total)" -v cap="$NIGHT_COST_CAP_USD" 'BEGIN{exit !(c>cap)}'; }
 
+# --- quota / rate-limit detection: true if the call failed for usage reasons ---
+quota_error(){ # json-file err-file
+  [ -s "$1" ] || return 0
+  python3 - "$1" "$2" <<'PY'
+import json,sys,re
+pat=re.compile(r'rate.?limit|usage.?limit|quota|exceeded|out of credits|insufficient|429|overloaded|not available|unknown model',re.I)
+try: d=json.load(open(sys.argv[1]))
+except Exception: sys.exit(0)
+txt=json.dumps(d)+open(sys.argv[2]).read()
+if d.get('is_error') or (not d.get('result') and pat.search(txt)): sys.exit(0)
+sys.exit(1)
+PY
+}
+
 # --- 3. workers, one per open lemma, bounded concurrency --------------------
 run_worker(){ # file module lemma
   local file=$1 mod=$2 lem=$3 wt=wt/$3 br=wip/$3
@@ -44,8 +58,14 @@ run_worker(){ # file module lemma
   local prompt; prompt=$(sed -e "s|{LEMMA_FILE}|$file|g" -e "s|{LEMMA_NAME}|$lem|g" \
                           -e "s|{MODULE}|$mod|g" -e "s|{MAX_ATTEMPTS}|$MAX_ATTEMPTS|g" prompts/worker.md)
   ( cd $wt && ln -sfn $ROOT/.lake .lake 2>/dev/null
-    timeout ${WORKER_TIMEOUT}s claude -p --model $MODEL_WORKER --max-turns $MAX_TURNS \
-      --dangerously-skip-permissions --output-format json "$prompt" > $ROOT/$RUN/$lem.json 2> $ROOT/$RUN/$lem.err
+    for model in $MODEL_WORKER $MODEL_WORKER_FALLBACK; do
+      timeout ${WORKER_TIMEOUT}s claude -p --model $model --max-turns $MAX_TURNS \
+        --dangerously-skip-permissions --output-format json "$prompt" > $ROOT/$RUN/$lem.json 2> $ROOT/$RUN/$lem.err
+      if quota_error $ROOT/$RUN/$lem.json $ROOT/$RUN/$lem.err; then
+        echo "$(date +%T) $lem: $model unavailable (quota/limit), trying fallback" >> $ROOT/$SUMMARY; continue
+      fi
+      echo "$lem model=$model" >> $ROOT/$RUN/models.txt; break
+    done
     python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("result",""))' $ROOT/$RUN/$lem.json > $ROOT/$RUN/$lem.out 2>/dev/null )
   cost_of $RUN/$lem.json >> $COST_FILE
   grep -o 'STATUS=[a-z]* GOALS=[0-9]* ATTEMPTS=[0-9]*' $RUN/$lem.out | tail -1 | sed "s/^/$lem /" >> $RUN/status.txt \

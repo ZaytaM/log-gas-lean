@@ -1,4 +1,73 @@
 import Mathlib
--- Phase 0 skeleton placeholder; scripts/orchestrate.sh notes/phase0.md rewrites this file.
+
+/-!
+# Phase 0 — warm-up: the rough partition-function bound, eq. (3.1)
+
+Source: `notes/sec3-badevent.tex`, equation `eq:rough-partition-bound`:
+
+  Z_{N,b} = E[ exp{ (1/N) Σ_i (b/2) Σ_{j≠i} g(X_i - X_j) } ]
+          ≤ (1/N) Σ_i E[ exp{ (b/2) Σ_{j≠i} g(X_i - X_j) } ] = A_b^{N-1}.
+
+The two steps are isolated here in abstract form (no torus, no kernel `g`):
+
+* `LogGas.Warmup.jensen_avg_exp`   — the convexity step (first inequality);
+* `LogGas.Warmup.prod_bound_indep` — the "integrate conditionally on `X_i`"
+  step giving each summand `≤ A^{N-1}`.
+
+Standing hypotheses H1/H2 of `notes/hypotheses.md` are not needed in this phase.
+-/
+
+open MeasureTheory ProbabilityTheory Finset
+open scoped BigOperators ENNReal
+
 namespace LogGas.Warmup
+
+-- SKETCH (P0.A): Pointwise, `convexOn_exp.map_sum_le` with the equal weights
+-- `w i = 1/N` (nonnegative, summing to one via `Finset.sum_const`, `card_fin`)
+-- gives `exp ((1/N) * Σ f i ω) ≤ Σ (1/N) * exp (f i ω)`.  The right-hand integrand
+-- is integrable by `integrable_finset_sum` and `Integrable.const_mul`; the left-hand
+-- integrand is then integrable by `Integrable.mono'` (it is nonneg and dominated,
+-- measurable via `Real.measurable_exp`, `Finset.measurable_sum`).  Conclude with
+-- `integral_mono`, `integral_finset_sum`, `integral_const_mul`, `Finset.mul_sum`.
+/-- Eq. `eq:rough-partition-bound`, first inequality (Jensen for an average of
+exponents): on a probability space,
+`∫ exp((1/N) Σ_i f i) dμ ≤ (1/N) Σ_i ∫ exp(f i) dμ`. -/
+theorem jensen_avg_exp {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    [IsProbabilityMeasure μ] (N : ℕ) (hN : 0 < N) (f : Fin N → Ω → ℝ)
+    (hf_meas : ∀ i, Measurable (f i))
+    (hf_int : ∀ i, Integrable (fun ω => Real.exp (f i ω)) μ) :
+    ∫ ω, Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω) ∂μ
+      ≤ (1 / (N : ℝ)) * ∑ i, ∫ ω, Real.exp (f i ω) ∂μ := by
+  sorry
+
+-- SKETCH (P0.B): Work with `lintegral` of the nonnegative integrand, so no
+-- integrability is needed up front.  By `iIndepFun_iff_map_fun_eq_pi_map`
+-- (using `hX_meas`, `hX_law`) the law of `ω ↦ (X · ω)` is `Measure.pi (fun _ => ν)`;
+-- rewrite the integral over `μ` as one over `Measure.pi` (`lintegral_map`).  Split off
+-- coordinate `i` with `measurePreserving_piFinSuccAbove` / `lintegral_prod` (Fubini) so
+-- that for `ν`-a.e. `x` the inner integral is `∫⁻ ∏_{j≠i} exp(K(x - y j)) ∂pi`, which
+-- factors (`lintegral_prod_eq_prod_lintegral_of_indepFun`, or `lintegral_fintype_prod`
+-- on the product measure) into `∏_{j≠i} ∫⁻ exp(K(x - y)) ∂ν ≤ ofReal A ^ (N-1)`
+-- (`Finset.prod_le_prod`, `Finset.prod_const`, `card_erase_of_mem`, `card_fin`); each
+-- factor is `≤ ofReal A` by `hK_int`, `hKA` and `ofReal_integral_eq_lintegral_ofReal`.
+-- Finally `integral_eq_lintegral_of_nonneg_ae`, `ENNReal.toReal_le_of_le_ofReal`.
+/-- Eq. `eq:rough-partition-bound`, last equality (as an inequality): for i.i.d.
+`X : Fin N → Ω → E` with law `ν`, a measurable `K : E → ℝ` and `A ≥ 1` with
+`exp(K(x - ·))` `ν`-integrable and `∫ exp(K(x - y)) dν(y) ≤ A` for `ν`-a.e. `x`,
+`∫ exp(Σ_{j ≠ i} K(X i - X j)) dμ ≤ A^(N-1)` for each `i`. -/
+theorem prod_bound_indep {Ω E : Type*} [MeasurableSpace Ω] [MeasurableSpace E]
+    [AddGroup E] [MeasurableSub₂ E]
+    (μ : Measure Ω) [IsProbabilityMeasure μ] (ν : Measure E) [IsProbabilityMeasure ν]
+    (N : ℕ) (hN : 2 ≤ N) (X : Fin N → Ω → E)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_indep : iIndepFun X μ)
+    (hX_law : ∀ i, μ.map (X i) = ν)
+    (K : E → ℝ) (hK : Measurable K)
+    (hK_int : ∀ᵐ x ∂ν, Integrable (fun y => Real.exp (K (x - y))) ν)
+    (A : ℝ) (hA : 1 ≤ A)
+    (hKA : ∀ᵐ x ∂ν, ∫ y, Real.exp (K (x - y)) ∂ν ≤ A)
+    (i : Fin N) :
+    ∫ ω, Real.exp (∑ j ∈ univ.erase i, K (X i ω - X j ω)) ∂μ ≤ A ^ (N - 1) := by
+  sorry
+
 end LogGas.Warmup

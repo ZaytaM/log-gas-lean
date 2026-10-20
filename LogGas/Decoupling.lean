@@ -155,7 +155,118 @@ theorem ext_moment (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p)
 gives `S/2`, for every fixed sample `ω`. -/
 theorem split_identity (h : Fin m → Fin m → E → E → ℝ) (Y : Fin m → Ω → E) (ω : Ω) :
     (∑ I : Finset (Fin m), D h Y I ω) / 2 ^ m = S h Y ω / 2 := by
-  sorry
+  classical
+  set a : Fin m → Fin m → ℝ := fun i j => ext h i j (Y i ω) (Y j ω) with ha
+  have hcount : ∀ i j : Fin m, i ≠ j →
+      ((univ.filter (fun I : Finset (Fin m) => i ∈ I ∧ j ∉ I)).card : ℝ) * 4 = 2 ^ m := by
+    intro i j hij
+    have hc : (univ.filter (fun I : Finset (Fin m) => i ∈ I ∧ j ∉ I)).card
+        = ((({i, j} : Finset (Fin m))ᶜ).powerset).card := by
+      symm
+      apply Finset.card_bij (fun I _ => insert i I)
+      · intro I hI
+        rw [Finset.mem_powerset] at hI
+        simp only [mem_filter, mem_univ, true_and, Finset.mem_insert]
+        refine ⟨Or.inl trivial, ?_⟩
+        intro hj
+        rcases hj with hj | hj
+        · exact hij hj.symm
+        · have := hI hj; simp at this
+      · intro I hI J hJ h2
+        rw [Finset.mem_powerset] at hI hJ
+        have hiI : i ∉ I := fun h' => by have := hI h'; simp at this
+        have hiJ : i ∉ J := fun h' => by have := hJ h'; simp at this
+        have := congrArg (fun s => s.erase i) h2
+        simpa [Finset.erase_insert hiI, Finset.erase_insert hiJ] using this
+      · intro J hJ
+        simp only [mem_filter, mem_univ, true_and] at hJ
+        refine ⟨J.erase i, ?_, Finset.insert_erase hJ.1⟩
+        rw [Finset.mem_powerset]
+        intro x hx
+        simp only [Finset.mem_erase] at hx
+        simp only [Finset.mem_compl, Finset.mem_insert, Finset.mem_singleton, not_or]
+        refine ⟨hx.1, ?_⟩
+        rintro rfl
+        exact hJ.2 hx.2
+    rw [hc, Finset.card_powerset, Finset.card_compl]
+    simp only [Finset.card_univ, Fintype.card_fin]
+    rw [Finset.card_pair hij]
+    have hm : 2 ≤ m := by
+      have := Finset.card_le_univ ({i, j} : Finset (Fin m))
+      rw [Finset.card_pair hij] at this; simpa using this
+    obtain ⟨n, rfl⟩ := Nat.exists_eq_add_of_le' hm
+    simp [pow_add]
+    ring
+  have hD : ∀ I : Finset (Fin m), D h Y I ω
+      = ∑ i, ∑ j, if i ∈ I ∧ j ∉ I then a i j else 0 := by
+    intro I
+    unfold D
+    have key : ∀ i, (∑ j, if i ∈ I ∧ j ∉ I then a i j else 0)
+        = if i ∈ I then ∑ j ∈ Iᶜ, a i j else 0 := by
+      intro i
+      by_cases hi : i ∈ I
+      · simp only [hi, true_and, if_true]
+        rw [← Finset.sum_filter (fun j => j ∉ I)]
+        congr 1
+        ext; simp
+      · simp [hi]
+    simp_rw [key]
+    rw [← Finset.sum_filter]
+    simp
+    rfl
+  have hsum : ∑ I : Finset (Fin m), D h Y I ω
+      = ∑ i, ∑ j, ((univ.filter (fun I : Finset (Fin m) => i ∈ I ∧ j ∉ I)).card : ℝ) * a i j := by
+    simp_rw [hD]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [← Finset.sum_filter, Finset.sum_const, nsmul_eq_mul]
+  have hdiag : ∀ i, a i i = 0 := by intro i; simp [ha, ext]
+  have hcard : ∀ i j, ((univ.filter (fun I : Finset (Fin m) => i ∈ I ∧ j ∉ I)).card : ℝ) * a i j
+      = 2 ^ m / 4 * a i j := by
+    intro i j
+    by_cases hij : i = j
+    · subst hij; simp [hdiag]
+    · have := hcount i j hij
+      congr 1
+      linarith
+  have hS : ∑ i, ∑ j, a i j = 2 * S h Y ω := by
+    have hsymm : ∀ i j, a j i = a i j := fun i j => ext_symm h i j _ _
+    have hlt : ∀ i j, i < j → a i j = h i j (Y i ω) (Y j ω) := by
+      intro i j hij; simp [ha, ext, hij]
+    have hdec : ∀ i j, a i j = (if i < j then a i j else 0) + (if j < i then a i j else 0) := by
+      intro i j
+      rcases lt_trichotomy i j with hij | hij | hij
+      · simp [hij, not_lt.2 hij.le]
+      · subst hij; simp [hdiag]
+      · simp [hij, not_lt.2 hij.le]
+    have h1 : ∑ i, ∑ j, (if i < j then a i j else 0) = S h Y ω := by
+      unfold S
+      refine Finset.sum_congr rfl fun i _ => ?_
+      rw [← Finset.sum_filter]
+      refine Finset.sum_congr (by ext; simp) fun j hj => ?_
+      exact hlt i j (by simpa using hj)
+    have h2 : ∑ i, ∑ j, (if j < i then a i j else 0) = S h Y ω := by
+      rw [Finset.sum_comm]
+      unfold S
+      refine Finset.sum_congr rfl fun i _ => ?_
+      rw [← Finset.sum_filter]
+      refine Finset.sum_congr (by ext; simp) fun j hj => ?_
+      have hj' : i < j := by simpa using hj
+      have : a j i = a i j := ext_symm h i j _ _
+      rw [this]; exact hlt i j hj'
+    calc ∑ i, ∑ j, a i j
+        = ∑ i, ∑ j, ((if i < j then a i j else 0) + (if j < i then a i j else 0)) := by
+          refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => hdec i j
+      _ = 2 * S h Y ω := by
+          simp_rw [Finset.sum_add_distrib]; rw [h1, h2]; ring
+  rw [hsum]
+  simp_rw [hcard, ← Finset.mul_sum]
+  rw [hS]
+  have : (2:ℝ) ^ m ≠ 0 := by positivity
+  field_simp
+  ring
 
 -- SKETCH (D2): pointwise, `S ω = 2 * avg_I D_I ω` by `split_identity`, so
 -- `|S ω|^(2k) = 2^(2k) * |avg_I D_I ω|^(2k) ≤ 2^(2k) * avg_I |D_I ω|^(2k)` by Jensen for the

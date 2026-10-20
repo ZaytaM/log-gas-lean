@@ -48,9 +48,10 @@ def config(root=ROOT):
 
 def connect(path=RUNTIME / 'queue.sqlite3'):
     path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path)
+    db = sqlite3.connect(path, timeout=30)
     db.row_factory = sqlite3.Row
-    db.execute('PRAGMA journal_mode=WAL')
+    # Dell3 home directories are on NFS; avoid WAL's shared-memory requirement.
+    db.execute('PRAGMA journal_mode=DELETE')
     db.execute('PRAGMA synchronous=FULL')
     db.executescript(SCHEMA)
     return db

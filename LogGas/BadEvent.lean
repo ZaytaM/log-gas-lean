@@ -101,7 +101,11 @@ theorem measurable_occupancy {N : ℕ} (X : Fin N → Ω → E) (hX : ∀ i, Mea
 theorem measurableSet_badEvent {ν : Measure E} {N M : ℕ} (X : Fin N → Ω → E)
     (hX : ∀ i, Measurable (X i)) (bx : Boxes ν M) (δ : ℝ) :
     MeasurableSet (badEvent X bx δ) := by
-  sorry
+  have : badEvent X bx δ = ⋃ a, {ω | δ * N < (occupancy X (bx.A a) ω : ℝ)} := by
+    ext ω; simp [badEvent]
+  rw [this]
+  exact MeasurableSet.iUnion fun a =>
+    measurableSet_lt measurable_const (measurable_occupancy X hX _ (bx.meas a))
 
 -- SKETCH: Jensen for the convex `exp` (`convexOn_exp.map_integral_le`, or
 -- `ConvexOn.map_integral_le` with `s = univ`) gives `exp (∫ K) ≤ ∫ exp K`; rewrite with

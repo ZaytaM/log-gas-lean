@@ -161,7 +161,28 @@ vector `g`: `∫ exp(v·(L g)) dγ(g) = exp(|Lᵀ v|²/2)`. -/
 theorem gaussian_mgf_linear (q : ℕ) (L : Matrix (Fin q) (Fin q) ℝ) (v : Fin q → ℝ) :
     ∫ g, Real.exp (v ⬝ᵥ (L *ᵥ g)) ∂(stdGauss q)
       = Real.exp ((Lᵀ *ᵥ v) ⬝ᵥ (Lᵀ *ᵥ v) / 2) := by
-  sorry
+  set w := Lᵀ *ᵥ v with hw
+  have h1 : ∀ g : Fin q → ℝ, v ⬝ᵥ (L *ᵥ g) = ∑ k, w k * g k := by
+    intro g
+    rw [hw, Matrix.mulVec_transpose, Matrix.dotProduct_mulVec]
+    rfl
+  have h2 : ∀ g : Fin q → ℝ, Real.exp (v ⬝ᵥ (L *ᵥ g)) = ∏ k, Real.exp (w k * g k) := by
+    intro g; rw [h1, Real.exp_sum]
+  simp_rw [h2]
+  unfold stdGauss
+  rw [integral_fintype_prod_eq_prod (fun k (x : ℝ) => Real.exp (w k * x))]
+  have h3 : ∀ k, ∫ x, Real.exp (w k * x) ∂(gaussianReal 0 1) = Real.exp (w k ^ 2 / 2) := by
+    intro k
+    have := mgf_gaussianReal (μ := 0) (v := 1) (X := id) (p := gaussianReal 0 1)
+      ⟨aemeasurable_id, by simp⟩ (w k)
+    simp only [mgf, id] at this
+    rw [this]; simp
+  simp_rw [h3]
+  rw [← Real.exp_sum, dotProduct]
+  congr 1
+  rw [← Finset.sum_div]
+  congr 1
+  exact Finset.sum_congr rfl fun k _ => by ring
 
 -- SKETCH: `exp ((s/2) * (g ⬝ᵥ g)) = ∏ k, exp ((s/2) * g k ^ 2)` (`dotProduct`, `Finset.mul_sum`,
 -- `Real.exp_sum`); `integral_fintype_prod_eq_prod`, then the one-dimensional integral

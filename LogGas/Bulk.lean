@@ -70,7 +70,28 @@ theorem gibbs_identity {α : Type*} [MeasurableSpace α] (ν : Measure α) [IsPr
         * Real.log (Real.exp (f x) / ∫ y, Real.exp (f y) ∂ν) ∂ν
       = (∫ x, f x * (Real.exp (f x) / ∫ y, Real.exp (f y) ∂ν) ∂ν)
           - Real.log (∫ y, Real.exp (f y) ∂ν) := by
-  sorry
+  set Z := ∫ y, Real.exp (f y) ∂ν with hZ
+  have hint : ∀ g : α → ℝ, Measurable g → (∀ x, |g x| ≤ C) → Integrable g ν := fun g hg hgC =>
+    Integrable.of_bound hg.aestronglyMeasurable C (Filter.Eventually.of_forall fun x => by
+      simpa [Real.norm_eq_abs] using hgC x)
+  have hexp : Integrable (fun x => Real.exp (f x)) ν := by
+    refine Integrable.of_bound (C := Real.exp C) (Real.measurable_exp.comp hf).aestronglyMeasurable
+      (Filter.Eventually.of_forall fun x => ?_)
+    rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+    exact Real.exp_le_exp.2 (le_trans (le_abs_self _) (hfC x))
+  have hZ0 : 0 < Z := by
+    exact integral_exp_pos hexp
+  have hpt : ∀ x, (Real.exp (f x) / Z) * Real.log (Real.exp (f x) / Z)
+      = f x * (Real.exp (f x) / Z) - (Real.exp (f x) / Z) * Real.log Z := by
+    intro x
+    rw [Real.log_div (Real.exp_pos _).ne' hZ0.ne', Real.log_exp]; ring
+  have h1 : Integrable (fun x => f x * (Real.exp (f x) / Z)) ν := by
+    simpa [div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm] using (hexp.mul_bdd (c := C) hf.aestronglyMeasurable
+      (Filter.Eventually.of_forall fun x => by simpa [Real.norm_eq_abs] using hfC x)).mul_const Z⁻¹
+  have h2 : Integrable (fun x => (Real.exp (f x) / Z) * Real.log Z) ν :=
+    (hexp.div_const Z).mul_const _
+  simp_rw [hpt]
+  rw [integral_sub h1 h2, integral_mul_const, integral_div, ← hZ, div_self hZ0.ne', one_mul]
 
 -- SKETCH: `Matrix.PosDef.add_posSemidef` is stated the other way round; use
 -- `(Matrix.PosDef.smul Matrix.PosDef.one hε).add_posSemidef`-style reasoning after

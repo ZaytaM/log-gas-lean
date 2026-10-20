@@ -449,8 +449,8 @@ class Runner:
                     self.log('All discovered Lean obligations are closed; service complete')
                     break
                 pause = float(meta(self.db, 'pause_until', '0'))
-                if time.time() >= pause:
-                    limit = max(1, min(5, int(self.cfg.get('MAX_WORKERS', '3'))))
+                if not self.stopping and not (RUNTIME / 'stop').exists() and time.time() >= pause:
+                    limit = max(1, min(6, int(self.cfg.get('MAX_WORKERS', '3'))))
                     if os.getloadavg()[0] > int(self.cfg.get('LOAD_HALVE_ABOVE', '50')): limit = max(1, limit//2)
                     while len(self.active) < limit:
                         task = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY attempts,last_attempt,id LIMIT 1", (time.time(),)).fetchone()

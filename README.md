@@ -3,7 +3,7 @@
 Lean 4 formalization of “An entropy bound for the attractive logarithmic gas”
 (Delgadino–Gvalani–Rosenzweig), running continuously on Dell3.
 
-The controller keeps three Sonnet workers busy across Claude allowance resets.
+The controller keeps six Sonnet workers busy across Claude allowance resets.
 It waits automatically when an actual session, weekly, or rate limit is reached,
 then retries after the advertised reset time. When no reset time is available,
 it backs off from five minutes to one hour. Turn limits and individual errors

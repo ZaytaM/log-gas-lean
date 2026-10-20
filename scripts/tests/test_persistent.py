@@ -158,6 +158,20 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE state='closed'").fetchone()[0],7)
             self.assertGreater(db.execute("SELECT COUNT(*) FROM jobs WHERE outcome='quota'").fetchone()[0],0)
 
+    def test_six_workers_can_run_concurrently(self):
+        path=self.root/'scripts/pipeline.conf'
+        path.write_text(path.read_text().replace('MAX_WORKERS=3','MAX_WORKERS=6'))
+        self.git('add','scripts/pipeline.conf'); self.git('commit','-m','Configure six workers')
+        p,log=self.launch('success'); p.wait(timeout=35)
+        self.assertEqual(p.returncode,0,log.read_text())
+        with self.db() as db:
+            events=[]
+            for a,b in db.execute('SELECT started,ended FROM jobs'): events += [(a,1),(b,-1)]
+            active=peak=0
+            for _,delta in sorted(events): active+=delta;peak=max(peak,active)
+            self.assertEqual(peak,6)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE state='closed'").fetchone()[0],7)
+
     def test_single_controller_and_checkpoint_on_stop(self):
         p,log=self.launch('slow')
         self.wait_for(p,lambda db: db.execute('SELECT 1 FROM jobs WHERE pid IS NOT NULL').fetchone(),log)

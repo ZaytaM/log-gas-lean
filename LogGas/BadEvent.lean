@@ -112,7 +112,9 @@ theorem one_le_integral_exp {α : Type*} [MeasurableSpace α] (ν : Measure α)
     [IsProbabilityMeasure ν] (K : α → ℝ) (hK : Integrable K ν) (hK0 : ∫ x, K x ∂ν = 0)
     (hexp : Integrable (fun x => Real.exp (K x)) ν) :
     1 ≤ ∫ x, Real.exp (K x) ∂ν := by
-  sorry
+  have h := convexOn_exp.map_integral_le Real.continuous_exp.continuousOn isClosed_univ
+    (Filter.Eventually.of_forall fun _ => Set.mem_univ _) hK hexp
+  rwa [hK0, Real.exp_zero] at h
 
 -- SKETCH: if `γ = 0` both sides are `1` (`Real.rpow_zero`, `integral_const`).  Otherwise
 -- `p := b/γ ≥ 1`; `x ↦ x^p` is convex on `[0,∞)` (`convexOn_rpow`), so Jensen

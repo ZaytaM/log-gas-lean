@@ -3,10 +3,12 @@
 Source: notes/sec6-lemma61.tex. Target file: LogGas/Decoupling.lean.
 Setting throughout: m ≥ 1; (Ω, μ) a probability space; Y : Fin m → Ω → E independent
 (ProbabilityTheory.iIndepFun), each with law ν i on a measurable space E; kernels
-h : Fin m → Fin m → E → E → ℝ, measurable, bounded, used only for i < j (h j i x y := h i j y x).
-Hypotheses as in the paper, with essential suprema replaced by pointwise bounds:
-  (6.1) centering: ∀ i<j, ∀ y, ∫ h i j x y d(ν i)(x) = 0 and ∀ x, ∫ h i j x y d(ν j)(y) = 0
-  (6.2) moments: ∀ i<j, ∀ p ≥ 1, ∀ y, ∫ |h i j x y|^p d(ν i)(x) ≤ 2 κ^p p!  (and symmetrically in x).
+h : Fin m → Fin m → E → E → ℝ, measurable with integrable absolute powers, used only for i < j (h j i x y := h i j y x).
+Hypotheses use almost-everywhere slice conditions, as in the paper:
+  integrability: ∀ i j, ∀ p ≥ 1, |h i j|^p is integrable under (ν i).prod (ν j);
+  Fubini then gives a.e. slice integrability in both directions.
+  (6.1) centering: ∀ i<j, for ν j-a.e. y, ∫ h i j x y d(ν i)(x) = 0 and for ν i-a.e. x, ∫ h i j x y d(ν j)(y) = 0
+  (6.2) moments: ∀ i<j, ∀ p ≥ 1, for ν j-a.e. y, ∫ |h i j x y|^p d(ν i)(x) ≤ 2 κ^p p!  (and symmetrically in x).
 S ω := Σ_{i<j} h i j (Y i ω) (Y j ω).
 
 Statements, in dependency order (each its own lemma):

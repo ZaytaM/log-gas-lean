@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 SCRIPTS = Path(__file__).resolve().parents[1]
@@ -125,6 +126,38 @@ class IntegrationTests(unittest.TestCase):
             if p.poll() is not None: self.fail(log.read_text())
             time.sleep(.05)
         self.fail('Timed out: '+log.read_text())
+
+    def test_discovery_waits_for_dependency_axioms(self):
+        spec = importlib.util.spec_from_file_location('discovery_test_runner', SCRIPTS/'persistent.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        db = sqlite3.connect(':memory:')
+        db.row_factory = sqlite3.Row
+        db.executescript(module.SCHEMA)
+        runner = module.Runner.__new__(module.Runner)
+        runner.db = db
+        checked_names = []
+        runner.axioms = lambda cwd, task, tag: checked_names.append(task['name']) or False
+        with patch.object(module, 'ROOT', self.root):
+            runner.discover()
+            path = self.root/'LogGas/T0.lean'
+            path.write_text(path.read_text().replace('sorry', 'trivial'))
+            runner.discover()
+            row = db.execute("SELECT state FROM tasks WHERE name='T0.proof'").fetchone()
+            self.assertEqual(row[0], 'waiting_dependencies')
+            before = len(checked_names)
+            runner.discover()
+            self.assertEqual(len(checked_names), before)
+            runner.axioms = lambda *args: True
+            # Closing a prerequisite changes the sources, triggering a fresh audit.
+            dep = self.root/'LogGas/T1.lean'
+            dep.write_text(dep.read_text().replace('sorry', 'trivial'))
+            runner.discover()
+            self.assertEqual(db.execute("SELECT state FROM tasks WHERE name='T0.proof'").fetchone()[0], 'closed')
+            path.write_text(path.read_text().replace('trivial', 'sorry'))
+            runner.discover()
+            self.assertEqual(db.execute("SELECT state FROM tasks WHERE name='T0.proof'").fetchone()[0], 'pending')
+        db.close()
 
     def test_more_than_five_tasks_and_completed_turn_limit(self):
         p,log=self.launch('turn_limit')

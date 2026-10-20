@@ -6,9 +6,9 @@ import Mathlib
 Source: `notes/sec6-lemma61.tex`.  Phase notes: `notes/phase1.md`.
 
 Setting.  `(Ω, μ)` is a probability space, `Y : Fin m → Ω → E` are independent with laws
-`ν i`, and `h : Fin m → Fin m → E → E → ℝ` are bounded measurable kernels, used only for
+`ν i`, and `h : Fin m → Fin m → E → E → ℝ` are measurable kernels with integrable powers, used only for
 `i < j`.  The transpose convention `h_{ji}(y,x) = h_{ij}(x,y)` of the paper is implemented
-by `ext`.  Essential suprema of the paper are replaced by pointwise bounds (phase notes).
+by `ext`. Centering and moment bounds hold almost everywhere, as in the paper.
 
 The Bernoulli(1/2) index set `I` "independent of `Y`" is modelled by the exact average
 `(∑ I : Finset (Fin m), ·) / 2 ^ m` over all subsets: `𝔼_I[F(I)] = 2^{-m} ∑_I F(I)`.
@@ -86,10 +86,9 @@ def B (m k : ℕ) : ℕ :=
 def Cu : ℝ := 16
 
 /-- Standing hypotheses of Lemma 6.1 (`lem:canonical-array-exponential`):
-independence of the `Y i` with laws `ν i`, measurable bounded kernels, centering
+independence of the `Y i` with laws `ν i`, measurable kernels with integrable powers, centering
 (eq. `eq:canonical-array-centering`, 6.1) and the factorial moment bounds
-(eq. `eq:canonical-array-kernel-moments`, 6.2), with essential suprema replaced by pointwise
-bounds. -/
+(eq. `eq:canonical-array-kernel-moments`, 6.2), with almost-everywhere slice conditions. -/
 structure Hyp (μ : Measure Ω) (ν : Fin m → Measure E) (Y : Fin m → Ω → E)
     (h : Fin m → Fin m → E → E → ℝ) (κ : ℝ) : Prop where
   κ_pos : 0 < κ
@@ -97,16 +96,18 @@ structure Hyp (μ : Measure Ω) (ν : Fin m → Measure E) (Y : Fin m → Ω →
   Y_indep : iIndepFun Y μ
   Y_law : ∀ i, μ.map (Y i) = ν i
   h_meas : ∀ i j, Measurable (Function.uncurry (h i j))
-  h_bdd : ∀ i j, ∃ C : ℝ, ∀ x y, |h i j x y| ≤ C
+  /-- Finite absolute moments on the joint law; Fubini supplies a.e. slice integrability. -/
+  h_int : ∀ i j (p : ℕ), 1 ≤ p →
+    Integrable (fun z : E × E => |h i j z.1 z.2| ^ p) ((ν i).prod (ν j))
   /-- (6.1), first variable. -/
-  centered_left : ∀ i j, i < j → ∀ y, ∫ x, h i j x y ∂(ν i) = 0
+  centered_left : ∀ i j, i < j → ∀ᵐ y ∂ν j, ∫ x, h i j x y ∂(ν i) = 0
   /-- (6.1), second variable. -/
-  centered_right : ∀ i j, i < j → ∀ x, ∫ y, h i j x y ∂(ν j) = 0
+  centered_right : ∀ i j, i < j → ∀ᵐ x ∂ν i, ∫ y, h i j x y ∂(ν j) = 0
   /-- (6.2), first variable. -/
-  moment_left : ∀ i j, i < j → ∀ p : ℕ, 1 ≤ p → ∀ y,
+  moment_left : ∀ i j, i < j → ∀ p : ℕ, 1 ≤ p → ∀ᵐ y ∂ν j,
     ∫ x, |h i j x y| ^ p ∂(ν i) ≤ 2 * κ ^ p * (p.factorial : ℝ)
   /-- (6.2), second variable. -/
-  moment_right : ∀ i j, i < j → ∀ p : ℕ, 1 ≤ p → ∀ x,
+  moment_right : ∀ i j, i < j → ∀ p : ℕ, 1 ≤ p → ∀ᵐ x ∂ν i,
     ∫ y, |h i j x y| ^ p ∂(ν j) ≤ 2 * κ ^ p * (p.factorial : ℝ)
 
 end Defs
@@ -125,24 +126,131 @@ theorem ext_symm (h : Fin m → Fin m → E → E → ℝ) (i j : Fin m) (x y : 
     ext h j i y x = ext h i j x y := by
   unfold ext; split_ifs <;> first | rfl | exact absurd ‹_› (lt_asymm ‹_›)
 
--- SKETCH: case split `i < j` / `j < i` / `i = j`.  First case is `H.centered_left`;
--- second is `H.centered_right j i` with the roles of `x, y` swapped (definitional after
--- `unfold ext`, `if_neg`, `if_pos`); third case integrates the zero function
--- (`integral_zero`).
-/-- Eq. `eq:canonical-array-centering` (6.1) for the extended kernel: the first-variable
-average of `ext h i j · y` under `ν i` vanishes for every `y`. -/
-theorem ext_centered (H : Hyp μ ν Y h κ) (i j : Fin m) (y : E) :
-    ∫ x, ext h i j x y ∂(ν i) = 0 := by
-  unfold ext; split_ifs <;>
-    first | exact H.centered_left _ _ ‹_› y | exact H.centered_right _ _ ‹_› y | simp
+/-- Measurability of the transposed, zero-diagonal extension. -/
+theorem measurable_ext (H : Hyp μ ν Y h κ) (i j : Fin m) :
+    Measurable (Function.uncurry (ext h i j)) := by
+  unfold ext; split_ifs
+  · exact H.h_meas i j
+  · exact (H.h_meas j i).comp measurable_swap
+  · exact measurable_const
 
--- SKETCH: same case split as `ext_centered`; the diagonal case gives `∫ 0 = 0 ≤ 2κ^p p!`
--- using `H.κ_pos` (`pow_pos`, `Nat.cast_pos.2 (Nat.factorial_pos p)`).  Off-diagonal
--- cases are `H.moment_left` and `H.moment_right`.
-/-- Eq. `eq:canonical-array-kernel-moments` (6.2) for the extended kernel, first variable. -/
-theorem ext_moment (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p) (y : E) :
-    ∫ x, |ext h i j x y| ^ p ∂(ν i) ≤ 2 * κ ^ p * (p.factorial : ℝ) := by
-  unfold ext; split_ifs <;> first | exact H.moment_left _ _ ‹_› p hp y | exact H.moment_right _ _ ‹_› p hp y | (have := H.κ_pos; simp [Nat.pos_iff_ne_zero.1 hp]; positivity)
+/-- Absolute powers of the extended kernel are integrable under the pair law. -/
+theorem ext_integrable_pow (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p) :
+    Integrable (fun z : E × E => |ext h i j z.1 z.2| ^ p) ((ν i).prod (ν j)) := by
+  unfold ext; split_ifs
+  · exact H.h_int i j p hp
+  · exact (H.h_int j i p hp).swap
+  · simpa [zero_pow (by omega : p ≠ 0)] using
+      (integrable_zero : Integrable (fun _ : E × E => (0 : ℝ)) ((ν i).prod (ν j)))
+
+/-- Slice integrability is a consequence of joint integrability, with the correct null sets. -/
+theorem ext_integrable_pow_left (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p) :
+    ∀ᵐ y ∂ν j, Integrable (fun x => |ext h i j x y| ^ p) (ν i) :=
+  (ext_integrable_pow H i j p hp).prod_left_ae
+
+theorem ext_integrable_pow_right (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p) :
+    ∀ᵐ x ∂ν i, Integrable (fun y => |ext h i j x y| ^ p) (ν j) :=
+  (ext_integrable_pow H i j p hp).prod_right_ae
+
+/-- Eq. (6.1) for the extended kernel, almost everywhere in its second variable. -/
+theorem ext_centered (H : Hyp μ ν Y h κ) (i j : Fin m) :
+    ∀ᵐ y ∂ν j, ∫ x, ext h i j x y ∂(ν i) = 0 := by
+  unfold ext; split_ifs
+  · exact H.centered_left _ _ ‹_›
+  · exact H.centered_right _ _ ‹_›
+  · simp
+
+/-- Eq. (6.2) for the extended kernel, almost everywhere in its second variable. -/
+theorem ext_moment (H : Hyp μ ν Y h κ) (i j : Fin m) (p : ℕ) (hp : 1 ≤ p) :
+    ∀ᵐ y ∂ν j, ∫ x, |ext h i j x y| ^ p ∂(ν i) ≤ 2 * κ ^ p * (p.factorial : ℝ) := by
+  unfold ext; split_ifs
+  · exact H.moment_left _ _ ‹_› p hp
+  · exact H.moment_right _ _ ‹_› p hp
+  · have := H.κ_pos
+    filter_upwards [] with y
+    simp only [abs_zero, zero_pow (by omega : p ≠ 0), integral_zero]
+    positivity
+
+/-- Independent coordinates transport joint kernel moments to the sample space. -/
+theorem ext_sample_integrable_pow (H : Hyp μ ν Y h κ) (i j : Fin m)
+    (p : ℕ) (hp : 1 ≤ p) :
+    Integrable (fun ω => |ext h i j (Y i ω) (Y j ω)| ^ p) μ := by
+  by_cases hij : i = j
+  · subst j
+    simpa [ext, zero_pow (by omega : p ≠ 0)] using
+      (integrable_zero : Integrable (fun _ : Ω => (0 : ℝ)) μ)
+  · have hpair : MeasurePreserving (fun ω => (Y i ω, Y j ω)) μ ((ν i).prod (ν j)) := by
+      refine ⟨(H.Y_meas i).prodMk (H.Y_meas j), ?_⟩
+      rw [(H.Y_indep.indepFun hij).map_prod_eq_prod_map_map
+        (H.Y_meas i).aemeasurable (H.Y_meas j).aemeasurable, H.Y_law i, H.Y_law j]
+    exact hpair.integrable_comp_of_integrable (ext_integrable_pow H i j p hp)
+
+/-- All finite absolute moments give membership in each finite positive `Lᵖ`. -/
+theorem memLp_of_integrable_abs_pow {f : Ω → ℝ} (hf : Measurable f) (p : ℕ) (hp : 1 ≤ p)
+    (hi : Integrable (fun ω => |f ω| ^ p) μ) : MemLp f (p : ℝ≥0∞) μ := by
+  apply (integrable_norm_rpow_iff hf.aestronglyMeasurable
+    (by exact_mod_cast (by omega : p ≠ 0)) (by simp)).mp
+  simpa [Real.norm_eq_abs, Real.rpow_natCast] using hi
+
+/-- Finite products of functions with all absolute moments are integrable (finite Hölder). -/
+theorem integrable_finset_prod_of_moments {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
+    (hf : ∀ i ∈ s, Measurable (f i))
+    (hi : ∀ i ∈ s, ∀ p : ℕ, 1 ≤ p → Integrable (fun ω => |f i ω| ^ p) μ) :
+    Integrable (fun ω => ∏ i ∈ s, f i ω) μ := by
+  classical
+  by_cases hs : s = ∅
+  · subst s; simp
+  have hn : 1 ≤ s.card := Finset.card_pos.mpr (Finset.nonempty_iff_ne_empty.mpr hs)
+  have hm : ∀ i ∈ s, MemLp (f i) (s.card : ℝ≥0∞) μ := fun i h =>
+    memLp_of_integrable_abs_pow (hf i h) s.card hn (hi i h s.card hn)
+  have hh := MemLp.fun_prod hm
+  have he : (∑ _i ∈ s, ((s.card : ℝ≥0∞))⁻¹)⁻¹ = 1 := by
+    simp only [Finset.sum_const, nsmul_eq_mul]
+    rw [ENNReal.mul_inv_cancel (by exact_mod_cast (by omega : s.card ≠ 0)) (by simp)]
+    simp
+  rw [he] at hh
+  exact memLp_one_iff_integrable.mp hh
+
+/-- Word integrability required for Fubini is obtained from moments, without boundedness. -/
+theorem integrable_word (H : Hyp μ ν Y h κ) {n : ℕ} (row col : Fin n → Fin m) :
+    Integrable (word h Y row col) μ := by
+  apply integrable_finset_prod_of_moments univ
+    (fun v ω => ext h (row v) (col v) (Y (row v) ω) (Y (col v) ω))
+  · intro v _
+    exact (measurable_ext H _ _).comp ((H.Y_meas _).prodMk (H.Y_meas _))
+  · intro v _ p hp
+    exact ext_sample_integrable_pow H _ _ p hp
+
+/-- Finite sums of the kernels have every absolute moment; `p = 0` is constant. -/
+theorem integrable_S_pow (H : Hyp μ ν Y h κ) (p : ℕ) :
+    Integrable (fun ω => |S h Y ω| ^ p) μ := by
+  by_cases hp : p = 0
+  · subst p; simp
+  have hm : MemLp (S h Y) (p : ℝ≥0∞) μ := by
+    apply memLp_finsetSum univ
+    intro i _
+    apply memLp_finsetSum (Ioi i)
+    intro j hj
+    have he := memLp_of_integrable_abs_pow
+      ((measurable_ext H i j).comp ((H.Y_meas i).prodMk (H.Y_meas j))) p (by omega)
+      (ext_sample_integrable_pow H i j p (by omega))
+    simpa only [Function.comp_def, Function.uncurry_apply_pair, ext,
+      if_pos (Finset.mem_Ioi.mp hj)] using he
+  simpa only [Real.norm_eq_abs] using hm.integrable_norm_pow hp
+
+theorem integrable_D_pow (H : Hyp μ ν Y h κ) (I : Finset (Fin m)) (p : ℕ) :
+    Integrable (fun ω => |D h Y I ω| ^ p) μ := by
+  by_cases hp : p = 0
+  · subst p; simp
+  have hm : MemLp (D h Y I) (p : ℝ≥0∞) μ := by
+    apply memLp_finsetSum I
+    intro i _
+    apply memLp_finsetSum Iᶜ
+    intro j _
+    exact memLp_of_integrable_abs_pow
+      ((measurable_ext H i j).comp ((H.Y_meas i).prodMk (H.Y_meas j))) p (by omega)
+      (ext_sample_integrable_pow H i j p (by omega))
+  simpa only [Real.norm_eq_abs] using hm.integrable_norm_pow hp
 
 -- SKETCH (D1): rewrite `D h Y I ω` as `∑ i, ∑ j, (if i ∈ I ∧ j ∉ I then ext h i j .. else 0)`
 -- (`Finset.sum_filter`, `Finset.mem_compl`), swap the sum over `I` inside
@@ -273,18 +381,54 @@ theorem split_identity (h : Fin m → Fin m → E → E → ℝ) (Y : Fin m → 
 -- convex function `x ↦ |x|^(2k)` (`(even_two_mul k).convexOn_pow` after `Even.pow_abs`,
 -- with `ConvexOn.map_sum_le` and the uniform weights `2⁻¹^m`, `Finset.card_univ`,
 -- `Fintype.card_finset`).  Integrate with `integral_mono`, `integral_finset_sum`,
--- `integral_const_mul`, `integral_div`; integrability from `H.h_meas`, `H.h_bdd`, `H.Y_meas`
--- via `Integrable.of_bound` (all integrands are bounded measurable, `μ` finite).
+-- `integral_const_mul`, `integral_div`; integrability from `H.h_int`, the independent pair laws, and finite Hölder.
+-- Handle `k = 0` separately (the integrand is constant).
 /-- Eq. `eq:array-random-split` (6.6): `𝔼|S|^{2k} ≤ 2^{2k} 𝔼_I 𝔼|D_I|^{2k}`. -/
 theorem random_split (H : Hyp μ ν Y h κ) (k : ℕ) :
     ∫ ω, |S h Y ω| ^ (2 * k) ∂μ
       ≤ 2 ^ (2 * k) * ((∑ I : Finset (Fin m), ∫ ω, |D h Y I ω| ^ (2 * k) ∂μ) / 2 ^ m) := by
-  sorry
+  have hDint : ∀ I, Integrable (fun ω => |D h Y I ω| ^ (2 * k)) μ :=
+    fun I => integrable_D_pow H I _
+  have hpt : ∀ ω, |S h Y ω| ^ (2 * k)
+      ≤ 2 ^ (2 * k) * ((∑ I : Finset (Fin m), |D h Y I ω| ^ (2 * k)) / 2 ^ m) := by
+    intro ω
+    have hS : S h Y ω = 2 * ((∑ I : Finset (Fin m), D h Y I ω) / 2 ^ m) := by
+      rw [split_identity]; ring
+    have hw : ∑ _I : Finset (Fin m), (1 / 2 ^ m : ℝ) = 1 := by
+      rw [Finset.sum_const, Finset.card_univ, Fintype.card_finset, Fintype.card_fin]
+      simp
+    have J := Real.pow_arith_mean_le_arith_mean_pow (Finset.univ : Finset (Finset (Fin m)))
+      (fun _ => (1 / 2 ^ m : ℝ)) (fun I => |D h Y I ω|) (fun _ _ => by positivity) hw
+      (fun I _ => abs_nonneg _) (2 * k)
+    have e1 : (∑ I : Finset (Fin m), (1 / 2 ^ m : ℝ) * |D h Y I ω|)
+        = (∑ I : Finset (Fin m), |D h Y I ω|) / 2 ^ m := by
+      rw [← Finset.mul_sum]; ring
+    have e2 : (∑ I : Finset (Fin m), (1 / 2 ^ m : ℝ) * |D h Y I ω| ^ (2 * k))
+        = (∑ I : Finset (Fin m), |D h Y I ω| ^ (2 * k)) / 2 ^ m := by
+      rw [← Finset.mul_sum]; ring
+    rw [e1, e2] at J
+    have h3 : |(∑ I : Finset (Fin m), D h Y I ω) / 2 ^ m|
+        ≤ (∑ I : Finset (Fin m), |D h Y I ω|) / 2 ^ m := by
+      rw [abs_div, abs_of_pos (by positivity : (0:ℝ) < 2 ^ m)]
+      gcongr
+      exact Finset.abs_sum_le_sum_abs _ _
+    rw [hS, abs_mul, mul_pow, abs_of_pos (by norm_num : (0:ℝ) < 2)]
+    gcongr
+    exact le_trans (pow_le_pow_left₀ (abs_nonneg _) h3 _) J
+  have hRint : Integrable (fun ω => 2 ^ (2 * k) *
+      ((∑ I : Finset (Fin m), |D h Y I ω| ^ (2 * k)) / 2 ^ m)) μ :=
+    ((MeasureTheory.integrable_finsetSum _ fun I _ => hDint I).div_const _).const_mul _
+  have hSint : Integrable (fun ω => |S h Y ω| ^ (2 * k)) μ := integrable_S_pow H _
+  calc ∫ ω, |S h Y ω| ^ (2 * k) ∂μ
+      ≤ ∫ ω, 2 ^ (2 * k) * ((∑ I : Finset (Fin m), |D h Y I ω| ^ (2 * k)) / 2 ^ m) ∂μ :=
+        integral_mono hSint hRint hpt
+    _ = _ := by
+        rw [integral_const_mul, integral_div, MeasureTheory.integral_finsetSum _ fun I _ => hDint I]
 
 -- SKETCH (D3): by `ext_symm` (transposing `row ↔ col`) it suffices to treat a row label
 -- `ℓ` with `mult row ℓ = 1`, i.e. `row v₀ = ℓ` for a unique `v₀` (`Finset.card_eq_one`).
 -- Since rows lie in `I` and columns in `Iᶜ`, `ℓ` is not a column label, so
--- `word = ext h ℓ (col v₀) (Y ℓ) (Y (col v₀)) * R` with `R` a bounded measurable function of
+-- `word = ext h ℓ (col v₀) (Y ℓ) (Y (col v₀)) * R` with `R` an integrable product of powers of
 -- `(Y j)_{j ≠ ℓ}` (`Finset.prod_erase_mul`).  `Y ℓ` is independent of `(Y j)_{j ≠ ℓ}`
 -- (`H.Y_indep.indepFun_finset {ℓ} {ℓ}ᶜ`), so the law of the pair is the product measure
 -- (`indepFun_iff_map_prod_eq_prod_map_map`, `H.Y_law`); rewrite with `integral_map` and
@@ -301,14 +445,17 @@ theorem vanishing_word (H : Hyp μ ν Y h κ) {n : ℕ} (I : Finset (Fin m))
 -- SKETCH (6.9): with `a = mult row ℓ ≥ 1`, Hölder with `a` equal exponents `1/a`:
 -- `|∫ ∏_v f_v| ≤ ∫ ∏_v |f_v| ≤ ∏_v (∫ |f_v|^a)^(1/a)` (`abs_integral_le_integral_abs`,
 -- `ENNReal.lintegral_prod_norm_pow_le` with `p v = 1/a`, `∑ p v = 1`, translated to Bochner
--- integrals via `ofReal_integral_eq_lintegral_ofReal` for the nonnegative bounded
+-- integrals via `ofReal_integral_eq_lintegral_ofReal` for the nonnegative integrable
 -- integrands).  Each factor is `≤ (2 κ^a a!)^(1/a)` by `ext_moment`; the product of `a`
 -- such factors is `2 κ^a a!` (`Real.rpow_natCast`, `Finset.prod_const`, `Real.rpow_mul`).
 /-- Eq. `eq:array-holder-group` (6.9): for a row label `ℓ` of multiplicity `a_ℓ ≥ 1`
 and frozen column values `y`,
 `|Φ_ℓ(y)| = |𝔼 ∏_{v : i_v = ℓ} h_{ℓ j_v}(Y_ℓ, y_{j_v})| ≤ 2 κ^{a_ℓ} a_ℓ!`. -/
-theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : Fin n → Fin m)
-    (hℓ : 1 ≤ mult row ℓ) (y : Fin m → E) :
+theorem holder_group_at (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : Fin n → Fin m)
+    (hℓ : 1 ≤ mult row ℓ) (y : Fin m → E)
+    (hint : ∀ v, Integrable (fun x => |ext h ℓ (col v) x (y (col v))| ^ mult row ℓ) (ν ℓ))
+    (hmoment : ∀ v, ∫ x, |ext h ℓ (col v) x (y (col v))| ^ mult row ℓ ∂ν ℓ
+      ≤ 2 * κ ^ mult row ℓ * ((mult row ℓ).factorial : ℝ)) :
     |∫ x, ∏ v ∈ univ.filter (fun v => row v = ℓ), ext h ℓ (col v) x (y (col v)) ∂(ν ℓ)|
       ≤ 2 * κ ^ (mult row ℓ) * ((mult row ℓ).factorial : ℝ) := by
   classical
@@ -317,12 +464,6 @@ theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : F
     · exact (H.h_meas _ _).comp (measurable_id.prodMk measurable_const)
     · exact (H.h_meas _ _).comp (measurable_const.prodMk measurable_id)
     · exact measurable_const
-  have hbdd : ∀ i j : Fin m, ∃ C : ℝ, ∀ x y, |ext h i j x y| ≤ C := by
-    intro i j; unfold ext; split_ifs
-    · exact H.h_bdd _ _
-    · obtain ⟨C, hC⟩ := H.h_bdd j i
-      exact ⟨C, fun x y => hC y x⟩
-    · exact ⟨0, by simp⟩
   set s := univ.filter (fun v => row v = ℓ) with hsdef
   set a := mult row ℓ with ha
   have hs : s.card = a := rfl
@@ -330,13 +471,7 @@ theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : F
   set F : Fin n → E → ℝ := fun v x => |ext h ℓ (col v) x (y (col v))| with hF
   have hFm : ∀ v, Measurable (F v) := fun v => (hmeas v).abs
   have hF0 : ∀ v x, 0 ≤ F v x := fun v x => abs_nonneg _
-  have hFint : ∀ v, Integrable (fun x => F v x ^ a) (ν ℓ) := by
-    intro v
-    obtain ⟨C, hC⟩ := hbdd ℓ (col v)
-    refine Integrable.of_bound ((hFm v).pow_const a).aestronglyMeasurable (C ^ a)
-      (ae_of_all _ fun x => ?_)
-    rw [Real.norm_of_nonneg (pow_nonneg (hF0 v x) a)]
-    exact pow_le_pow_left₀ (hF0 v x) (hC _ _) a
+  have hFint : ∀ v, Integrable (fun x => F v x ^ a) (ν ℓ) := hint
   have key : ∫⁻ x, ENNReal.ofReal (∏ v ∈ s, F v x) ∂(ν ℓ)
       ≤ ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ)) := by
     have hp : ∑ v ∈ s, (1 / (a : ℝ)) = 1 := by
@@ -364,7 +499,7 @@ theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : F
             _ = ENNReal.ofReal (∫ x, F v x ^ a ∂(ν ℓ)) :=
                 (ofReal_integral_eq_lintegral_ofReal (hFint v)
                   (ae_of_all _ fun x => pow_nonneg (hF0 v x) a)).symm
-            _ ≤ _ := ENNReal.ofReal_le_ofReal (ext_moment H ℓ (col v) a ha1 (y (col v)))
+            _ ≤ _ := ENNReal.ofReal_le_ofReal (hmoment v)
       _ = ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ)) := by
           rw [Finset.prod_const, hs, ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
           have : (a : ℝ) ≠ 0 := by positivity
@@ -380,6 +515,26 @@ theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : F
         ENNReal.toReal_mono ENNReal.ofReal_ne_top key
     _ = 2 * κ ^ a * (a.factorial : ℝ) :=
         ENNReal.toReal_ofReal (by have := H.κ_pos; positivity)
+
+/-- Hölder's row bound holds for almost every frozen column vector, as required by Fubini. -/
+theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : Fin n → Fin m)
+    (hℓ : 1 ≤ mult row ℓ) :
+    ∀ᵐ y ∂Measure.pi ν,
+      |∫ x, ∏ v ∈ univ.filter (fun v => row v = ℓ), ext h ℓ (col v) x (y (col v)) ∂ν ℓ|
+        ≤ 2 * κ ^ mult row ℓ * ((mult row ℓ).factorial : ℝ) := by
+  have hi : ∀ v, ∀ᵐ y ∂Measure.pi ν,
+      Integrable (fun x => |ext h ℓ (col v) x (y (col v))| ^ mult row ℓ) (ν ℓ) := by
+    intro v
+    exact (measurePreserving_eval ν (col v)).quasiMeasurePreserving.ae
+      (ext_integrable_pow_left H ℓ (col v) _ hℓ)
+  have hm : ∀ v, ∀ᵐ y ∂Measure.pi ν,
+      ∫ x, |ext h ℓ (col v) x (y (col v))| ^ mult row ℓ ∂ν ℓ
+        ≤ 2 * κ ^ mult row ℓ * ((mult row ℓ).factorial : ℝ) := by
+    intro v
+    exact (measurePreserving_eval ν (col v)).quasiMeasurePreserving.ae
+      (ext_moment H ℓ (col v) _ hℓ)
+  filter_upwards [ae_all_iff.mpr hi, ae_all_iff.mpr hm] with y hiy hmy
+  exact holder_group_at H ℓ row col hℓ y hiy hmy
 
 -- SKETCH (D4, 6.10): condition on the column block.  `(Y i)_{i ∈ I}` and `(Y j)_{j ∈ Iᶜ}`
 -- are independent (`H.Y_indep.indepFun_finset I Iᶜ disjoint_compl_right`), so by
@@ -407,22 +562,11 @@ theorem word_moment (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m))
     · exact H.h_meas _ _
     · exact (H.h_meas _ _).comp measurable_swap
     · exact measurable_const
-  have hbdd : ∀ i j : Fin m, ∃ C : ℝ, ∀ x y, |ext h i j x y| ≤ C := by
-    intro i j; unfold ext; split_ifs
-    · exact H.h_bdd _ _
-    · obtain ⟨C, hC⟩ := H.h_bdd j i
-      exact ⟨C, fun x y => hC y x⟩
-    · exact ⟨0, by simp⟩
-  choose C hC using hbdd
   set G : (Fin m → E) → ℝ := fun y => ∏ v, ext h (row v) (col v) (y (row v)) (y (col v)) with hGdef
   have hG : Measurable G := Finset.measurable_prod _ fun v _ => by
     have hp : Measurable (fun y : Fin m → E => (y (row v), y (col v))) :=
       (measurable_pi_apply (row v)).prodMk (measurable_pi_apply (col v))
     exact (hext_meas (row v) (col v)).comp hp
-  have hGb : ∀ y, |G y| ≤ ∏ v, C (row v) (col v) := by
-    intro y
-    rw [hGdef]; simp only [Finset.abs_prod]
-    exact Finset.prod_le_prod₀ (fun _ _ => abs_nonneg _) fun v _ => hC _ _ _ _
   have hmap : μ.map (fun ω i => Y i ω) = Measure.pi ν := by
     rw [(iIndepFun_iff_map_fun_eq_pi_map (fun i => (H.Y_meas i).aemeasurable)).1 H.Y_indep]
     congr; funext i; exact H.Y_law i
@@ -438,17 +582,32 @@ theorem word_moment (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m))
     have := hmp.integral_comp' (g := K)
     simp only [hK, MeasurableEquiv.symm_apply_apply] at this
     convert this
+  have hGint : Integrable G (Measure.pi ν) := by
+    rw [← hmap]
+    exact (integrable_map_measure hG.aestronglyMeasurable
+      (Measurable.of_eval H.Y_meas).aemeasurable).mpr (integrable_word H row col)
   have hKint : Integrable K ((Measure.pi fun i : ↥I => ν i).prod
-      (Measure.pi fun i : { i // i ∉ I } => ν i)) :=
-    Integrable.of_bound hKm.aestronglyMeasurable (∏ v, C (row v) (col v))
-      (ae_of_all _ fun z => by rw [Real.norm_eq_abs]; exact hGb _)
+      (Measure.pi fun i : { i // i ∉ I } => ν i)) := by
+    convert hmp.symm.integrable_comp_of_integrable hGint using 1 <;>
+      first | rfl | (congr <;> exact Subsingleton.elim _ _)
   have h3 : ∫ z, K z ∂((Measure.pi fun i : ↥I => ν i).prod
       (Measure.pi fun i : { i // i ∉ I } => ν i)) =
       ∫ v, ∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i) ∂(Measure.pi fun i : { i // i ∉ I } => ν i) :=
     integral_prod_symm K hKint
-  have hinner : ∀ v : { i // i ∉ I } → E, |∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i)|
+  have hgood : ∀ ℓ (t : Fin (2 * k)), ∀ᵐ v ∂(Measure.pi fun i : { i // i ∉ I } => ν i),
+      Integrable (fun x => |ext h ℓ (col t) x (v ⟨col t, hcol t⟩)| ^ mult row ℓ) (ν ℓ) ∧
+      (∫ x, |ext h ℓ (col t) x (v ⟨col t, hcol t⟩)| ^ mult row ℓ ∂ν ℓ)
+        ≤ 2 * κ ^ mult row ℓ * ((mult row ℓ).factorial : ℝ) := by
+    intro ℓ t
+    by_cases hzero : mult row ℓ = 0
+    · filter_upwards [] with v
+      simp [hzero]
+    · exact (measurePreserving_eval (fun i : { i // i ∉ I } => ν i) ⟨col t, hcol t⟩).quasiMeasurePreserving.ae
+        ((ext_integrable_pow_left H ℓ (col t) _ (by omega)).and
+          (ext_moment H ℓ (col t) _ (by omega)))
+  have hinner : ∀ᵐ v ∂(Measure.pi fun i : { i // i ∉ I } => ν i), |∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i)|
       ≤ 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ) := by
-    intro v
+    filter_upwards [ae_all_iff.mpr (fun ℓ => ae_all_iff.mpr (hgood ℓ))] with v hv
     have hsum : ∑ ℓ, mult row ℓ = 2 * k := by
       have := Finset.card_eq_sum_card_fiberwise (f := row) (s := (univ : Finset (Fin (2 * k))))
         (t := (univ : Finset (Fin m))) (by simp)
@@ -483,7 +642,9 @@ theorem word_moment (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m))
       by_cases h0 : mult row ℓ = 0
       · have : univ.filter (fun t => row t = ℓ.val) = ∅ := Finset.card_eq_zero.1 h0
         rw [this]; simp [hg, h0]
-      · have := holder_group H ℓ.val row col (Nat.one_le_iff_ne_zero.2 h0) y
+      · have := holder_group_at H ℓ.val row col (Nat.one_le_iff_ne_zero.2 h0) y
+          (fun t => by simpa only [hycol] using (hv ℓ.val t).1)
+          (fun t => by simpa only [hycol] using (hv ℓ.val t).2)
         calc _ ≤ _ := this
           _ = g ℓ := by simp [hg, h0]
     have hprod : ∏ ℓ : ↥I, g ℓ = ∏ ℓ : Fin m, g ℓ := by
@@ -526,7 +687,7 @@ theorem word_moment (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m))
     (μ := Measure.pi fun i : { i // i ∉ I } => ν i)
     (f := fun v => ∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i))
     (C := 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ))
-    (ae_of_all _ fun v => by rw [Real.norm_eq_abs]; exact hinner v)
+    (hinner.mono fun v hv => by rw [Real.norm_eq_abs]; exact hv)
   simpa using this
 
 -- SKETCH: group the words by their multiplicity vector `w ↦ mult w` (`Finset.sum_fiberwise`
@@ -631,7 +792,7 @@ theorem sum_factorial_mult (m k : ℕ) :
 -- `D_I = ∑_{p ∈ I ×ˢ Iᶜ} f p` to the `2k`-th power as a sum over words
 -- `Fin (2k) → I ×ˢ Iᶜ` (`Finset.sum_pow'`, `Finset.prod_univ_sum`), i.e. over pairs
 -- `(row, col)` with `row v ∈ I`, `col v ∉ I`; so `∫ D_I^(2k) = ∑_{(row,col)} ∫ word`
--- (`integral_finset_sum`, integrability by boundedness).  Terms with a multiplicity-one
+-- (`integral_finset_sum`, integrability by `integrable_D_pow` and `integrable_word`).  Terms with a multiplicity-one
 -- label vanish (`vanishing_word`); the others are bounded by `word_moment`
 -- (`Finset.abs_sum_le_sum_abs`).  Sum over surviving `col` first (at most `B m k` of them,
 -- `Finset.card_le_card` since columns in `Iᶜ` are a subset of all surviving words), then

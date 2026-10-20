@@ -135,11 +135,14 @@ class Runner:
 
     def discover(self):
         seen = {}
+        sources = [(path, path.read_text()) for path in sorted((ROOT / 'LogGas').glob('*.lean'))]
+        fingerprint = hashlib.sha256('\0'.join(text for _, text in sources).encode()).hexdigest()
+        changed = fingerprint != getattr(self, '_source_fingerprint', None)
         with self.db:
-            for path in sorted((ROOT / 'LogGas').glob('*.lean')):
+            for path, source in sources:
                 file = str(path.relative_to(ROOT))
                 module = file[:-5].replace('/', '.')
-                for decl in declarations(path.read_text()):
+                for decl in declarations(source):
                     task_id = module + ':' + decl.name
                     seen[task_id] = decl
                     if decl.sorry:
@@ -149,8 +152,16 @@ class Runner:
                 decl = seen.get(task['id'])
                 if decl is None and task['state'] != 'closed':
                     self.db.execute("UPDATE tasks SET state='blocked',error='Declaration disappeared; inspect source' WHERE id=?", (task['id'],))
-                elif decl and not decl.sorry:
-                    self.db.execute("UPDATE tasks SET state='closed',error='' WHERE id=?", (task['id'],))
+                elif decl and decl.sorry and task['state'] in ('closed', 'waiting_dependencies'):
+                    self.db.execute("UPDATE tasks SET state='pending',not_before=0,error='Source proof reopened' WHERE id=?", (task['id'],))
+                elif decl and not decl.sorry and (changed or task['state'] not in ('closed', 'waiting_dependencies')):
+                    # A centrally repaired proof can reference unfinished prerequisites.
+                    # Source without a literal sorry is not yet evidence of kernel closure.
+                    verified = self.axioms(ROOT, task, 'discover-' + hashlib.sha256(task['id'].encode()).hexdigest()[:16])
+                    self.db.execute("UPDATE tasks SET state=?,error=? WHERE id=?",
+                        ('closed' if verified else 'waiting_dependencies',
+                         '' if verified else 'Proof present; awaiting prerequisite proofs and a clean axiom audit', task['id']))
+        self._source_fingerprint = fingerprint
 
     def build(self, cwd, module=None, tag='build'):
         args = ['lake', 'build'] + ([module] if module else [])
@@ -380,7 +391,8 @@ class Runner:
                 f'Attempts: {totals["n"]}; reported cost: ${totals["cost"] or 0:.4f}; attempts with unknown/incomplete usage: {totals["missing"] or 0}.',
                 f'Automatic retry: {stamp(pause)} ({meta(self.db,"pause_reason")})' if pause > time.time() else 'Queue is eligible to dispatch work.', '',
                 'Costs are client estimates and do not measure subscription allowance precisely.',
-                'Closed means the target proof passed source, build and axiom checks on main.', '', '## Needs attention', '']
+                'Closed means the target proof passed source, build and axiom checks on main.',
+                'Waiting_dependencies means a proof is present but its transitive axiom audit is not yet clean; no model worker is spent on it.', '', '## Needs attention', '']
         body += [f'- {t["name"]}: {t["error"]}' for t in self.db.execute("SELECT name,error FROM tasks WHERE state='blocked'")]
         (ROOT / 'reports/persistent.md').write_text('\n'.join(body) + '\n')
         fields = ['id','task','started','ended','outcome','proof_result','cost','usage_known','turns','duration_ms','usage']
@@ -453,7 +465,9 @@ class Runner:
                     limit = max(1, min(6, int(self.cfg.get('MAX_WORKERS', '3'))))
                     if os.getloadavg()[0] > int(self.cfg.get('LOAD_HALVE_ABOVE', '50')): limit = max(1, limit//2)
                     while len(self.active) < limit:
-                        task = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY attempts,last_attempt,id LIMIT 1", (time.time(),)).fetchone()
+                        priority = self.cfg.get('PRIORITY_MODULES', '').split()
+                        ranking = ('CASE WHEN module IN (' + ','.join('?' for _ in priority) + ') THEN 0 ELSE 1 END,') if priority else ''
+                        task = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY " + ranking + "attempts,last_attempt,id LIMIT 1", (time.time(), *priority)).fetchone()
                         if not task: break
                         self.start(task)
                 state = 'waiting_quota' if pause > time.time() else 'running'

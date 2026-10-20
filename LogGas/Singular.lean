@@ -30,19 +30,12 @@ Statements (phase notes S1–S8):
   `label_exp_bound` — eqs. (5.10)–(5.11);
 * S8 `lemma51` — eq. (5.1).
 
-Two deviations from the paper, forced by the earlier phases:
-1. `LogGas.Decoupling.Hyp` requires *bounded* kernels (pointwise bounds replaced essential
-   suprema in Phase 1), whereas `h_r` has a logarithmic singularity.  Lemma 6.1 is therefore
-   applied to the truncated kernels `h_r^R = (I-Q_J)_x(I-Q_J)_y (s_r ∧ R)`, which are bounded,
-   box-centered and satisfy (5.8) uniformly in `R`; the bound for `h_r` itself follows by
-   Fatou's lemma as `R → ∞` (`label_exp_bound`).  Consequently the statements involving the
-   unbounded kernel are phrased with `lintegral`s, and `lemma51` asserts integrability
-   together with the bound.
-2. The occupancy decomposition (5.9) is first proved at the level of label vectors
-   `L : Fin N → Fin M` with weights `M^{-N}` (`label_decomposition`), which is what the
-   grouped bound (6.4) needs (it accepts an arbitrary grouping `grp = L`); the paper's grouped
-   form with multinomial weights `π_N(n)` is `occupancy_decomposition` and is not used
-   downstream.
+The decoupling interface accepts integrable absolute powers and almost-everywhere
+centering/moment bounds. The logarithmically singular kernel is passed directly through
+`hker_boxKernel`; bounded truncations remain useful auxiliary approximations.
+The occupancy decomposition (5.9) is first proved at the level of label vectors
+`L : Fin N → Fin M` with weights `M^{-N}` (`label_decomposition`); the paper's multinomial
+form is `occupancy_decomposition`.
 
 The standing hypothesis H1 is not needed in this phase; H2 enters only through
 `SingularKernel`.
@@ -717,6 +710,62 @@ theorem hker_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {s' : E 
         ≤ ENNReal.ofReal (2 * kappaStar Cc V ^ p * p.factorial)) := by
   sorry
 
+/-- Finite nonnegative moments imply genuine Bochner integrability, including for `s_r`.
+This avoids the convention that the integral of a nonintegrable function is zero. -/
+theorem hker_integrable_pow_left (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d)
+    {s' : E → ℝ} (hs' : K.Sub s') (a : Fin M) (p : ℕ) (hp : 1 ≤ p) (y : E) :
+    Integrable (fun x => |hker bx s' x y| ^ p) (boxMeasure bx a) := by
+  apply (lintegral_ofReal_ne_top_iff_integrable
+    (((measurable_hker s' hs'.meas).comp (measurable_id.prodMk measurable_const)).abs.pow_const p).aestronglyMeasurable
+    (ae_of_all _ fun x => pow_nonneg (abs_nonneg _) p)).mp
+  exact ne_top_of_le_ne_top ENNReal.ofReal_ne_top ((hker_moment K hd hs' a p hp).1 y)
+
+theorem hker_integrable_pow_right (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d)
+    {s' : E → ℝ} (hs' : K.Sub s') (b : Fin M) (p : ℕ) (hp : 1 ≤ p) (x : E) :
+    Integrable (fun y => |hker bx s' x y| ^ p) (boxMeasure bx b) := by
+  apply (lintegral_ofReal_ne_top_iff_integrable
+    (((measurable_hker s' hs'.meas).comp (measurable_const.prodMk measurable_id)).abs.pow_const p).aestronglyMeasurable
+    (ae_of_all _ fun y => pow_nonneg (abs_nonneg _) p)).mp
+  exact ne_top_of_le_ne_top ENNReal.ofReal_ne_top ((hker_moment K hd hs' b p hp).2 x)
+
+/-- Eq. (5.8) as Bochner moments, without truncation or boundedness assumptions. -/
+theorem hker_moment_integral (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d)
+    {s' : E → ℝ} (hs' : K.Sub s') (a : Fin M) (p : ℕ) (hp : 1 ≤ p) :
+    (∀ y, ∫ x, |hker bx s' x y| ^ p ∂boxMeasure bx a
+      ≤ 2 * kappaStar Cc V ^ p * p.factorial) ∧
+    (∀ x, ∫ y, |hker bx s' x y| ^ p ∂boxMeasure bx a
+      ≤ 2 * kappaStar Cc V ^ p * p.factorial) := by
+  constructor
+  · intro y
+    exact (ENNReal.ofReal_le_ofReal_iff (by have := kappaStar_pos Cc V; positivity)).mp
+      ((ofReal_integral_eq_lintegral_ofReal (hker_integrable_pow_left K hd hs' a p hp y)
+        (ae_of_all _ fun x => pow_nonneg (abs_nonneg _) p)).trans_le
+        ((hker_moment K hd hs' a p hp).1 y))
+  · intro x
+    exact (ENNReal.ofReal_le_ofReal_iff (by have := kappaStar_pos Cc V; positivity)).mp
+      ((ofReal_integral_eq_lintegral_ofReal (hker_integrable_pow_right K hd hs' a p hp x)
+        (ae_of_all _ fun y => pow_nonneg (abs_nonneg _) p)).trans_le
+        ((hker_moment K hd hs' a p hp).2 x))
+
+/-- Joint moments are integrable by Fubini and the uniform slice moment bound. -/
+theorem hker_integrable_pow_prod (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d)
+    {s' : E → ℝ} (hs' : K.Sub s') (a b : Fin M) (p : ℕ) (hp : 1 ≤ p) :
+    Integrable (fun z : E × E => |hker bx s' z.1 z.2| ^ p)
+      ((boxMeasure bx a).prod (boxMeasure bx b)) := by
+  apply (integrable_prod_iff' ((measurable_hker s' hs'.meas).abs.pow_const p).aestronglyMeasurable).mpr
+  refine ⟨ae_of_all _ (hker_integrable_pow_left K hd hs' a p hp), ?_⟩
+  apply Integrable.of_bound
+    ((show StronglyMeasurable (uncurry (fun x y => ‖|hker bx s' x y| ^ p‖)) from
+      ((measurable_hker s' hs'.meas).abs.pow_const p).stronglyMeasurable.norm).integral_prod_left.aestronglyMeasurable)
+    (2 * kappaStar Cc V ^ p * p.factorial)
+  filter_upwards [] with y
+  change ‖∫ x, ‖|hker bx s' x y| ^ p‖ ∂boxMeasure bx a‖ ≤ _
+  have heq : ∀ x : E, ‖|hker bx s' x y| ^ p‖ = |hker bx s' x y| ^ p :=
+    fun x => Real.norm_of_nonneg (pow_nonneg (abs_nonneg _) p)
+  simp_rw [heq]
+  rw [Real.norm_of_nonneg (integral_nonneg fun x => pow_nonneg (abs_nonneg _) p)]
+  exact (hker_moment_integral K hd hs' a p hp).1 y
+
 -- SKETCH: `hker bx (trunc R K.s)` is bounded by `R + 3 Cc` (`hker_abs_le`, `min_le_right`),
 -- so `|h|^p` is integrable on the probability measure `ν_a` (`Integrable.of_bound`), and
 -- `ofReal_integral_eq_lintegral_ofReal` + `ENNReal.ofReal_le_ofReal_iff` transfer `hker_moment`.
@@ -728,7 +777,7 @@ theorem hker_moment_trunc (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {R
         ≤ 2 * kappaStar Cc V ^ p * p.factorial) ∧
     (∀ x, ∫ y, |hker bx (trunc R K.s) x y| ^ p ∂(boxMeasure bx a)
         ≤ 2 * kappaStar Cc V ^ p * p.factorial) := by
-  sorry
+  exact hker_moment_integral K hd (SingularKernel.Sub.trunc K hR) a p hp
 
 end SingularMoments
 
@@ -875,7 +924,7 @@ section Grouped
 variable {N : ℕ}
 variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 
-/-- The hypotheses of Lemma 6.1 for a single bounded symmetric kernel under the box measures,
+/-- The hypotheses of Lemma 6.1 for a single symmetric kernel with finite moments under the box measures,
 together with locality: exactly what Step 3 of the proof of Lemma 5.1 verifies for `h_r`
 (centering (6.1) under every `ν_a`, moments (6.2) with `κ`, vanishing between distinct
 non-adjacent boxes). -/
@@ -883,13 +932,15 @@ structure BoxKernel (bx : Boxes μE M) (G : SimpleGraph (Fin M)) (h : E → E �
     Prop where
   κ_pos : 0 < κ
   meas : Measurable (uncurry h)
-  bdd : ∃ C : ℝ, ∀ x y, |h x y| ≤ C
+  integrable_pow : ∀ a b (p : ℕ), 1 ≤ p →
+    Integrable (fun z : E × E => |h z.1 z.2| ^ p)
+      ((boxMeasure bx a).prod (boxMeasure bx b))
   symm : ∀ x y, h x y = h y x
-  centered_left : ∀ a y, ∫ x, h x y ∂(boxMeasure bx a) = 0
-  centered_right : ∀ b x, ∫ y, h x y ∂(boxMeasure bx b) = 0
-  moment_left : ∀ a (p : ℕ), 1 ≤ p → ∀ y,
+  centered_left : ∀ a b, ∀ᵐ y ∂boxMeasure bx b, ∫ x, h x y ∂(boxMeasure bx a) = 0
+  centered_right : ∀ a b, ∀ᵐ x ∂boxMeasure bx a, ∫ y, h x y ∂(boxMeasure bx b) = 0
+  moment_left : ∀ a b (p : ℕ), 1 ≤ p → ∀ᵐ y ∂boxMeasure bx b,
     ∫ x, |h x y| ^ p ∂(boxMeasure bx a) ≤ 2 * κ ^ p * p.factorial
-  moment_right : ∀ b (p : ℕ), 1 ≤ p → ∀ x,
+  moment_right : ∀ a b (p : ℕ), 1 ≤ p → ∀ᵐ x ∂boxMeasure bx a,
     ∫ y, |h x y| ^ p ∂(boxMeasure bx b) ≤ 2 * κ ^ p * p.factorial
   local_ : ∀ a b, a ≠ b → ¬ G.Adj a b → ∀ x ∈ bx.A a, ∀ y ∈ bx.A b, h x y = 0
 
@@ -903,8 +954,7 @@ noncomputable def labelKer (bx : Boxes μE M) (L : Fin N → Fin M) (h : E → E
 -- SKETCH: `κ_pos := H.κ_pos`; `Y_meas i := measurable_pi_apply i`; `Y_indep` via
 -- `iIndepFun_iff_map_fun_eq_pi_map`: `map (fun x i => x i) = map id = labelMeasure`, and
 -- `map (eval i) (Measure.pi ν) = ν i` (`Measure.pi_map_eval`, `measure_univ`, `Finset.prod_const_one`);
--- `Y_law` the same; `h_meas` from `H.meas` and indicators; `h_bdd` from `H.bdd`
--- (indicators are `≤ 1`); centering: pull the constant `1_{A_{L j}}(y)` out
+-- `Y_law` the same; `h_meas` from `H.meas` and indicators; `h_int` by restricting the joint moment integral to the measurable box rectangle; centering: pull the constant `1_{A_{L j}}(y)` out
 -- (`integral_const_mul`) and `∫ 1_{A_{L i}} h(·, y) dν_{L i} = ∫ h(·, y) dν_{L i} = 0`
 -- (`integral_congr_ae` with `ae_mem_boxMeasure`, `H.centered_left`); moments likewise
 -- (`|1_A x * 1_B y * h| ^ p ≤ |h| ^ p`, `integral_mono`, `H.moment_left`).
@@ -912,7 +962,53 @@ noncomputable def labelKer (bx : Boxes μE M) (L : Fin N → Fin M) (h : E → E
 and the localized kernels satisfy (6.1)–(6.2) with constant `κ`. -/
 theorem hyp_labels {h : E → E → ℝ} {κ : ℝ} (H : BoxKernel bx G h κ) (L : Fin N → Fin M) :
     Hyp (labelMeasure bx L) (fun i => boxMeasure bx (L i)) (coord N) (labelKer bx L h) κ := by
-  sorry
+  classical
+  refine { κ_pos := H.κ_pos
+           Y_meas := fun i => measurable_pi_apply i
+           Y_indep := iIndepFun_pi (X := fun _ => id) (fun _ => aemeasurable_id)
+           Y_law := fun i => (measurePreserving_eval (fun i => boxMeasure bx (L i)) i).map_eq
+           h_meas := ?_
+           h_int := ?_
+           centered_left := ?_
+           centered_right := ?_
+           moment_left := ?_
+           moment_right := ?_ }
+  · intro i j
+    exact (((measurable_const.indicator (bx.meas (L i))).comp measurable_fst).mul
+      ((measurable_const.indicator (bx.meas (L j))).comp measurable_snd)).mul H.meas
+  · intro i j p hp
+    convert (H.integrable_pow (L i) (L j) p hp).indicator
+      ((bx.meas (L i)).prod (bx.meas (L j))) using 1
+    funext z
+    by_cases hx : z.1 ∈ bx.A (L i) <;> by_cases hy : z.2 ∈ bx.A (L j) <;>
+      simp [labelKer, Set.indicator, hx, hy, zero_pow (by omega : p ≠ 0)]
+  · intro i j _
+    filter_upwards [H.centered_left (L i) (L j), ae_mem_boxMeasure bx (L j)] with y hc hy
+    rw [← hc]
+    apply integral_congr_ae
+    filter_upwards [ae_mem_boxMeasure bx (L i)] with x hx
+    simp [labelKer, hx, hy]
+  · intro i j _
+    filter_upwards [H.centered_right (L i) (L j), ae_mem_boxMeasure bx (L i)] with x hc hx
+    rw [← hc]
+    apply integral_congr_ae
+    filter_upwards [ae_mem_boxMeasure bx (L j)] with y hy
+    simp [labelKer, hx, hy]
+  · intro i j _ p hp
+    filter_upwards [H.moment_left (L i) (L j) p hp, ae_mem_boxMeasure bx (L j)] with y hm hy
+    have heq : (fun x => |labelKer bx L h i j x y| ^ p) =ᵐ[boxMeasure bx (L i)]
+        (fun x => |h x y| ^ p) := by
+      filter_upwards [ae_mem_boxMeasure bx (L i)] with x hx
+      simp [labelKer, hx, hy]
+    rwa [integral_congr_ae heq]
+  · intro i j _ p hp
+    filter_upwards [H.moment_right (L i) (L j) p hp, ae_mem_boxMeasure bx (L i)] with x hm hx
+    have heq : (fun y => |labelKer bx L h i j x y| ^ p) =ᵐ[boxMeasure bx (L j)]
+        (fun y => |h x y| ^ p) := by
+      filter_upwards [ae_mem_boxMeasure bx (L j)] with y hy
+      simp [labelKer, hx, hy]
+    rwa [integral_congr_ae heq]
+
 
 -- SKETCH: on the a.e. set of `ae_labels_mem`, every indicator equals `1`
 -- (`Set.indicator_of_mem`, `one_mul`), so the double sums defining `S` agree termwise
@@ -931,12 +1027,35 @@ theorem S_labelKer_ae (bx : Boxes μE M) (L : Fin N → Fin M) (h : E → E → 
 -- (`abs_of_nonneg`, `Nat.floor_le`, `div_le_iff₀`, `nlinarith`).
 /-- Eq. `eq:physical-local-effective-coupling` (5.10): for a good label vector and
 `8 K C_u κ t δ ≤ 1/2` with `K = 3^d`, the grouped bound (6.4) gives
-`𝔼_L[e^{t W_N(h)}] ≤ (8/3)^M` for every bounded box kernel `h`. -/
+`𝔼_L[e^{t W_N(h)}] ≤ (8/3)^M` for every box kernel `h` with finite moments. -/
 theorem label_exp_bound_of_boxKernel [DecidableRel G.Adj] (hdeg : ∀ a, G.degree a ≤ 3 ^ d - 1)
     {h : E → E → ℝ} {κ : ℝ} (H : BoxKernel bx G h κ) (hN : 1 ≤ N) (L : Fin N → Fin M) (δ : ℝ)
     (hL : GoodLabel L δ) (t : ℝ) (ht : 0 ≤ t) (hδ : 8 * 3 ^ d * Cu * κ * t * δ ≤ 1 / 2) :
     ∫ x, Real.exp (t * W h (coord N) x) ∂(labelMeasure bx L) ≤ (8 / 3) ^ M := by
   sorry
+
+/-- The singular centered kernel and all its sub-kernels satisfy the generalized interface.
+No boundedness assumption is needed. -/
+theorem hker_boxKernel (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d)
+    {s' : E → ℝ} (hs' : K.Sub s') : BoxKernel bx G (hker bx s') (kappaStar Cc V) := by
+  refine { κ_pos := kappaStar_pos Cc V
+           meas := measurable_hker s' hs'.meas
+           integrable_pow := fun a b p hp => hker_integrable_pow_prod K hd hs' a b p hp
+           symm := hker_symm K hs'
+           centered_left := fun a b => ae_of_all _ (hker_box_centered_left K hs' a)
+           centered_right := fun a b => ae_of_all _ (hker_box_centered_right K hs' b)
+           moment_left := fun a b p hp => ae_of_all _ (hker_moment_integral K hd hs' a p hp).1
+           moment_right := fun a b p hp => ae_of_all _ (hker_moment_integral K hd hs' b p hp).2
+           local_ := ?_ }
+  intro a b hab hadj x hx y hy
+  exact hker_local K hs' hab hadj hx hy
+
+/-- Direct application of the generalized decoupling hypotheses to the logarithmically
+singular kernel under a label law. All integrability fields are discharged by (5.8). -/
+theorem hyp_hker_labels (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) (L : Fin N → Fin M) :
+    Hyp (labelMeasure bx L) (fun i => boxMeasure bx (L i)) (coord N)
+      (labelKer bx L (hker bx K.s)) (kappaStar Cc V) := by
+  exact hyp_labels (hker_boxKernel K hd (SingularKernel.Sub.self K)) L
 
 -- SKETCH: `kappaStar_pos`; `measurable_hker (K.s_meas.min measurable_const)`;
 -- `⟨R + 3 * Cc, …⟩` from `hker_abs_le` and `min_le_right`; `hker_symm`,
@@ -945,7 +1064,7 @@ theorem label_exp_bound_of_boxKernel [DecidableRel G.Adj] (hdeg : ∀ a, G.degre
 with the universal constant `κ_*` of eq. (5.8). -/
 theorem hker_trunc_boxKernel (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {R : ℝ}
     (hR : 0 ≤ R) : BoxKernel bx G (hker bx (trunc R K.s)) (kappaStar Cc V) := by
-  sorry
+  exact hker_boxKernel K hd (SingularKernel.Sub.trunc K hR)
 
 -- SKETCH: `label_exp_bound_of_boxKernel hdeg (hker_trunc_boxKernel K hd hR) hN L δ hL t ht hδ`.
 /-- Eqs. (5.10)–(5.11) for the truncated kernels: `𝔼_L[e^{t W_N(h_r^R)}] ≤ (8/3)^M` for every
@@ -969,16 +1088,12 @@ theorem hker_trunc_tendsto (K : SingularKernel μE bx G d Cc V) (x y : E) :
     Tendsto (fun n : ℕ => hker bx (trunc n K.s) x y) atTop (𝓝 (hker bx K.s x y)) := by
   sorry
 
--- SKETCH: Fatou.  `exp (t W(h_r^n)) → exp (t W(h_r))` pointwise (`hker_trunc_tendsto`,
--- `tendsto_finset_sum`, `Real.continuous_exp.tendsto`, `ENNReal.continuous_ofReal`), so the left
--- side is `∫⁻ liminf_n ofReal (exp (t W(h_r^n)))` (`Tendsto.liminf_eq`), which is
--- `≤ liminf_n ∫⁻ ofReal (exp (t W(h_r^n)))` by `lintegral_liminf_le` (measurability:
--- `measurable_W`, `measurable_hker`, `measurable_pi_apply`).  Each term is
--- `= ofReal (∫ exp (t W(h_r^n))) ≤ ofReal ((8/3)^M)` (`ofReal_integral_eq_lintegral_ofReal`
--- for the bounded integrand, `label_exp_bound_trunc` with `R = n`), and `liminf_le_of_le`
--- / `Filter.liminf_le_of_frequently_le` give the bound.
+-- Use `hker_boxKernel K hd K.Sub.self` and the grouped bound directly.
+-- Establish exponential integrability using the positive moment series before converting
+-- the Bochner bound to a lintegral bound. An upper bound on a Bochner integral alone does
+-- not establish integrability. Truncation/Fatou remains an alternative derivation.
 /-- Eq. `eq:physical-centered-local-bound` (5.11) for a fixed good label vector:
-`𝔼_L[e^{t W_N(h_r)}] ≤ (8/3)^M`, obtained from the truncated bound by Fatou's lemma. -/
+`𝔼_L[e^{t W_N(h_r)}] ≤ (8/3)^M`, using the integrable-moment box-kernel interface. -/
 theorem label_exp_bound [DecidableRel G.Adj] (hdeg : ∀ a, G.degree a ≤ 3 ^ d - 1)
     (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) (hN : 1 ≤ N) (L : Fin N → Fin M) (δ : ℝ)
     (hL : GoodLabel L δ) (t : ℝ) (ht : 0 ≤ t)

@@ -45,6 +45,9 @@ that watchdog. Unexpected controller exits are retried by the supervisor.
 - Before accepting a proof, the controller requires the statement and other
   declarations to be unchanged, builds its module, and checks its transitive
   axioms against `propext`, `Classical.choice`, and `Quot.sound`.
+- Proofs introduced centrally also receive an axiom check. A proof whose prerequisites
+  remain unfinished is `waiting_dependencies`; it is rechecked after source changes
+  without launching another model worker.
 - Each merge gets a full project build and another axiom check on main. A valid
   proof is recovered even if its worker finished at the turn limit.
 - Proofs, author flags, and usage reports are committed and pushed incrementally.
@@ -65,6 +68,8 @@ Edit `scripts/pipeline.conf` while the service is stopped, then restart it.
 Workers have 20 model turns and a 10-minute timeout per invocation. Subagent
 and recursive model delegation are disabled. `pipeline.conf.cheap` is a legacy
 preset; its dollar/task caps have no effect on the persistent controller.
+`PRIORITY_MODULES` places ready tasks from the repaired Decoupling/Grouped chain first;
+retry cooldowns still allow other modules to progress.
 
 Offline regression tests use fake models and Lean commands with real Git worktrees:
 

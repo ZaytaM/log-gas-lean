@@ -83,48 +83,64 @@ theorem Hyp.restrict (H : Hyp μ ν Y h κ) (p : Fin m → Fin m → Prop)
   have hz : ∀ (q : ℕ) (hq : 1 ≤ q), (0:ℝ) ≤ 2 * κ ^ q * (q.factorial : ℝ) := fun q _ => by
     have := H.κ_pos
     positivity
-  refine ⟨H.κ_pos, H.Y_meas, H.Y_indep, H.Y_law, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine { H with
+    h_meas := ?_
+    h_int := ?_
+    centered_left := ?_
+    centered_right := ?_
+    moment_left := ?_
+    moment_right := ?_ }
   · intro i j
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.h_meas i j
-    · simp only [hp, if_false]; exact measurable_const
-  · intro i j
+    split_ifs
+    · exact H.h_meas i j
+    · exact measurable_const
+  · intro i j q hq
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.h_bdd i j
-    · exact ⟨0, by simp [hp]⟩
-  · intro i j hij y
+    split_ifs
+    · exact H.h_int i j q hq
+    · simpa [zero_pow (by omega : q ≠ 0)] using
+        (integrable_zero : Integrable (fun _ : E × E => (0 : ℝ)) ((ν i).prod (ν j)))
+  · intro i j hij
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.centered_left i j hij y
-    · simp [hp]
-  · intro i j hij x
+    split_ifs
+    · exact H.centered_left i j hij
+    · simp
+  · intro i j hij
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.centered_right i j hij x
-    · simp [hp]
-  · intro i j hij q hq y
+    split_ifs
+    · exact H.centered_right i j hij
+    · simp
+  · intro i j hij q hq
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.moment_left i j hij q hq y
-    · simp [hp, zero_pow (by omega : q ≠ 0)]
-      exact hz q hq
-  · intro i j hij q hq x
+    split_ifs
+    · exact H.moment_left i j hij q hq
+    · filter_upwards [] with y
+      simpa [zero_pow (by omega : q ≠ 0)] using hz q hq
+  · intro i j hij q hq
     unfold LogGas.Grouped.restrict
-    by_cases hp : p i j
-    · simpa [hp] using H.moment_right i j hij q hq x
-    · simp [hp, zero_pow (by omega : q ≠ 0)]
-      exact hz q hq
+    split_ifs
+    · exact H.moment_right i j hij q hq
+    · filter_upwards [] with x
+      simpa [zero_pow (by omega : q ≠ 0)] using hz q hq
 
--- SKETCH: `Y_indep` is `H.Y_indep.precomp e.injective`; `Y_law`, `Y_meas`, `h_meas`, `h_bdd`
+-- SKETCH: `Y_indep` is `H.Y_indep.precomp e.injective`; `Y_law`, `Y_meas`, `h_meas`, `h_int`
 -- are instances of the fields of `H` at `e a`, `e b`.  For the `i < j` fields use
 -- `e.strictMono` / `OrderEmbedding.lt_iff_lt` to transport `a < b` to `e a < e b`.
 /-- Reindexing along a strictly monotone injection `e : Fin n ↪o Fin m` (the increasing
 enumeration of a block of variables) preserves the hypotheses of Lemma 6.1. -/
 theorem Hyp.reindex (H : Hyp μ ν Y h κ) {n : ℕ} (e : Fin n ↪o Fin m) :
     Hyp μ (fun a => ν (e a)) (fun a => Y (e a)) (fun a b => h (e a) (e b)) κ := by
-  sorry
+  exact { κ_pos := H.κ_pos
+          Y_meas := fun a => H.Y_meas (e a)
+          Y_indep := H.Y_indep.precomp e.injective
+          Y_law := fun a => H.Y_law (e a)
+          h_meas := fun a b => H.h_meas (e a) (e b)
+          h_int := fun a b q hq => H.h_int (e a) (e b) q hq
+          centered_left := fun a b hab => H.centered_left (e a) (e b) (e.strictMono hab)
+          centered_right := fun a b hab => H.centered_right (e a) (e b) (e.strictMono hab)
+          moment_left := fun a b hab q hq => H.moment_left (e a) (e b) (e.strictMono hab) q hq
+          moment_right := fun a b hab q hq => H.moment_right (e a) (e b) (e.strictMono hab) q hq }
 
 -- SKETCH: unfold `S`; on the right drop all terms with `i ∉ T` or `j ∉ T` (`hvan`,
 -- `Finset.sum_subset`, `Finset.sum_eq_zero`), leaving `∑ i ∈ T, ∑ j ∈ T.filter (i < ·), …`.
@@ -195,12 +211,17 @@ theorem measurable_S (hY : ∀ i, Measurable (Y i))
     (hh : ∀ i j, Measurable (Function.uncurry (h i j))) : Measurable (S h Y) := by
   sorry
 
--- SKETCH: choose bounds `C i j` from `H.h_bdd` (`Classical.choose`, or `choose C hC using`),
--- and take `∑ i, ∑ j ∈ Ioi i, C i j`; conclude with `Finset.abs_sum_le_sum_abs` and
--- `Finset.sum_le_sum`.
-/-- `S` is a bounded function under the hypotheses of Lemma 6.1. -/
-theorem exists_bound_S (H : Hyp μ ν Y h κ) : ∃ C : ℝ, ∀ ω, |S h Y ω| ≤ C := by
-  sorry
+/-- A separate bounded-kernel utility. Boundedness is an explicit extra premise,
+not a consequence of the hypotheses of Lemma 6.1. -/
+theorem exists_bound_S (H : Hyp μ ν Y h κ)
+    (hbdd : ∀ i j, ∃ C : ℝ, ∀ x y, |h i j x y| ≤ C) :
+    ∃ C : ℝ, ∀ ω, |S h Y ω| ≤ C := by
+  classical
+  choose C hC using hbdd
+  refine ⟨∑ i, ∑ j ∈ Ioi i, C i j, fun ω => ?_⟩
+  unfold S
+  exact (Finset.abs_sum_le_sum_abs _ _).trans (Finset.sum_le_sum fun i _ =>
+    (Finset.abs_sum_le_sum_abs _ _).trans (Finset.sum_le_sum fun j _ => hC i j _ _))
 
 -- SKETCH: set `n := T.card`, `e := T.orderEmbOfFin rfl`.  `H.reindex e` gives the
 -- hypotheses on `Fin n`; `S_reindex h Y T rfl hvan ω` identifies the two `S`'s pointwise
@@ -364,7 +385,8 @@ theorem class_decomposition (H : Hyp μ ν Y h κ) {M : ℕ} (grp : Fin m → Fi
 -- `f c ω := u * (∑ a, S (h' c a) Y ω) / m`, so `u * S h Y ω / m = ∑ c, f c ω`
 -- (`Finset.mul_sum`, `Finset.sum_div`) and `(2K : ℝ) * f c ω = (2K u) * (∑ a, S …) / m`.
 -- `holder_classes μ (n := 2K)`: measurability from `measurable_S`, integrability from
--- boundedness (`exists_bound_S` for each `h' c a`, `Integrable.of_bound`).  Each factor is
+-- finite exponential moments at the required coupling, proved via the nonnegative
+-- exponential series and `moment_bound`. No boundedness premise is available.  Each factor is
 -- `≤ ((8/3)^M) ^ (1/(2K))` by `class_bound` with `t = 2 K u`, since
 -- `Cu κ |2Ku| (2 m*)/m = 4 K Cu κ |u| m*/m ≤ 1/2` (`abs_mul`, `Nat.abs_cast`, `ring_nf`)
 -- and `Real.rpow_le_rpow` (bases nonnegative by `integral_nonneg`).  Finally

@@ -30,3 +30,10 @@ Run hygiene (added 2026-10-20 after the first night failed silently)
 - `scripts/quota_error.py` decides "model unavailable" for workers, advisor, reporter and orchestrator.
 - `state/tracker.md` rows are written by the script, not the reporter.
 - `scripts/pipeline.conf.cheap` holds the low-cost defaults (sonnet workers, $40 cap, advisor on).
+
+Current conservative settings
+- Opus creates skeletons; Sonnet proves lemmas; Haiku writes reports. Advisor calls are disabled.
+- At most 3 workers concurrently and 5 worker tasks per run; workers cannot use Agent/Task delegation.
+- Each worker has 5 proof attempts, 20 tool turns, and a 10-minute timeout.
+- The run uses a $40 estimated-cost cap; this does not guarantee staying within subscription limits.
+- Automatic model fallback is disabled. `pipeline.conf.cheap` is an older, higher-concurrency preset.

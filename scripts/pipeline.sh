@@ -91,6 +91,7 @@ run_worker(){ # file module lemma
     echo unavailable > $ROOT/$RUN/$lem.rc
     for model in $MODEL_WORKER $MODEL_WORKER_FALLBACK; do
       timeout ${WORKER_TIMEOUT}s claude -p --model $model --max-turns $MAX_TURNS \
+        --disallowedTools "Agent" "Task" \
         --dangerously-skip-permissions --output-format json "$prompt" > $ROOT/$RUN/$lem.json 2> $ROOT/$RUN/$lem.err
       rc=$?
       if [ $rc -eq 124 ]; then echo timeout > $ROOT/$RUN/$lem.rc; echo "$lem model=$model timeout" >> $ROOT/$RUN/models.txt; break; fi
@@ -114,6 +115,7 @@ run_worker(){ # file module lemma
 log "budget tonight: \$$CAP (hard cap \$$NIGHT_COST_CAP_USD, session allowance ${SESSION_LIMIT_USD:-unknown} x ${SESSION_LIMIT_FRACTION:-0.9})"
 n=0
 while IFS=$'\t' read -r file mod lem cnt; do
+  [ "$n" -ge "${MAX_TASKS_PER_RUN:-5}" ] && { log "task cap reached ($n workers launched); no more workers"; break; }
   over_cap $n && { log "budget \$$CAP reached (spent \$$(cost_total), $((n - $(grep -c . $COST_FILE))) workers still running); no more workers"; break; }
   [ -e $RUN/unavailable ] && { log "a worker found the model unavailable (limit/quota); not starting more"; break; }
   run_worker "$file" "$mod" "$lem" &

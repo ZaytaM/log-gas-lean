@@ -1,5 +1,5 @@
 You are proving one Lean 4 lemma in a Mathlib project. You work alone on a git worktree;
-only the file below may change.
+only the file below may change. Do not spawn subagents or launch other model sessions.
 
 File: {LEMMA_FILE}
 Lemma: {LEMMA_NAME}

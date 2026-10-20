@@ -232,7 +232,87 @@ theorem integrable_exp_sum (hN : 2 ≤ N) (hX_meas : ∀ i, Measurable (X i))
     (hK_int : ∀ᵐ x ∂ν, Integrable (fun y => Real.exp (K (x - y))) ν)
     (A : ℝ) (hA : 1 ≤ A) (hKA : ∀ᵐ x ∂ν, ∫ y, Real.exp (K (x - y)) ∂ν ≤ A) (i : Fin N) :
     Integrable (fun ω => Real.exp (∑ j ∈ univ.erase i, K (X i ω - X j ω))) μ := by
-  sorry
+  classical
+  obtain ⟨n, rfl⟩ : ∃ n, N = n + 1 := ⟨N - 1, by omega⟩
+  set P : Measure (Fin (n + 1) → E) := Measure.pi (fun _ : Fin (n + 1) => ν) with hP
+  have hmap : μ.map (fun ω j => X j ω) = P := by
+    rw [(iIndepFun_iff_map_fun_eq_pi_map (fun j => (hX_meas j).aemeasurable)).1 hX_indep]
+    congr 1; funext j; exact hX_law j
+  have hXv : Measurable (fun ω j => X j ω) := measurable_pi_iff.2 hX_meas
+  set G : (Fin (n + 1) → E) → ℝ := fun y => Real.exp (∑ j ∈ univ.erase i, K (y i - y j)) with hG
+  have hGm : Measurable G := by
+    refine Real.measurable_exp.comp (Finset.measurable_sum _ fun j _ => hK.comp ?_)
+    exact (measurable_pi_apply i).sub (measurable_pi_apply j)
+  have hsum : ∀ y : Fin (n + 1) → E,
+      ∑ j ∈ univ.erase i, K (y i - y j) = ∑ k : Fin n, K (y i - y (i.succAbove k)) := by
+    intro y
+    have h1 := Fin.sum_univ_succAbove (fun j => K (y i - y j)) i
+    have h2 := Finset.add_sum_erase univ (fun j => K (y i - y j)) (Finset.mem_univ i)
+    linarith
+  have hfin : ∫⁻ ω, ENNReal.ofReal (G (fun j => X j ω)) ∂μ ≤ ENNReal.ofReal A ^ n := by
+    have e1 : ∫⁻ ω, ENNReal.ofReal (G (fun j => X j ω)) ∂μ
+        = ∫⁻ y, ENNReal.ofReal (G y) ∂P := by
+      rw [← hmap]
+      exact (lintegral_map (f := fun y => ENNReal.ofReal (G y))
+        (ENNReal.measurable_ofReal.comp hGm) hXv).symm
+    rw [e1]
+    set H : E × (Fin n → E) → ℝ≥0∞ := fun p =>
+      ∏ k : Fin n, ENNReal.ofReal (Real.exp (K (p.1 - p.2 k))) with hH
+    have hHm : Measurable H := by
+      refine Finset.measurable_prod _ fun k _ => ENNReal.measurable_ofReal.comp
+        (Real.measurable_exp.comp (hK.comp ?_))
+      exact measurable_fst.sub ((measurable_pi_apply k).comp measurable_snd)
+    have e2 : ∀ y, ENNReal.ofReal (G y) = H (MeasurableEquiv.piFinSuccAbove (fun _ => E) i y) := by
+      intro y
+      have he : MeasurableEquiv.piFinSuccAbove (fun _ => E) i y
+          = (y i, fun k => y (i.succAbove k)) := rfl
+      rw [he]
+      simp only [hG, hH]
+      rw [hsum y, Real.exp_sum, ENNReal.ofReal_prod_of_nonneg (fun k _ => (Real.exp_pos _).le)]
+    simp_rw [e2]
+    have mp := measurePreserving_piFinSuccAbove (fun _ : Fin (n + 1) => ν) i
+    rw [mp.lintegral_comp_emb (MeasurableEquiv.measurableEmbedding _) H,
+      lintegral_prod _ hHm.aemeasurable]
+    calc ∫⁻ x, ∫⁻ z, H (x, z) ∂(Measure.pi fun j : Fin n => ν) ∂ν
+        ≤ ∫⁻ x, ENNReal.ofReal A ^ n ∂ν := by
+          refine lintegral_mono_ae ?_
+          filter_upwards [hK_int, hKA] with x hx1 hx2
+          have hind : iIndepFun (fun (k : Fin n) (z : Fin n → E) =>
+              ENNReal.ofReal (Real.exp (K (x - z k)))) (Measure.pi fun j : Fin n => ν) :=
+            iIndepFun_pi (μ := fun _ : Fin n => ν)
+              (X := fun _ y => ENNReal.ofReal (Real.exp (K (x - y))))
+              (fun _ => (ENNReal.measurable_ofReal.comp
+                (Real.measurable_exp.comp (hK.comp (measurable_const.sub measurable_id)))).aemeasurable)
+          have := lintegral_prod_eq_prod_lintegral_of_indepFun (Finset.univ : Finset (Fin n))
+            (fun (k : Fin n) (z : Fin n → E) => ENNReal.ofReal (Real.exp (K (x - z k)))) hind
+            (fun k => ENNReal.measurable_ofReal.comp
+              (Real.measurable_exp.comp (hK.comp (measurable_const.sub (measurable_pi_apply k)))))
+          simp only [hH]
+          rw [this]
+          have hk : ∀ k : Fin n, ∫⁻ z, ENNReal.ofReal (Real.exp (K (x - z k)))
+              ∂(Measure.pi fun j : Fin n => ν) ≤ ENNReal.ofReal A := by
+            intro k
+            have hmp := (measurePreserving_eval (fun _ : Fin n => ν) k)
+            have hg : Measurable (fun y : E => ENNReal.ofReal (Real.exp (K (x - y)))) :=
+              ENNReal.measurable_ofReal.comp
+                (Real.measurable_exp.comp (hK.comp (measurable_const.sub measurable_id)))
+            have e : ∫⁻ z, ENNReal.ofReal (Real.exp (K (x - z k)))
+                ∂(Measure.pi fun j : Fin n => ν)
+                = ∫⁻ y, ENNReal.ofReal (Real.exp (K (x - y))) ∂ν := by
+              calc _ = ∫⁻ y, ENNReal.ofReal (Real.exp (K (x - y)))
+                    ∂(Measure.map (Function.eval k) (Measure.pi fun j : Fin n => ν)) :=
+                    (lintegral_map hg (measurable_pi_apply k)).symm
+                _ = _ := by rw [hmp.map_eq]
+            rw [e]
+            rw [← ofReal_integral_eq_lintegral_ofReal hx1
+              (Filter.Eventually.of_forall fun y => (Real.exp_pos _).le)]
+            exact ENNReal.ofReal_le_ofReal hx2
+          calc ∏ k : Fin n, _ ≤ ∏ _k : Fin n, ENNReal.ofReal A := Finset.prod_le_prod' (fun k _ => hk k)
+            _ = _ := by simp
+      _ = ENNReal.ofReal A ^ n := by simp
+  refine ⟨(hGm.comp hXv).aestronglyMeasurable, ?_⟩
+  rw [hasFiniteIntegral_iff_ofReal (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le)]
+  exact lt_of_le_of_lt hfin (ENNReal.pow_lt_top ENNReal.ofReal_lt_top)
 
 -- SKETCH: `(b/2) * W g X ω = (1/N) * ∑ i, f i ω` with
 -- `f i ω = (b/2) * ∑ j ∈ univ.erase i, g (X i ω - X j ω)` (`W`, `Finset.mul_sum`,

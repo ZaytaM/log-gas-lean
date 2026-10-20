@@ -220,6 +220,9 @@ class Runner:
                            'LEMMA_NAME':task['name'], 'MAX_ATTEMPTS':self.cfg.get('MAX_ATTEMPTS', '5')}.items():
             prompt = prompt.replace('{' + key + '}', value)
         prompt += f'\nPrevious attempts: {task["attempts"]}. Last outcome: {task["error"][-1500:]}.\n'
+        notes = worktree / '.lake/worker-notes.md'
+        if notes.exists():
+            prompt += '\nSaved notes from the previous attempt:\n' + notes.read_text()[-3000:] + '\n'
         now = time.time()
         base = checked(['git', 'rev-parse', 'main'])
         with self.db:
@@ -262,7 +265,11 @@ class Runner:
             failures = int(meta(self.db, 'limit_failures', '0')) + 1
             put_meta(self.db, 'limit_failures', failures)
             fallback = min(3600, 300 * 2 ** min(failures-1, 4)) if outcome == 'quota' else (1800 if outcome == 'authentication' else min(900, 60*failures))
-            until = reset_time(json.dumps(data or {}) + stderr, now, fallback)
+            # A finished worker may wait behind integration builds. Interpret the
+            # advertised clock at the response time, so a reset just passed does
+            # not accidentally become a next-day wait.
+            observed = min(now, result_path.stat().st_mtime) if result_path.exists() else now
+            until = max(now + 60, reset_time(json.dumps(data or {}) + stderr, observed, fallback))
             until = max(until, float(meta(self.db, 'pause_until', '0')))
             put_meta(self.db, 'pause_until', until)
             put_meta(self.db, 'pause_reason', outcome)
@@ -365,6 +372,7 @@ class Runner:
         totals = self.db.execute('SELECT COUNT(*) n,SUM(cost) cost,SUM(usage_known=0) missing FROM jobs').fetchone()
         pause = float(meta(self.db, 'pause_until', '0'))
         body = ['# Persistent Lean verification', '', f'Updated: {stamp()}', '',
+                f'State: {meta(self.db,"service_state","starting")}.',
                 f'Workers configured: {self.cfg.get("MAX_WORKERS", "3")}; active: {len(self.active)}.',
                 'Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.', '',
                 *[f'- {r["state"]}: {r["n"]}' for r in tasks], '',
@@ -447,7 +455,10 @@ class Runner:
                         task = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY attempts,last_attempt,id LIMIT 1", (time.time(),)).fetchone()
                         if not task: break
                         self.start(task)
-                put_meta(self.db, 'service_state', 'waiting_quota' if pause > time.time() else 'running')
+                state = 'waiting_quota' if pause > time.time() else 'running'
+                if not self.active and state == 'running':
+                    state = 'waiting_retry' if self.db.execute("SELECT 1 FROM tasks WHERE state='pending' LIMIT 1").fetchone() else 'needs_attention'
+                put_meta(self.db, 'service_state', state)
                 if time.time() - self.last_report >= 300:
                     self.report()
                     self.publish()
@@ -458,6 +469,10 @@ class Runner:
                 process.wait()
                 self.active.pop(job)
                 self.finish(job, process.returncode, 'interrupted')
+            if self.stopping or (RUNTIME / 'stop').exists():
+                put_meta(self.db, 'service_state', 'stopped')
+            elif sys.exc_info()[0] is not None:
+                put_meta(self.db, 'service_state', 'recovering')
             self.report()
             self.publish()
             put_meta(self.db, 'controller_pid', '')

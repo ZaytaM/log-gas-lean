@@ -30,3 +30,6 @@ Keep the statement, all other declarations, and dependencies byte-for-byte uncha
 Do not edit the shared Mathlib packages, lake configuration, or toolchain.
 Your .lake/build is private; .lake/packages contains shared, already-built dependencies.
 If blocked, preserve your best partial proof and explain the remaining goal briefly.
+Keep concise checkpoint notes in .lake/worker-notes.md: the latest failing goal,
+approaches already tried, and the next useful step. The controller supplies these
+notes on your next attempt; this ignored scratch file is explicitly permitted.

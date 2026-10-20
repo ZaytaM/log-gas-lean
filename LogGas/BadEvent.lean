@@ -247,7 +247,40 @@ theorem integrable_exp_W (hN : 2 ≤ N) (hX_meas : ∀ i, Measurable (X i))
     (hK_int : ∀ᵐ x ∂ν, Integrable (fun y => Real.exp ((b / 2) * g (x - y))) ν)
     (hKA : ∀ᵐ x ∂ν, ∫ y, Real.exp ((b / 2) * g (x - y)) ∂ν ≤ A) :
     Integrable (fun ω => Real.exp ((b / 2) * W (fun x y => g (x - y)) X ω)) μ := by
-  sorry
+  have hN0 : (N : ℝ) ≠ 0 := by
+    have : (2 : ℝ) ≤ N := by exact_mod_cast hN
+    linarith
+  have hNpos : (0 : ℝ) < N := by
+    have : (2 : ℝ) ≤ N := by exact_mod_cast hN
+    linarith
+  set f : Fin N → Ω → ℝ := fun i ω =>
+    ∑ j ∈ univ.erase i, ((b / 2) * g (X i ω - X j ω)) with hf
+  have hfi : ∀ i, Integrable (fun ω => Real.exp (f i ω)) μ := fun i =>
+    integrable_exp_sum μ ν hN hX_meas hX_indep hX_law (fun z => (b / 2) * g z)
+      (hg.const_mul _) hK_int A hA hKA i
+  have hint : Integrable (fun ω => (1 / (N : ℝ)) * ∑ i, Real.exp (f i ω)) μ :=
+    (integrable_finsetSum _ fun i _ => hfi i).const_mul _
+  have hexp : ∀ ω, (b / 2) * W (fun x y => g (x - y)) X ω
+      = ∑ i, (1 / (N : ℝ)) * f i ω := by
+    intro ω
+    simp only [W, hf, ← Finset.mul_sum]
+    field_simp
+  have hmeas : ∀ i j, Measurable (fun ω => g (X i ω - X j ω)) := fun i j =>
+    hg.comp ((hX_meas i).sub (hX_meas j))
+  have hWm : Measurable (fun ω => W (fun x y => g (x - y)) X ω) := by
+    unfold W
+    refine measurable_const.mul (Finset.measurable_sum _ fun i _ => ?_)
+    exact Finset.measurable_sum _ fun j _ => hmeas i j
+  refine Integrable.mono' hint
+    (Real.measurable_exp.comp (hWm.const_mul _)).aestronglyMeasurable
+    (Filter.Eventually.of_forall fun ω => ?_)
+  rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _), hexp]
+  have := convexOn_exp.map_sum_le (t := (univ : Finset (Fin N)))
+    (w := fun _ => 1 / (N : ℝ)) (p := fun i => f i ω)
+    (fun _ _ => by positivity)
+    (by simp [Finset.sum_const, nsmul_eq_mul]; field_simp)
+    (fun _ _ => Set.mem_univ _)
+  simpa [smul_eq_mul, ← Finset.mul_sum] using this
 
 -- SKETCH (B2): unfold `Z`, `W`; rewrite the exponent as `(1/N) * ∑ i, f i ω` as in
 -- `integrable_exp_W`.  Apply `LogGas.Warmup.jensen_avg_exp` (B1; `hf_int` from

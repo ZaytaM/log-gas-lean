@@ -21,7 +21,21 @@ try:
   d=json.load(open(sys.argv[1])); print(d.get("total_cost_usd",0) or 0)
 except Exception: print(0)' "$1"; }
 cost_total(){ awk '{s+=$1} END{printf "%.2f", s}' $COST_FILE; }
-over_cap(){ awk -v c="$(cost_total)" -v cap="$NIGHT_COST_CAP_USD" 'BEGIN{exit !(c>cap)}'; }
+# Effective budget for the night: the hard cap, lowered to SESSION_LIMIT_FRACTION of the
+# calibrated session allowance when one is known (see pipeline.conf). Claude Code gives no
+# headless readout of the plan's utilization, so cost at list price is the proxy.
+CAP=$(awk -v cap="$NIGHT_COST_CAP_USD" -v lim="${SESSION_LIMIT_USD:-}" -v f="${SESSION_LIMIT_FRACTION:-0.9}" \
+      'BEGIN{ if (lim+0>0 && lim*f<cap) cap=lim*f; printf "%.2f", cap }')
+# A worker still running has already spent money we cannot see yet. Project it as the mean
+# cost of the finished workers (WORKER_COST_EST_USD until one has finished).
+over_cap(){ # launched
+  awk -v c="$(cost_total)" -v cap="$CAP" -v n="$1" -v done="$(grep -c . $COST_FILE)" -v est="${WORKER_COST_EST_USD:-3}" \
+      'BEGIN{ avg = (done>0) ? c/done : est; exit !(c + (n-done)*avg > cap) }'; }
+record_limit_hit(){ # lemma
+  [ -f state/limit_hits.tsv ] || printf 'date\ttime\tcost_so_far_usd\tlemma\tmessage\n' > state/limit_hits.tsv
+  printf '%s\t%s\t%s\t%s\t%s\n' "$DATE" "$(date +%T)" "$(cost_total)" "$1" \
+    "$(result_of $RUN/$1.json | head -c 100 | tr '\n\t' '  ')" >> state/limit_hits.tsv
+}
 result_of(){ python3 -c 'import json,sys
 try: print(json.load(open(sys.argv[1])).get("result",""))
 except Exception: pass' "$1"; }
@@ -92,21 +106,21 @@ run_worker(){ # file module lemma
   case "$(cat $RUN/$lem.rc 2>/dev/null)" in
     ok)      echo "$lem ${st:-STATUS=unknown GOALS=? ATTEMPTS=?}" >> $RUN/status.txt ;;
     timeout) echo "$lem ${st:-STATUS=timeout GOALS=? ATTEMPTS=?}" >> $RUN/status.txt ;;
-    *)       echo "$lem STATUS=failed GOALS=? ATTEMPTS=0" >> $RUN/status.txt; touch $RUN/unavailable ;;
+    *)       echo "$lem STATUS=failed GOALS=? ATTEMPTS=0" >> $RUN/status.txt; touch $RUN/unavailable
+             grep -qi 'limit\|quota' $RUN/$lem.out 2>/dev/null && record_limit_hit $lem ;;
   esac
 }
 : > $RUN/status.txt; : > $RUN/models.txt
+log "budget tonight: \$$CAP (hard cap \$$NIGHT_COST_CAP_USD, session allowance ${SESSION_LIMIT_USD:-unknown} x ${SESSION_LIMIT_FRACTION:-0.9})"
 n=0
 while IFS=$'\t' read -r file mod lem cnt; do
-  over_cap && { log "cost cap reached, no more workers"; break; }
-  if [ -e $RUN/unavailable ] && [ ! -s $RUN/models.txt ]; then
-    log "model unavailable for every worker so far; not starting more"; break
-  fi
+  over_cap $n && { log "budget \$$CAP reached (spent \$$(cost_total), $((n - $(grep -c . $COST_FILE))) workers still running); no more workers"; break; }
+  [ -e $RUN/unavailable ] && { log "a worker found the model unavailable (limit/quota); not starting more"; break; }
   run_worker "$file" "$mod" "$lem" &
   n=$((n+1)); [ $((n % MAX_WORKERS)) -eq 0 ] && wait
 done < $RUN/open.tsv
 wait
-log "workers done: $(grep -c . $RUN/status.txt) status lines, $(grep -c 'STATUS=closed' $RUN/status.txt) closed, $(grep -c 'STATUS=failed' $RUN/status.txt) failed; cost so far \$$(cost_total)"
+log "workers done: $(grep -c . $RUN/status.txt) status lines, $(grep -c 'STATUS=closed' $RUN/status.txt) closed, $(grep -c 'STATUS=failed' $RUN/status.txt) failed; cost \$$(cost_total) of budget \$$CAP"
 [ "$NOPEN" -gt 0 ] && [ ! -s $RUN/models.txt ] && abort_run "model unavailable for every worker (quota/session limit); first message: $(grep -m1 unavailable: $SUMMARY | sed 's/.*unavailable: //')"
 
 # --- 4. merge progress into main --------------------------------------------

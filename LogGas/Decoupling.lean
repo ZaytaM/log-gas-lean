@@ -304,7 +304,89 @@ theorem sum_factorial_mult (m k : ℕ) :
     ∑ w ∈ (univ : Finset (Fin (2 * k) → Fin m)).filter (fun w => ∀ ℓ, mult w ℓ ≠ 1),
         ∏ ℓ, ((mult w ℓ).factorial : ℝ)
       ≤ ((2 * k).factorial : ℝ) * A m k := by
-  sorry
+  classical
+  have fib : ∀ (a : Fin m → ℕ), ∑ ℓ, a ℓ = 2 * k →
+      ((univ : Finset (Fin (2 * k) → Fin m)).filter (fun w => ∀ ℓ, mult w ℓ = a ℓ)).card
+        = Nat.multinomial univ a := by
+    intro a ha
+    unfold mult
+    generalize 2 * k = n at *
+    have h := MvPolynomial.coeff_sum_X_pow_of_fintype (R := ℕ) (σ := Fin m)
+      (Finsupp.equivFunOnFinite.symm a) n
+    have hs : (Finsupp.equivFunOnFinite.symm a).sum (fun _ m => m) = n := by
+      rw [Finsupp.sum_fintype _ _ (by simp)]; simpa using ha
+    rw [if_pos hs] at h
+    have hm : (Finsupp.equivFunOnFinite.symm a).multinomial = Nat.multinomial univ a := by
+      rw [Finsupp.multinomial_eq_of_support_subset (s := univ) (by simp)]; rfl
+    rw [hm, Nat.cast_id] at h
+    rw [← h]
+    have e : (∑ i : Fin m, (MvPolynomial.X i : MvPolynomial (Fin m) ℕ)) ^ n
+        = ∑ w : Fin n → Fin m, ∏ v, MvPolynomial.X (w v) := by
+      have := Finset.prod_univ_sum (fun _ : Fin n => (univ : Finset (Fin m)))
+        (fun _ j => (MvPolynomial.X j : MvPolynomial (Fin m) ℕ))
+      simpa [Fintype.piFinset_univ] using this
+    rw [e, MvPolynomial.coeff_sum]
+    rw [Finset.card_filter]
+    refine Finset.sum_congr rfl fun w _ => ?_
+    have : ∏ v, (MvPolynomial.X (w v) : MvPolynomial (Fin m) ℕ)
+        = MvPolynomial.monomial (Finsupp.equivFunOnFinite.symm (fun ℓ => #{v | w v = ℓ})) 1 := by
+      rw [← Finset.prod_fiberwise_of_maps_to (s := univ) (t := univ) (g := w) (fun _ _ => mem_univ _),
+        MvPolynomial.monomial_eq, Finsupp.prod_fintype _ _ (by simp)]
+      simp only [map_one, one_mul]
+      refine Finset.prod_congr rfl fun ℓ _ => ?_
+      rw [Finset.prod_congr rfl (fun v hv => by rw [(Finset.mem_filter.1 hv).2]), Finset.prod_const]
+      rfl
+    rw [this, MvPolynomial.coeff_monomial]
+    simp [funext_iff, eq_comm]
+  have hle : ∀ w : Fin (2 * k) → Fin m, ∀ ℓ, mult w ℓ < 2 * k + 1 := fun w ℓ =>
+    Nat.lt_succ_of_le (by
+      unfold mult
+      simpa using Finset.card_le_univ (univ.filter (fun v : Fin (2 * k) => w v = ℓ)))
+  have hsum : ∀ w : Fin (2 * k) → Fin m, ∑ ℓ, mult w ℓ = 2 * k := fun w => by
+    unfold mult
+    have := Finset.card_eq_sum_card_fiberwise (f := w) (s := (univ : Finset (Fin (2 * k)))) (t := univ)
+      (fun _ _ => mem_univ _)
+    simpa using this.symm
+  let g : (Fin (2 * k) → Fin m) → (Fin m → Fin (2 * k + 1)) := fun w ℓ => ⟨mult w ℓ, hle w ℓ⟩
+  rw [← Finset.sum_fiberwise_of_maps_to (s := (univ : Finset (Fin (2 * k) → Fin m)).filter
+      (fun w => ∀ ℓ, mult w ℓ ≠ 1)) (t := univ.filter (fun a : Fin m → Fin (2 * k + 1) =>
+        ∑ ℓ, (a ℓ : ℕ) = 2 * k ∧ ∀ ℓ, (a ℓ : ℕ) ≠ 1)) (g := g)]
+  · have hA : ((2 * k).factorial : ℝ) * (A m k : ℝ) = ∑ a ∈ univ.filter (fun a : Fin m → Fin (2 * k + 1) =>
+        ∑ ℓ, (a ℓ : ℕ) = 2 * k ∧ ∀ ℓ, (a ℓ : ℕ) ≠ 1), ((2 * k).factorial : ℝ) := by
+      simp [A, mul_comm]
+    rw [hA]
+    refine Finset.sum_le_sum fun a ha => ?_
+    obtain ⟨ha1, -⟩ := Finset.mem_filter.1 ha
+    have hs : ∑ ℓ, ((a ℓ : ℕ)) = 2 * k := (Finset.mem_filter.1 ha).2.1
+    have hc := fib (fun ℓ => (a ℓ : ℕ)) hs
+    have hspec := Nat.multinomial_spec (univ : Finset (Fin m)) (fun ℓ => (a ℓ : ℕ))
+    rw [hs] at hspec
+    have hsub : ((univ : Finset (Fin (2 * k) → Fin m)).filter (fun w => ∀ ℓ, mult w ℓ ≠ 1)).filter
+        (fun w => g w = a) ⊆ (univ : Finset (Fin (2 * k) → Fin m)).filter
+          (fun w => ∀ ℓ, mult w ℓ = (a ℓ : ℕ)) := by
+      intro w hw
+      simp only [Finset.mem_filter, mem_univ, true_and] at hw ⊢
+      intro ℓ
+      rw [← hw.2]
+    have hconst : ∀ w ∈ ((univ : Finset (Fin (2 * k) → Fin m)).filter (fun w => ∀ ℓ, mult w ℓ ≠ 1)).filter
+        (fun w => g w = a), ∏ ℓ, ((mult w ℓ).factorial : ℝ) = ∏ ℓ, (((a ℓ : ℕ)).factorial : ℝ) := by
+      intro w hw
+      have := (Finset.mem_filter.1 hw).2
+      refine Finset.prod_congr rfl fun ℓ _ => ?_
+      rw [← this]
+    rw [Finset.sum_congr rfl hconst, Finset.sum_const, nsmul_eq_mul]
+    have h1 := Finset.card_le_card hsub
+    rw [hc] at h1
+    have h2 : ((Finset.card (((univ : Finset (Fin (2 * k) → Fin m)).filter (fun w => ∀ ℓ, mult w ℓ ≠ 1)).filter
+        (fun w => g w = a)) : ℕ) : ℝ) ≤ (Nat.multinomial univ (fun ℓ => (a ℓ : ℕ)) : ℝ) := by exact_mod_cast h1
+    have h3 : (∏ ℓ, (((a ℓ : ℕ)).factorial : ℝ)) * (Nat.multinomial univ (fun ℓ => (a ℓ : ℕ)) : ℝ)
+        = ((2 * k).factorial : ℝ) := by exact_mod_cast hspec
+    calc _ ≤ (Nat.multinomial univ (fun ℓ => (a ℓ : ℕ)) : ℝ) * ∏ ℓ, (((a ℓ : ℕ)).factorial : ℝ) := by
+          gcongr
+      _ = _ := by rw [← h3, mul_comm]
+  · intro w hw
+    simp only [Finset.mem_filter, mem_univ, true_and] at hw ⊢
+    exact ⟨hsum w, fun ℓ => hw ℓ⟩
 
 -- SKETCH (6.11): `|D_I|^(2k) = D_I^(2k)` (`pow_abs_two_mul`); expand
 -- `D_I = ∑_{p ∈ I ×ˢ Iᶜ} f p` to the `2k`-th power as a sum over words

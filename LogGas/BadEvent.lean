@@ -262,7 +262,39 @@ theorem rough_bound (hN : 2 ≤ N) (hX_meas : ∀ i, Measurable (X i))
     (hK_int : ∀ᵐ x ∂ν, Integrable (fun y => Real.exp ((b / 2) * g (x - y))) ν)
     (hKA : ∀ᵐ x ∂ν, ∫ y, Real.exp ((b / 2) * g (x - y)) ∂ν ≤ A) :
     Z μ b g X ≤ A ^ (N - 1) := by
-  sorry
+  have hN0 : 0 < N := by omega
+  set f : Fin N → Ω → ℝ := fun i ω =>
+    (b / 2) * ∑ j ∈ univ.erase i, g (X i ω - X j ω) with hf
+  have key : ∀ ω, (b / 2) * W (fun x y => g (x - y)) X ω = (1 / (N : ℝ)) * ∑ i, f i ω := by
+    intro ω
+    simp only [hf, W]
+    rw [← Finset.mul_sum]
+    ring
+  have hfm : ∀ i, Measurable (f i) := fun i => by
+    simp only [hf]
+    refine Measurable.const_mul (Finset.measurable_sum _ fun j _ => ?_) _
+    exact hg.comp ((hX_meas i).sub (hX_meas j))
+  have hfe : ∀ i ω, f i ω = ∑ j ∈ univ.erase i, (b / 2) * g (X i ω - X j ω) := fun i ω => by
+    simp only [hf]; rw [Finset.mul_sum]
+  have hfi : ∀ i, Integrable (fun ω => Real.exp (f i ω)) μ := fun i => by
+    simp only [hfe]
+    exact integrable_exp_sum μ ν hN hX_meas hX_indep hX_law (fun z => (b / 2) * g z)
+      (hg.const_mul _) hK_int A hA hKA i
+  have hJ := LogGas.Warmup.jensen_avg_exp μ N hN0 f hfm hfi
+  have hZ : Z μ b g X = ∫ ω, Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω) ∂μ := by
+    simp only [Z, key]
+  rw [hZ]
+  refine hJ.trans ?_
+  have hb : ∀ i, ∫ ω, Real.exp (f i ω) ∂μ ≤ A ^ (N - 1) := fun i => by
+    have := LogGas.Warmup.prod_bound_indep μ ν N hN X hX_meas hX_indep hX_law
+      (fun z => (b / 2) * g z) (hg.const_mul _) hK_int A hA hKA i
+    simpa only [hfe] using this
+  calc (1 / (N : ℝ)) * ∑ i, ∫ ω, Real.exp (f i ω) ∂μ
+      ≤ (1 / (N : ℝ)) * ∑ _i : Fin N, A ^ (N - 1) :=
+        mul_le_mul_of_nonneg_left (Finset.sum_le_sum fun i _ => hb i) (by positivity)
+    _ = A ^ (N - 1) := by
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul,
+          ← mul_assoc, one_div_mul_cancel (by positivity), one_mul]
 
 -- SKETCH (B3): first inequality: `integral_exp_mul_le_rpow` with `F := W g X / 2`
 -- (so `γ * F = (γ/2) * W`; `mul_div_assoc`, `mul_comm`), measurability of `W` from

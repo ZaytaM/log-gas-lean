@@ -200,7 +200,75 @@ theorem holder_group (H : Hyp μ ν Y h κ) {n : ℕ} (ℓ : Fin m) (row col : F
     (hℓ : 1 ≤ mult row ℓ) (y : Fin m → E) :
     |∫ x, ∏ v ∈ univ.filter (fun v => row v = ℓ), ext h ℓ (col v) x (y (col v)) ∂(ν ℓ)|
       ≤ 2 * κ ^ (mult row ℓ) * ((mult row ℓ).factorial : ℝ) := by
-  sorry
+  classical
+  have hmeas : ∀ v, Measurable fun x => ext h ℓ (col v) x (y (col v)) := by
+    intro v; unfold ext; split_ifs
+    · exact (H.h_meas _ _).comp (measurable_id.prodMk measurable_const)
+    · exact (H.h_meas _ _).comp (measurable_const.prodMk measurable_id)
+    · exact measurable_const
+  have hbdd : ∀ i j : Fin m, ∃ C : ℝ, ∀ x y, |ext h i j x y| ≤ C := by
+    intro i j; unfold ext; split_ifs
+    · exact H.h_bdd _ _
+    · obtain ⟨C, hC⟩ := H.h_bdd j i
+      exact ⟨C, fun x y => hC y x⟩
+    · exact ⟨0, by simp⟩
+  set s := univ.filter (fun v => row v = ℓ) with hsdef
+  set a := mult row ℓ with ha
+  have hs : s.card = a := rfl
+  have ha1 : 1 ≤ a := hℓ
+  set F : Fin n → E → ℝ := fun v x => |ext h ℓ (col v) x (y (col v))| with hF
+  have hFm : ∀ v, Measurable (F v) := fun v => (hmeas v).abs
+  have hF0 : ∀ v x, 0 ≤ F v x := fun v x => abs_nonneg _
+  have hFint : ∀ v, Integrable (fun x => F v x ^ a) (ν ℓ) := by
+    intro v
+    obtain ⟨C, hC⟩ := hbdd ℓ (col v)
+    refine Integrable.of_bound ((hFm v).pow_const a).aestronglyMeasurable (C ^ a)
+      (ae_of_all _ fun x => ?_)
+    rw [Real.norm_of_nonneg (pow_nonneg (hF0 v x) a)]
+    exact pow_le_pow_left₀ (hF0 v x) (hC _ _) a
+  have key : ∫⁻ x, ENNReal.ofReal (∏ v ∈ s, F v x) ∂(ν ℓ)
+      ≤ ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ)) := by
+    have hp : ∑ v ∈ s, (1 / (a : ℝ)) = 1 := by
+      rw [Finset.sum_const, hs, nsmul_eq_mul]
+      have : (a : ℝ) ≠ 0 := by positivity
+      field_simp
+    calc ∫⁻ x, ENNReal.ofReal (∏ v ∈ s, F v x) ∂(ν ℓ)
+        = ∫⁻ x, ∏ v ∈ s, (ENNReal.ofReal (F v x) ^ (a : ℝ)) ^ (1 / (a : ℝ)) ∂(ν ℓ) := by
+          congr 1; ext x
+          rw [ENNReal.ofReal_prod_of_nonneg (fun v _ => hF0 v x)]
+          refine Finset.prod_congr rfl fun v _ => ?_
+          rw [← ENNReal.rpow_mul]
+          have : (a : ℝ) ≠ 0 := by positivity
+          rw [mul_one_div_cancel this, ENNReal.rpow_one]
+      _ ≤ ∏ v ∈ s, (∫⁻ x, ENNReal.ofReal (F v x) ^ (a : ℝ) ∂(ν ℓ)) ^ (1 / (a : ℝ)) := by
+          refine ENNReal.lintegral_prod_norm_pow_le s (fun v _ => ?_) hp (fun v _ => by positivity)
+          exact ((hFm v).ennreal_ofReal.pow_const _).aemeasurable
+      _ ≤ ∏ v ∈ s, (ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ))) ^ (1 / (a : ℝ)) := by
+          refine Finset.prod_le_prod' fun v _ => ?_
+          refine ENNReal.rpow_le_rpow ?_ (by positivity)
+          calc ∫⁻ x, ENNReal.ofReal (F v x) ^ (a : ℝ) ∂(ν ℓ)
+              = ∫⁻ x, ENNReal.ofReal (F v x ^ a) ∂(ν ℓ) := by
+                congr 1; ext x
+                rw [ENNReal.ofReal_pow (hF0 v x), ← ENNReal.rpow_natCast]
+            _ = ENNReal.ofReal (∫ x, F v x ^ a ∂(ν ℓ)) :=
+                (ofReal_integral_eq_lintegral_ofReal (hFint v)
+                  (ae_of_all _ fun x => pow_nonneg (hF0 v x) a)).symm
+            _ ≤ _ := ENNReal.ofReal_le_ofReal (ext_moment H ℓ (col v) a ha1 (y (col v)))
+      _ = ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ)) := by
+          rw [Finset.prod_const, hs, ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
+          have : (a : ℝ) ≠ 0 := by positivity
+          rw [one_div_mul_cancel this, ENNReal.rpow_one]
+  calc |∫ x, ∏ v ∈ s, ext h ℓ (col v) x (y (col v)) ∂(ν ℓ)|
+      ≤ ∫ x, |∏ v ∈ s, ext h ℓ (col v) x (y (col v))| ∂(ν ℓ) := abs_integral_le_integral_abs
+    _ = ∫ x, ∏ v ∈ s, F v x ∂(ν ℓ) := by simp [hF, Finset.abs_prod]
+    _ = (∫⁻ x, ENNReal.ofReal (∏ v ∈ s, F v x) ∂(ν ℓ)).toReal :=
+        integral_eq_lintegral_of_nonneg_ae
+          (ae_of_all _ fun x => Finset.prod_nonneg fun v _ => hF0 v x)
+          (Finset.measurable_prod s fun v _ => hFm v).aestronglyMeasurable
+    _ ≤ (ENNReal.ofReal (2 * κ ^ a * (a.factorial : ℝ))).toReal :=
+        ENNReal.toReal_mono ENNReal.ofReal_ne_top key
+    _ = 2 * κ ^ a * (a.factorial : ℝ) :=
+        ENNReal.toReal_ofReal (by have := H.κ_pos; positivity)
 
 -- SKETCH (D4, 6.10): condition on the column block.  `(Y i)_{i ∈ I}` and `(Y j)_{j ∈ Iᶜ}`
 -- are independent (`H.Y_indep.indepFun_finset I Iᶜ disjoint_compl_right`), so by

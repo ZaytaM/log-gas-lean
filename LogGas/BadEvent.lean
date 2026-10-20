@@ -451,7 +451,29 @@ theorem mgf_occupancy (hX_meas : ∀ i, Measurable (X i)) (hX_indep : iIndepFun 
     (hX_law : ∀ i, μ.map (X i) = ν) (A : Set E) (hA : MeasurableSet A) (q : ℝ)
     (hq : ν.real A = q) (t : ℝ) :
     mgf (fun ω => (occupancy X A ω : ℝ)) μ t = (1 - q + q * Real.exp t) ^ N := by
-  sorry
+  set f : E → ℝ := fun e => ((A.indicator (1 : E → ℕ) e : ℕ) : ℝ) with hf
+  have hfm : Measurable f :=
+    (measurable_from_top (f := (Nat.cast : ℕ → ℝ))).comp (measurable_one.indicator hA)
+  have hind : iIndepFun (fun i => f ∘ X i) μ := hX_indep.comp (fun _ => f) (fun _ => hfm)
+  have hmeas : ∀ i, Measurable (f ∘ X i) := fun i => hfm.comp (hX_meas i)
+  have hsum : (fun ω => (occupancy X A ω : ℝ)) = ∑ i, (f ∘ X i) := by
+    ext ω; simp [occupancy, hf, Finset.sum_apply]
+  have hfac : ∀ i, mgf (f ∘ X i) μ t = 1 - q + q * Real.exp t := by
+    intro i
+    have h1 : mgf (f ∘ X i) μ t = ∫ x, Real.exp (t * f x) ∂ν := by
+      rw [mgf, ← hX_law i, integral_map (hX_meas i).aemeasurable]
+      · rfl
+      · exact (Real.measurable_exp.comp (measurable_const.mul hfm)).aestronglyMeasurable
+    have h2 : (fun x => Real.exp (t * f x)) =
+        fun x => 1 + (Real.exp t - 1) * A.indicator (fun _ => (1 : ℝ)) x := by
+      ext x
+      by_cases hx : x ∈ A <;> simp [hf, hx]
+    rw [h1, h2, integral_add (integrable_const _)
+      (((integrable_const (1:ℝ)).indicator hA).const_mul _), integral_const_mul,
+      integral_indicator_const _ hA]
+    simp [hq]; ring
+  rw [hsum, hind.mgf_sum hmeas]
+  simp [hfac]
 
 -- SKETCH (B4): `ProbabilityTheory.measure_ge_le_exp_mul_mgf (ε := δ * N)` with
 -- `t := Real.log (δ * (1 - q) / (q * (1 - δ)))`, which is `≥ 0` because

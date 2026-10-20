@@ -105,7 +105,51 @@ theorem S_reindex (h : Fin m → Fin m → E → E → ℝ) (Y : Fin m → Ω �
     (hvan : ∀ i j, (i ∉ T ∨ j ∉ T) → ∀ x y, h i j x y = 0) (ω : Ω) :
     S (fun a b => h (T.orderEmbOfFin hT a) (T.orderEmbOfFin hT b))
         (fun a => Y (T.orderEmbOfFin hT a)) ω = S h Y ω := by
-  sorry
+  set e := T.orderEmbOfFin hT with he
+  have hmem : ∀ a, e a ∈ T := fun a => Finset.orderEmbOfFin_mem T hT a
+  have hsurj : ∀ i ∈ T, ∃ a, e a = i := by
+    intro i hi
+    have : i ∈ Set.range e := by
+      rw [he, Finset.range_orderEmbOfFin]; exact hi
+    exact this
+  unfold S
+  have h1 : ∀ i, ∑ j ∈ Ioi i, h i j (Y i ω) (Y j ω)
+      = ∑ j ∈ T.filter (i < ·), if i ∈ T then h i j (Y i ω) (Y j ω) else 0 := by
+    intro i
+    by_cases hi : i ∈ T
+    · simp only [hi, if_true]
+      symm
+      apply Finset.sum_subset
+      · intro j hj; simp at hj ⊢; exact hj.2
+      · intro j hj hj'
+        simp at hj hj'
+        exact hvan i j (Or.inr (fun hjT => absurd (hj' hjT) (not_le.mpr hj))) _ _
+    · simp only [hi, if_false, Finset.sum_const_zero]
+      exact Finset.sum_eq_zero fun j _ => hvan i j (Or.inl hi) _ _
+  simp_rw [h1]
+  rw [← Finset.sum_subset (Finset.subset_univ T)]
+  · apply Finset.sum_bij (fun a _ => e a)
+    · intro a _; exact Finset.mem_coe.mp (hmem a) |> fun h => h
+    · intro a _ b _ hab; exact e.injective hab
+    · intro i hi
+      obtain ⟨a, ha⟩ := hsurj i hi
+      exact ⟨a, Finset.mem_univ _, ha⟩
+    · intro a _
+      simp only [hmem a, if_true]
+      apply Finset.sum_bij (fun b _ => e b)
+      · intro b hb
+        simp only [Finset.mem_Ioi] at hb
+        simp [hmem b, e.lt_iff_lt.mpr hb]
+      · intro b _ c _ hbc; exact e.injective hbc
+      · intro j hj
+        simp only [Finset.mem_filter] at hj
+        obtain ⟨b, hb⟩ := hsurj j hj.1
+        refine ⟨b, ?_, hb⟩
+        simp only [Finset.mem_Ioi]
+        rw [← e.lt_iff_lt, hb]; exact hj.2
+      · intro b _; rfl
+  · intro i _ hi
+    simp only [hi, if_false, Finset.sum_const_zero]
 
 -- SKETCH: `Finset.measurable_sum` twice; each summand is
 -- `(hh i j).comp ((hY i).prodMk (hY j))` after rewriting `h i j (Y i ω) (Y j ω)` as

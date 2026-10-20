@@ -175,7 +175,39 @@ theorem gaussian_mgf_linear (q : ℕ) (L : Matrix (Fin q) (Fin q) ℝ) (v : Fin 
 `∫ exp((s/2)|g|²) dγ(g) = (1 − s)^{−q/2}` for `0 ≤ s < 1`. -/
 theorem gaussian_quadratic_integral (q : ℕ) (s : ℝ) (hs0 : 0 ≤ s) (hs1 : s < 1) :
     ∫ g, Real.exp ((s / 2) * (g ⬝ᵥ g)) ∂(stdGauss q) = (1 - s) ^ (-(q : ℝ) / 2) := by
-  sorry
+  have h1s : 0 < 1 - s := by linarith
+  have h1 : ∫ x, Real.exp ((s / 2) * (x * x)) ∂(gaussianReal 0 1) = (1 - s) ^ (-(1 : ℝ) / 2) := by
+    rw [integral_gaussianReal_eq_integral_smul (by norm_num)]
+    simp only [gaussianPDFReal_def, smul_eq_mul]
+    have : ∀ x : ℝ, (√(2 * Real.pi * ((1 : NNReal) : ℝ)))⁻¹ * Real.exp (-(x - 0) ^ 2 / (2 * ((1 : NNReal) : ℝ)))
+        * Real.exp ((s / 2) * (x * x)) = (√(2 * Real.pi))⁻¹ * Real.exp (-((1 - s) / 2) * x ^ 2) := by
+      intro x
+      rw [mul_assoc, ← Real.exp_add]
+      simp only [NNReal.coe_one, mul_one, sub_zero]
+      congr 2
+      ring
+    simp_rw [this]
+    rw [integral_const_mul, integral_gaussian]
+    have hpi := Real.pi_pos
+    have hpi := Real.pi_pos
+    have : (1 - s) ^ (-(1 : ℝ) / 2) = (√(1 - s))⁻¹ := by
+      rw [Real.sqrt_eq_rpow, ← Real.rpow_neg h1s.le]; norm_num
+    rw [this, Real.sqrt_div (by positivity), Real.sqrt_mul (by norm_num),
+      Real.sqrt_div h1s.le]
+    have h2 : 0 < √2 := by positivity
+    have h3 : 0 < √Real.pi := Real.sqrt_pos.mpr hpi
+    have h4 : 0 < √(1 - s) := Real.sqrt_pos.mpr h1s
+    field_simp
+  have h2 : ∀ g : Fin q → ℝ, Real.exp ((s / 2) * (g ⬝ᵥ g)) = ∏ k, Real.exp ((s / 2) * (g k * g k)) := by
+    intro g
+    rw [dotProduct, Finset.mul_sum, Real.exp_sum]
+  simp_rw [h2]
+  unfold stdGauss
+  rw [integral_fintype_prod_eq_prod (f := fun _ x => Real.exp ((s / 2) * (x * x)))]
+  simp only [h1, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  rw [← Real.rpow_natCast, ← Real.rpow_mul h1s.le]
+  congr 1
+  ring
 
 -- SKETCH: `Real.exp_sum` gives the integrand `∏ i, exp (φ (X i ω))`; by
 -- `iIndepFun_iff_map_fun_eq_pi_map` (with `hX_meas`, `hX_law`) the law of `ω ↦ (X · ω)` is

@@ -183,7 +183,31 @@ theorem holder_indicator (μ : Measure Ω) [IsProbabilityMeasure μ] (B : Set Ω
     (hs : s.HolderConjugate s') (hint : Integrable (fun ω => Real.exp (s * F ω)) μ) :
     ∫ ω, B.indicator (fun ω => Real.exp (F ω)) ω ∂μ
       ≤ (μ.real B) ^ (1 / s') * (∫ ω, Real.exp (s * F ω) ∂μ) ^ (1 / s) := by
-  sorry
+  have hs0 : 0 < s := hs.pos
+  have hs'0 : 0 < s' := hs.symm.pos
+  have hg : MemLp (fun ω => Real.exp (F ω)) (ENNReal.ofReal s) μ := by
+    rw [← integrable_norm_rpow_iff (by fun_prop) (by simpa using hs0)
+      ENNReal.ofReal_ne_top, ENNReal.toReal_ofReal hs0.le]
+    refine hint.congr (Filter.Eventually.of_forall fun ω => ?_)
+    simp only [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+    rw [← Real.exp_mul, mul_comm]
+  have hf : MemLp (B.indicator (fun _ : Ω => (1 : ℝ))) (ENNReal.ofReal s') μ :=
+    memLp_indicator_const _ hB.nullMeasurableSet _ (Or.inr (measure_ne_top _ _))
+  have h := integral_mul_le_Lp_mul_Lq_of_nonneg hs.symm
+    (Filter.Eventually.of_forall fun ω => Set.indicator_nonneg (fun _ _ => zero_le_one) ω)
+    (Filter.Eventually.of_forall fun ω => (Real.exp_pos (F ω)).le) hf hg
+  have e1 : ∀ ω, B.indicator (fun _ : Ω => (1 : ℝ)) ω * Real.exp (F ω)
+      = B.indicator (fun ω => Real.exp (F ω)) ω := fun ω => by
+    by_cases hω : ω ∈ B <;> simp [hω]
+  have e2 : ∀ ω, B.indicator (fun _ : Ω => (1 : ℝ)) ω ^ s'
+      = B.indicator (fun _ : Ω => (1 : ℝ)) ω := fun ω => by
+    by_cases hω : ω ∈ B <;> simp [hω, hs'0.ne']
+  have e3 : ∀ ω, (Real.exp (F ω)) ^ s = Real.exp (s * F ω) := fun ω => by
+    rw [← Real.exp_mul, mul_comm]
+  simp only [e1, e2, e3] at h
+  have e4 : ∫ ω, B.indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ = μ.real B := by
+    exact integral_indicator_one (μ := μ) hB
+  rwa [e4] at h
 
 /-! ### B2–B3: the rough partition-function bound and its monotonicity -/
 

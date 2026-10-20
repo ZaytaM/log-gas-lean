@@ -80,7 +80,42 @@ def restrict (h : Fin m → Fin m → E → E → ℝ) (p : Fin m → Fin m → 
 preserves the hypotheses (6.1), (6.2). -/
 theorem Hyp.restrict (H : Hyp μ ν Y h κ) (p : Fin m → Fin m → Prop)
     [∀ i j, Decidable (p i j)] : Hyp μ ν Y (restrict h p) κ := by
-  sorry
+  have hz : ∀ (q : ℕ) (hq : 1 ≤ q), (0:ℝ) ≤ 2 * κ ^ q * (q.factorial : ℝ) := fun q _ => by
+    have := H.κ_pos
+    positivity
+  refine ⟨H.κ_pos, H.Y_meas, H.Y_indep, H.Y_law, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro i j
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.h_meas i j
+    · simp only [hp, if_false]; exact measurable_const
+  · intro i j
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.h_bdd i j
+    · exact ⟨0, by simp [hp]⟩
+  · intro i j hij y
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.centered_left i j hij y
+    · simp [hp]
+  · intro i j hij x
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.centered_right i j hij x
+    · simp [hp]
+  · intro i j hij q hq y
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.moment_left i j hij q hq y
+    · simp [hp, zero_pow (by omega : q ≠ 0)]
+      exact hz q hq
+  · intro i j hij q hq x
+    unfold LogGas.Grouped.restrict
+    by_cases hp : p i j
+    · simpa [hp] using H.moment_right i j hij q hq x
+    · simp [hp, zero_pow (by omega : q ≠ 0)]
+      exact hz q hq
 
 -- SKETCH: `Y_indep` is `H.Y_indep.precomp e.injective`; `Y_law`, `Y_meas`, `h_meas`, `h_bdd`
 -- are instances of the fields of `H` at `e a`, `e b`.  For the `i < j` fields use

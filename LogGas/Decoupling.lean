@@ -288,7 +288,135 @@ theorem word_moment (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m))
     (hsurv : ∀ ℓ, mult row ℓ ≠ 1) :
     |∫ ω, word h Y row col ω ∂μ|
       ≤ 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ) := by
-  sorry
+  rcases Nat.eq_zero_or_pos k with rfl | hk
+  · simp [word, mult]
+  classical
+  have hext_meas : ∀ i j : Fin m, Measurable (fun p : E × E => ext h i j p.1 p.2) := by
+    intro i j; unfold ext; split_ifs
+    · exact H.h_meas _ _
+    · exact (H.h_meas _ _).comp measurable_swap
+    · exact measurable_const
+  have hbdd : ∀ i j : Fin m, ∃ C : ℝ, ∀ x y, |ext h i j x y| ≤ C := by
+    intro i j; unfold ext; split_ifs
+    · exact H.h_bdd _ _
+    · obtain ⟨C, hC⟩ := H.h_bdd j i
+      exact ⟨C, fun x y => hC y x⟩
+    · exact ⟨0, by simp⟩
+  choose C hC using hbdd
+  set G : (Fin m → E) → ℝ := fun y => ∏ v, ext h (row v) (col v) (y (row v)) (y (col v)) with hGdef
+  have hG : Measurable G := Finset.measurable_prod _ fun v _ => by
+    have hp : Measurable (fun y : Fin m → E => (y (row v), y (col v))) :=
+      (measurable_pi_apply (row v)).prodMk (measurable_pi_apply (col v))
+    exact (hext_meas (row v) (col v)).comp hp
+  have hGb : ∀ y, |G y| ≤ ∏ v, C (row v) (col v) := by
+    intro y
+    rw [hGdef]; simp only [Finset.abs_prod]
+    exact Finset.prod_le_prod₀ (fun _ _ => abs_nonneg _) fun v _ => hC _ _ _ _
+  have hmap : μ.map (fun ω i => Y i ω) = Measure.pi ν := by
+    rw [(iIndepFun_iff_map_fun_eq_pi_map (fun i => (H.Y_meas i).aemeasurable)).1 H.Y_indep]
+    congr; funext i; exact H.Y_law i
+  have h1 : ∫ ω, word h Y row col ω ∂μ = ∫ y, G y ∂Measure.pi ν := by
+    rw [← hmap, integral_map (Measurable.of_eval H.Y_meas).aemeasurable
+      hG.aestronglyMeasurable]
+    rfl
+  have hmp := measurePreserving_piEquivPiSubtypeProd (fun i => ν i) (· ∈ I)
+  set K : ((↥I → E) × ({ i // i ∉ I } → E)) → ℝ := fun z => G ((MeasurableEquiv.piEquivPiSubtypeProd (fun _ : Fin m => E) (· ∈ I)).symm z) with hK
+  have hKm : Measurable K := hG.comp (MeasurableEquiv.piEquivPiSubtypeProd (fun _ : Fin m => E) (· ∈ I)).symm.measurable
+  have h2 : ∫ y, G y ∂Measure.pi ν = ∫ z, K z ∂((Measure.pi fun i : ↥I => ν i).prod
+      (Measure.pi fun i : { i // i ∉ I } => ν i)) := by
+    have := hmp.integral_comp' (g := K)
+    simp only [hK, MeasurableEquiv.symm_apply_apply] at this
+    convert this
+  have hKint : Integrable K ((Measure.pi fun i : ↥I => ν i).prod
+      (Measure.pi fun i : { i // i ∉ I } => ν i)) :=
+    Integrable.of_bound hKm.aestronglyMeasurable (∏ v, C (row v) (col v))
+      (ae_of_all _ fun z => by rw [Real.norm_eq_abs]; exact hGb _)
+  have h3 : ∫ z, K z ∂((Measure.pi fun i : ↥I => ν i).prod
+      (Measure.pi fun i : { i // i ∉ I } => ν i)) =
+      ∫ v, ∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i) ∂(Measure.pi fun i : { i // i ∉ I } => ν i) :=
+    integral_prod_symm K hKint
+  have hinner : ∀ v : { i // i ∉ I } → E, |∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i)|
+      ≤ 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ) := by
+    intro v
+    have hsum : ∑ ℓ, mult row ℓ = 2 * k := by
+      have := Finset.card_eq_sum_card_fiberwise (f := row) (s := (univ : Finset (Fin (2 * k))))
+        (t := (univ : Finset (Fin m))) (by simp)
+      simpa [mult] using this.symm
+    obtain ⟨e0⟩ : Nonempty E := by
+      obtain ⟨ω0⟩ : Nonempty Ω := nonempty_of_isProbabilityMeasure μ
+      exact ⟨Y (row ⟨0, by omega⟩) ω0⟩
+    set y : Fin m → E := fun j => if hj : j ∈ I then e0 else v ⟨j, hj⟩ with hy
+    have hycol : ∀ t, y (col t) = v ⟨col t, hcol t⟩ := fun t => by simp [hy, hcol t]
+    set rowI : Fin (2 * k) → ↥I := fun t => ⟨row t, hrow t⟩ with hrowI
+    set g : Fin m → ℝ := fun ℓ =>
+      (if mult row ℓ = 0 then 1 else 2) * κ ^ (mult row ℓ) * ((mult row ℓ).factorial : ℝ) with hg
+    have hκ := H.κ_pos
+    have hKuv : ∀ u : ↥I → E, K (u, v) =
+        ∏ ℓ : ↥I, ∏ t ∈ univ.filter (fun t => rowI t = ℓ), ext h ℓ (col t) (u ℓ) (y (col t)) := by
+      intro u
+      calc K (u, v) = ∏ t, ext h (row t) (col t) (u (rowI t)) (y (col t)) := by
+            simp [hK, hGdef, MeasurableEquiv.piEquivPiSubtypeProd_symm_apply, hrow, hcol, hycol,
+              hrowI]
+        _ = ∏ ℓ : ↥I, ∏ t ∈ univ.filter (fun t => rowI t = ℓ),
+              ext h (row t) (col t) (u (rowI t)) (y (col t)) :=
+            (Finset.prod_fiberwise univ rowI _).symm
+        _ = _ := Finset.prod_congr rfl fun ℓ _ => Finset.prod_congr rfl fun t ht => by
+            have := (Finset.mem_filter.1 ht).2
+            subst this; rfl
+    have hfac : ∀ ℓ : ↥I, |∫ x, ∏ t ∈ univ.filter (fun t => rowI t = ℓ),
+        ext h ℓ (col t) x (y (col t)) ∂(ν ℓ)| ≤ g ℓ := by
+      intro ℓ
+      have hfilt : univ.filter (fun t => rowI t = ℓ) = univ.filter (fun t => row t = ℓ.val) :=
+        Finset.filter_congr fun t _ => by simp [hrowI, Subtype.ext_iff]
+      rw [hfilt]
+      by_cases h0 : mult row ℓ = 0
+      · have : univ.filter (fun t => row t = ℓ.val) = ∅ := Finset.card_eq_zero.1 h0
+        rw [this]; simp [hg, h0]
+      · have := holder_group H ℓ.val row col (Nat.one_le_iff_ne_zero.2 h0) y
+        calc _ ≤ _ := this
+          _ = g ℓ := by simp [hg, h0]
+    have hprod : ∏ ℓ : ↥I, g ℓ = ∏ ℓ : Fin m, g ℓ := by
+      rw [Finset.prod_coe_sort I g]
+      refine Finset.prod_subset (Finset.subset_univ _) fun ℓ _ hℓ => ?_
+      have : mult row ℓ = 0 := by
+        unfold mult; rw [Finset.card_eq_zero, Finset.filter_eq_empty_iff]
+        intro t _ heq; exact hℓ (heq ▸ hrow t)
+      simp [hg, this]
+    have hgbd : ∏ ℓ : Fin m, g ℓ ≤ 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ) := by
+      have h2 : ∏ ℓ, g ℓ = (∏ ℓ, (if mult row ℓ = 0 then (1:ℝ) else 2)) * κ ^ (2 * k) *
+          ∏ ℓ, ((mult row ℓ).factorial : ℝ) := by
+        simp only [hg, Finset.prod_mul_distrib, Finset.prod_pow_eq_pow_sum, hsum]
+      rw [h2]
+      have hc : (univ.filter (fun ℓ => ¬ mult row ℓ = 0)).card ≤ k := by
+        have : 2 * (univ.filter (fun ℓ => ¬ mult row ℓ = 0)).card ≤ ∑ ℓ, mult row ℓ := by
+          calc 2 * (univ.filter (fun ℓ => ¬ mult row ℓ = 0)).card
+              = ∑ ℓ ∈ univ.filter (fun ℓ => ¬ mult row ℓ = 0), 2 := by simp [mul_comm]
+            _ ≤ ∑ ℓ ∈ univ.filter (fun ℓ => ¬ mult row ℓ = 0), mult row ℓ :=
+                Finset.sum_le_sum fun ℓ hℓ => by
+                  have := hsurv ℓ; have := (Finset.mem_filter.1 hℓ).2; omega
+            _ ≤ _ := Finset.sum_le_sum_of_subset (Finset.filter_subset _ _)
+        omega
+      have h3 : ∏ ℓ, (if mult row ℓ = 0 then (1:ℝ) else 2) ≤ 2 ^ k := by
+        rw [Finset.prod_ite]; simp only [Finset.prod_const_one, one_mul, Finset.prod_const]
+        exact pow_le_pow_right₀ (by norm_num) hc
+      gcongr
+    have hint : ∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i) =
+        ∏ ℓ : ↥I, ∫ x, ∏ t ∈ univ.filter (fun t => rowI t = ℓ),
+          ext h ℓ (col t) x (y (col t)) ∂(ν ℓ) := by
+      simp only [hKuv]
+      exact integral_fintype_prod_eq_prod (fun (ℓ : ↥I) x => ∏ t ∈ univ.filter (fun t => rowI t = ℓ),
+        ext h ℓ (col t) x (y (col t))) (μ := fun i : ↥I => ν i)
+    rw [hint, Finset.abs_prod]
+    calc _ ≤ ∏ ℓ : ↥I, g ℓ := Finset.prod_le_prod₀ (fun _ _ => abs_nonneg _) fun ℓ _ => hfac ℓ
+      _ = _ := hprod
+      _ ≤ _ := hgbd
+  rw [h1, h2, h3]
+  have := norm_integral_le_of_norm_le_const
+    (μ := Measure.pi fun i : { i // i ∉ I } => ν i)
+    (f := fun v => ∫ u, K (u, v) ∂(Measure.pi fun i : ↥I => ν i))
+    (C := 2 ^ k * κ ^ (2 * k) * ∏ ℓ, ((mult row ℓ).factorial : ℝ))
+    (ae_of_all _ fun v => by rw [Real.norm_eq_abs]; exact hinner v)
+  simpa using this
 
 -- SKETCH: group the words by their multiplicity vector `w ↦ mult w` (`Finset.sum_fiberwise`
 -- / `Finset.sum_comp`).  The fibre over `a` has `Nat.multinomial univ a = (2k)! / ∏ a_ℓ!`

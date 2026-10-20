@@ -4,3 +4,8 @@ wt/
 logs/
 *.json
 .DS_Store
+
+# Persistent service state and isolated workers
+state/runtime/
+__pycache__/
+*.pyc

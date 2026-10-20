@@ -1,39 +1,76 @@
 # log-gas-lean
 
-Lean 4 formalization of "An entropy bound for the attractive logarithmic gas"
-(Delgadino–Gvalani–Rosenzweig), run nightly on dell3 by a model pipeline.
+Lean 4 formalization of “An entropy bound for the attractive logarithmic gas”
+(Delgadino–Gvalani–Rosenzweig), running continuously on Dell3.
 
-Layout
-- `LogGas/*.lean` — one file per phase (Warmup, Decoupling, Grouped, BadEvent, Singular, Bulk, Main)
-- `notes/*.tex` — the paper split by section; `notes/phaseN.md` — targets per phase; `notes/hypotheses.md`
-- `notes/hints.md` — author hints, read by every worker; `notes/flags/` — worker/advisor flags needing the author
-- `prompts/` — orchestrator, worker, advisor, reporter prompt templates
-- `scripts/pipeline.sh` — nightly run; `scripts/pipeline.conf` — knobs; `scripts/orchestrate.sh` — skeleton for a phase
-- `reports/YYYY-MM-DD.md` — morning report; `state/tracker.md` — one row per night; `advice/` — advisor outputs
+The controller keeps three Sonnet workers busy across Claude allowance resets.
+It waits automatically when an actual session, weekly, or rate limit is reached,
+then retries after the advertised reset time. When no reset time is available,
+it backs off from five minutes to one hour. Turn limits and individual errors
+checkpoint and requeue that target; they do not stop unrelated work.
+There is no routine total-task or estimated-dollar stopping budget.
 
-Nightly run (from the Mac, via the offload skill or by hand):
-    ssh dell3 'tmux new -d -s loggas "bash ~/bin/dell3_run.sh ~/work/log-gas-lean cmd \"bash scripts/pipeline.sh\""'
+## Operate on Dell3
 
-Schedule it: on dell3, `crontab -e` and add
-    0 22 * * * bash $HOME/bin/dell3_run.sh $HOME/work/log-gas-lean cmd "bash scripts/pipeline.sh" >/dev/null 2>&1
-so the report is ready by 09:00.
+From this repository on Dell3:
 
-Claude Code flags used: `-p`, `--model`, `--max-turns`, `--output-format json`,
-`--dangerously-skip-permissions`. Verify with `claude --help` after an update.
+```
+bash scripts/install_service.sh     # install reboot/watchdog recovery and start
+bash scripts/service.sh status     # queue, usage, controller, reset and push status
+bash scripts/service.sh stop       # save active work; watchdog honors this stop
+bash scripts/service.sh start      # resume explicitly after a manual stop
+bash scripts/service.sh retry-blocked  # after resolving author-review issues
+```
 
-Run hygiene (added 2026-10-20 after the first night failed silently)
-- The run clears `wt/` and all `wip/*` branches at the start; a branch with unmerged
-  commits is kept as `failed/<lemma>-<run>` for inspection.
-- Worker STATUS values: closed | partial | stuck | timeout | failed (model never ran) | unknown.
-- If the baseline build fails or the model is unavailable for every worker (session or
-  usage limit), the run writes a stub report, commits, and exits 1. Check `logs/<run>/summary.txt`.
-- `scripts/quota_error.py` decides "model unavailable" for workers, advisor, reporter and orchestrator.
-- `state/tracker.md` rows are written by the script, not the reporter.
-- `scripts/pipeline.conf.cheap` holds the low-cost defaults (sonnet workers, $40 cap, advisor on).
+From the Mac, prefix these commands with `ssh dell3` and run them in
+`~/work/log-gas-lean`. The tmux session is `loggas-service`; its log is
+`logs/service/controller.log`. `scripts/pipeline.sh` is a compatibility entry
+point for the continuous controller; it no longer runs just one nightly batch.
 
-Current conservative settings
-- Opus creates skeletons; Sonnet proves lemmas; Haiku writes reports. Advisor calls are disabled.
-- At most 3 workers concurrently and 5 worker tasks per run; workers cannot use Agent/Task delegation.
-- Each worker has 5 proof attempts, 20 tool turns, and a 10-minute timeout.
-- The run uses a $40 estimated-cost cap; this does not guarantee staying within subscription limits.
-- Automatic model fallback is disabled. `pipeline.conf.cheap` is an older, higher-concurrency preset.
+The installer preserves other cron entries. It adds reboot recovery and a
+five-minute watchdog. A completed queue or explicit stop is not restarted by
+that watchdog. Unexpected controller exits are retried by the supervisor.
+
+## Progress, verification, and recovery
+
+- `reports/persistent.md`: deterministic queue report, estimated cost and attention items.
+- `state/worker_usage.tsv`: per-attempt outcomes, token/cache usage, cost and duration.
+  Costs include every service model invocation; unknown usage is explicitly marked.
+- `state/runtime/queue.sqlite3`: durable tasks, attempts and quota-reset state.
+  This directory and detailed logs are intentionally untracked.
+- `wt/service/`: private worker checkouts with separate `.lake/build` outputs;
+  installed dependency packages are shared. Existing legacy worktrees are retained.
+- Repeatedly stuck targets rotate through the queue with increasing cooldowns,
+  capped at daily retries. Author-review flags block only the affected target.
+- Before accepting a proof, the controller requires the statement and other
+  declarations to be unchanged, builds its module, and checks its transitive
+  axioms against `propext`, `Classical.choice`, and `Quot.sound`.
+- Each merge gets a full project build and another axiom check on main. A valid
+  proof is recovered even if its worker finished at the turn limit.
+- Proofs, author flags, and usage reports are committed and pushed incrementally.
+  A failed push leaves commits intact and retries automatically. A divergent
+  remote is reported for operator reconciliation; it is never force-pushed.
+- Interrupted workers are identified by PID plus process start time, stopped,
+  and their files recovered. Partial proof snapshots and checkpoint refs survive
+  retries. Restart recovery also rolls back an interrupted, unverified integration.
+
+The controller completes when all discovered source obligations are closed.
+This verifies the encoded statements; correspondence to the paper still needs
+mathematical review. When only blocked targets remain, the service stays alive
+and reports the needed author decisions.
+
+## Settings and tests
+
+Edit `scripts/pipeline.conf` while the service is stopped, then restart it.
+Workers have 20 model turns and a 10-minute timeout per invocation. Subagent
+and recursive model delegation are disabled. `pipeline.conf.cheap` is a legacy
+preset; its dollar/task caps have no effect on the persistent controller.
+
+Offline regression tests use fake models and Lean commands with real Git worktrees:
+
+```
+python3 -m unittest discover -s scripts/tests -v
+```
+
+No model usage is consumed by these tests. Heavy builds and real proof work run
+on Dell3. Keep the main checkout dedicated to the controller while it is active.

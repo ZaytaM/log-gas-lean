@@ -491,7 +491,87 @@ theorem chernoff_binomial (hX_meas : ∀ i, Measurable (X i)) (hX_indep : iIndep
     (hX_law : ∀ i, μ.map (X i) = ν) (A : Set E) (hA : MeasurableSet A) (q : ℝ)
     (hq : ν.real A = q) (hq0 : 0 < q) (δ : ℝ) (hqδ : q < δ) (hδ1 : δ < 1) :
     μ.real {ω | δ * N ≤ (occupancy X A ω : ℝ)} ≤ Real.exp (-(N : ℝ) * relEnt δ q) := by
-  sorry
+  have hq1 : q < 1 := hqδ.trans hδ1
+  have hδ0 : 0 < δ := hq0.trans hqδ
+  set f : E → ℝ := A.indicator fun _ => (1 : ℝ) with hf
+  have hfm : Measurable f := measurable_const.indicator hA
+  set Y : Fin N → Ω → ℝ := fun i ω => f (X i ω) with hY
+  have hYmeas : ∀ i, Measurable (Y i) := fun i => hfm.comp (hX_meas i)
+  have hYind : iIndepFun Y μ := hX_indep.comp (fun _ => f) (fun _ => hfm)
+  have hocc : (fun ω => (occupancy X A ω : ℝ)) = ∑ i, Y i := by
+    ext ω
+    simp only [occupancy, Nat.cast_sum, Finset.sum_apply, hY, hf]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    by_cases h : X i ω ∈ A <;> simp [Set.indicator_apply, h]
+  have hfac : ∀ t : ℝ, ∀ i, mgf (Y i) μ t = 1 - q + q * Real.exp t := by
+    intro t i
+    have h1 : mgf (Y i) μ t = ∫ x, Real.exp (t * f x) ∂ν := by
+      have := integral_map (μ := μ) (hX_meas i).aemeasurable
+        (f := fun x : E => Real.exp (t * f x))
+        (by exact (by fun_prop : Measurable fun x => Real.exp (t * f x)).aestronglyMeasurable)
+      rw [hX_law i] at this
+      rw [mgf, this]
+    have h2 : ∀ x, Real.exp (t * f x) = 1 + (Real.exp t - 1) * f x := by
+      intro x
+      by_cases h : x ∈ A <;> simp [hf, Set.indicator_apply, h]
+    have hfi : Integrable f ν := (integrable_const (1 : ℝ)).indicator hA
+    have h3 : ∫ x, f x ∂ν = q := by
+      rw [hf, integral_indicator hA]; simp [← hq, Measure.real]
+    rw [h1]; simp_rw [h2]
+    rw [integral_add (integrable_const _) (hfi.const_mul _), integral_const_mul, h3]
+    simp; ring
+  have hmgf : ∀ t : ℝ, mgf (fun ω => (occupancy X A ω : ℝ)) μ t
+      = (1 - q + q * Real.exp t) ^ N := by
+    intro t
+    rw [hocc, hYind.mgf_sum hYmeas]
+    simp [hfac]
+  set t : ℝ := Real.log (δ * (1 - q) / (q * (1 - δ))) with ht
+  have h1δ : 0 < 1 - δ := by linarith
+  have h1q : 0 < 1 - q := by linarith
+  have harg : 0 < δ * (1 - q) / (q * (1 - δ)) := by positivity
+  have ht0 : 0 ≤ t := by
+    apply Real.log_nonneg
+    rw [le_div_iff₀ (by positivity)]
+    nlinarith
+  have hint : Integrable (fun ω => Real.exp (t * (occupancy X A ω : ℝ))) μ := by
+    refine Integrable.of_bound (C := Real.exp (t * N)) ?_ ?_
+    · exact (by have := measurable_occupancy X hX_meas A hA; fun_prop :
+        Measurable fun ω => Real.exp (t * (occupancy X A ω : ℝ))).aestronglyMeasurable
+    · refine ae_of_all _ fun ω => ?_
+      rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+      apply Real.exp_le_exp.2
+      apply mul_le_mul_of_nonneg_left _ ht0
+      have : occupancy X A ω ≤ N := by
+        unfold occupancy
+        calc _ ≤ ∑ _i : Fin N, 1 := Finset.sum_le_sum fun i _ => by
+              by_cases h : X i ω ∈ A <;> simp [Set.indicator_apply, h]
+          _ = N := by simp
+      exact_mod_cast this
+  have hch := measure_ge_le_exp_mul_mgf (μ := μ) (X := fun ω => (occupancy X A ω : ℝ))
+    (δ * N) ht0 hint
+  rw [hmgf t] at hch
+  have hexp : 1 - q + q * Real.exp t = (1 - q) / (1 - δ) := by
+    rw [ht, Real.exp_log harg]
+    field_simp
+    ring
+  rw [hexp] at hch
+  refine hch.trans (le_of_eq ?_)
+  have hpos : 0 < (1 - q) / (1 - δ) := by positivity
+  have hrel : relEnt δ q = δ * t - Real.log ((1 - q) / (1 - δ)) := by
+    have e1 : Real.log (δ / q) = Real.log δ - Real.log q := Real.log_div hδ0.ne' hq0.ne'
+    have e2 : Real.log ((1 - δ) / (1 - q)) = Real.log (1 - δ) - Real.log (1 - q) :=
+      Real.log_div h1δ.ne' h1q.ne'
+    have e3 : Real.log ((1 - q) / (1 - δ)) = Real.log (1 - q) - Real.log (1 - δ) :=
+      Real.log_div h1q.ne' h1δ.ne'
+    have e4 : Real.log (δ * (1 - q) / (q * (1 - δ)))
+        = Real.log δ + Real.log (1 - q) - Real.log q - Real.log (1 - δ) := by
+      rw [Real.log_div (by positivity) (by positivity), Real.log_mul hδ0.ne' h1q.ne',
+        Real.log_mul hq0.ne' h1δ.ne']; ring
+    rw [relEnt, ht, e1, e2, e3, e4]
+    ring
+  rw [hrel, ← Real.exp_log (pow_pos hpos N), Real.log_pow, ← Real.exp_add]
+  congr 1
+  ring
 
 -- SKETCH (B5): `badEvent X bx δ = ⋃ a, {ω | δ N < occupancy X (bx.A a) ω}`
 -- (`Set.setOf_exists`); `measureReal_iUnion_fintype_le`; each term is `≤` the `≥`-event

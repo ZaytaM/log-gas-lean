@@ -93,7 +93,12 @@ theorem Boxes.real_vol {ν : Measure E} {M : ℕ} (bx : Boxes ν M) (a : Fin M) 
 theorem measurable_occupancy {N : ℕ} (X : Fin N → Ω → E) (hX : ∀ i, Measurable (X i))
     (A : Set E) (hA : MeasurableSet A) :
     Measurable (fun ω => (occupancy X A ω : ℝ)) := by
-  sorry
+  unfold occupancy
+  simp only [Nat.cast_sum]
+  refine Finset.measurable_sum _ fun i _ => ?_
+  have h : Measurable (fun e : E => ((A.indicator (1 : E → ℕ) e : ℕ) : ℝ)) :=
+    (measurable_from_top (f := (Nat.cast : ℕ → ℝ))).comp ((measurable_one.indicator hA))
+  exact h.comp (hX i)
 
 -- SKETCH: `badEvent = ⋃ a, {ω | δ N < occupancy}`; `MeasurableSet.iUnion` and
 -- `measurableSet_lt measurable_const (measurable_occupancy …)`.

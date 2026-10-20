@@ -277,7 +277,195 @@ theorem count_small (m k : ℕ) (hmk : m < 2 * k) :
 `A ≤ 4^k (em/k)^k`, `B_k ≤ k^{2k} (em/k)^k`, hence `A B_k ≤ (4e²)^k m^{2k}`. -/
 theorem count_large (m k : ℕ) (hmk : 2 * k ≤ m) :
     ((A m k * B m k : ℕ) : ℝ) ≤ (4 * Real.exp 1 ^ 2) ^ k * (m : ℝ) ^ (2 * k) := by
-  sorry
+  have tset :
+      (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card : ℝ) * (k:ℝ)^k
+        ≤ (Real.exp 1 * m)^k := by
+    have h1 : ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card
+        ≤ ∑ n ∈ range (k+1), m.choose n := by
+      calc _ ≤ ((range (k+1)).biUnion (fun n => powersetCard n (univ : Finset (Fin m)))).card := by
+            apply card_le_card
+            intro T hT
+            simp only [mem_filter, mem_univ, true_and] at hT
+            simp only [mem_biUnion, mem_range, mem_powersetCard]
+            exact ⟨T.card, by omega, subset_univ _, rfl⟩
+        _ ≤ ∑ n ∈ range (k+1), (powersetCard n (univ : Finset (Fin m))).card := card_biUnion_le
+        _ = _ := by simp [card_powersetCard]
+    have h2 : (∑ n ∈ range (k+1), (m.choose n : ℝ)) * (k:ℝ)^k
+        ≤ (m:ℝ)^k * ∑ n ∈ range (k+1), (k:ℝ)^n / n ! := by
+      rw [Finset.sum_mul, Finset.mul_sum]
+      apply Finset.sum_le_sum
+      intro n hn
+      have hn' : n ≤ k := by simpa [Nat.lt_succ_iff] using hn
+      have hc : (m.choose n : ℝ) ≤ (m:ℝ)^n / n ! := Nat.choose_le_pow_div n m
+      have hkm : (k:ℝ) ≤ m := by exact_mod_cast (by omega : k ≤ m)
+      have hp : (k:ℝ)^(k-n) ≤ (m:ℝ)^(k-n) := pow_le_pow_left₀ (by positivity) hkm _
+      have hf : (0:ℝ) < n ! := by exact_mod_cast Nat.factorial_pos n
+      calc (m.choose n : ℝ) * (k:ℝ)^k ≤ ((m:ℝ)^n / n !) * (k:ℝ)^k := by gcongr
+        _ = ((m:ℝ)^n * (k:ℝ)^n * (k:ℝ)^(k-n)) / n ! := by
+            have hk : (k:ℝ)^k = (k:ℝ)^n * (k:ℝ)^(k-n) := by
+              rw [← pow_add, Nat.add_sub_cancel' hn']
+            rw [hk]; ring
+        _ ≤ ((m:ℝ)^n * (k:ℝ)^n * (m:ℝ)^(k-n)) / n ! := by gcongr
+        _ = (m:ℝ)^k * ((k:ℝ)^n / n !) := by
+            have : (m:ℝ)^k = (m:ℝ)^n * (m:ℝ)^(k-n) := by
+              rw [← pow_add, Nat.add_sub_cancel' hn']
+            rw [this]; ring
+    have h3 := Real.sum_le_exp_of_nonneg (x := (k:ℝ)) (by positivity) (k+1)
+    calc _ ≤ ((∑ n ∈ range (k+1), m.choose n : ℕ) : ℝ) * (k:ℝ)^k := by
+          gcongr
+      _ = (∑ n ∈ range (k+1), (m.choose n : ℝ)) * (k:ℝ)^k := by push_cast; rfl
+      _ ≤ _ := h2
+      _ ≤ (m:ℝ)^k * Real.exp k := by gcongr
+      _ = _ := by rw [mul_pow, ← Real.exp_nat_mul]; simp [mul_comm]
+  have bbound :
+      B m k ≤ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * k^(2*k) := by
+    unfold B
+    calc _ ≤ (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).biUnion
+          (fun T => Fintype.piFinset (fun _ : Fin (2*k) => T))).card := by
+          apply card_le_card
+          intro w hw
+          simp only [mem_filter, mem_univ, true_and] at hw
+          simp only [mem_biUnion, mem_filter, mem_univ, true_and, Fintype.mem_piFinset]
+          refine ⟨univ.image w, ?_, fun v => mem_image_of_mem _ (mem_univ _)⟩
+          have hsum : ∑ ℓ ∈ univ.image w, mult w ℓ = 2 * k := by
+            unfold mult
+            have := Finset.card_eq_sum_card_image w (univ : Finset (Fin (2*k)))
+            simpa using this.symm
+          have hge : ∀ ℓ ∈ univ.image w, 2 ≤ mult w ℓ := by
+            intro ℓ hℓ
+            have h1 := hw ℓ
+            obtain ⟨v, -, hv⟩ := mem_image.1 hℓ
+            have : 0 < mult w ℓ := by
+              unfold mult
+              exact card_pos.2 ⟨v, by simp [hv]⟩
+            omega
+          have := Finset.card_nsmul_le_sum (univ.image w) (mult w) 2 hge
+          have h' : (univ.image w).card * 2 ≤ ∑ ℓ ∈ univ.image w, mult w ℓ := by simpa using this
+          omega
+      _ ≤ ∑ T ∈ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)),
+            (Fintype.piFinset (fun _ : Fin (2*k) => T)).card := card_biUnion_le
+      _ ≤ ∑ T ∈ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)), k^(2*k) := by
+          apply sum_le_sum
+          intro T hT
+          simp only [mem_filter, mem_univ, true_and] at hT
+          rw [Fintype.card_piFinset]
+          simp only [prod_const, card_univ, Fintype.card_fin]
+          exact Nat.pow_le_pow_left hT _
+      _ = _ := by simp
+  have abound :
+      A m k ≤ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * 4^k := by
+    unfold A
+    set S := (univ.filter (fun a : Fin m → Fin (2 * k + 1) =>
+      ∑ ℓ, (a ℓ : ℕ) = 2 * k ∧ ∀ ℓ, (a ℓ : ℕ) ≠ 1)) with hS
+    have hmem : ∀ a ∈ S, ∑ ℓ, (a ℓ : ℕ) = 2 * k ∧ ∀ ℓ, (a ℓ : ℕ) ≠ 1 := by
+      intro a ha; simpa [hS] using ha
+    have hsupp : ∀ a ∈ S, (univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0)).card ≤ k := by
+      intro a ha
+      obtain ⟨h1, h2⟩ := hmem a ha
+      have hge : ∀ ℓ ∈ univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0), 2 ≤ (a ℓ : ℕ) := by
+        intro ℓ hℓ
+        have := (mem_filter.1 hℓ).2
+        have := h2 ℓ
+        omega
+      have := Finset.card_nsmul_le_sum _ (fun ℓ => (a ℓ : ℕ)) 2 hge
+      have h3 : ∑ ℓ ∈ univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0), (a ℓ : ℕ) = 2 * k := by
+        rw [Finset.sum_filter_ne_zero]; exact h1
+      simp only [smul_eq_mul] at this
+      omega
+    calc S.card ≤ (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).biUnion
+          (fun T => S.filter (fun a => univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0) = T))).card := by
+          apply card_le_card
+          intro a ha
+          simp only [mem_biUnion, mem_filter, mem_univ, true_and]
+          exact ⟨_, hsupp a ha, ha, rfl⟩
+      _ ≤ ∑ T ∈ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)),
+            (S.filter (fun a => univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0) = T)).card := card_biUnion_le
+      _ ≤ ∑ T ∈ ((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)), 4^k := by
+          apply sum_le_sum
+          intro T hT
+          simp only [mem_filter, mem_univ, true_and] at hT
+          let f : (Fin m → Fin (2 * k + 1)) → (Fin m →₀ ℕ) := fun a =>
+            Finsupp.equivFunOnFinite.symm (fun ℓ => if ℓ ∈ T then (a ℓ : ℕ) - 2 else 0)
+          have hfv : ∀ a ℓ, f a ℓ = if ℓ ∈ T then (a ℓ : ℕ) - 2 else 0 := fun _ _ => rfl
+          have hf : ∀ a ∈ S.filter (fun a => univ.filter (fun ℓ => (a ℓ : ℕ) ≠ 0) = T),
+              f a ∈ T.finsuppAntidiag (2 * k - 2 * T.card) := by
+            intro a ha
+            simp only [mem_filter] at ha
+            obtain ⟨ha, hT'⟩ := ha
+            obtain ⟨h1, h2⟩ := hmem a ha
+            have hge : ∀ ℓ ∈ T, 2 ≤ (a ℓ : ℕ) := by
+              intro ℓ hℓ
+              rw [← hT'] at hℓ
+              have := (mem_filter.1 hℓ).2
+              have := h2 ℓ
+              omega
+            have h3 : ∑ ℓ ∈ T, (a ℓ : ℕ) = 2 * k := by
+              rw [← hT', Finset.sum_filter_ne_zero]; exact h1
+            rw [mem_finsuppAntidiag]
+            constructor
+            · have : ∑ ℓ ∈ T, ((a ℓ : ℕ) - 2) + ∑ ℓ ∈ T, 2 = ∑ ℓ ∈ T, (a ℓ : ℕ) := by
+                rw [← sum_add_distrib]
+                exact sum_congr rfl (fun ℓ hℓ => Nat.sub_add_cancel (hge ℓ hℓ))
+              simp only [sum_const, smul_eq_mul] at this
+              rw [sum_congr rfl (fun ℓ hℓ => (hfv a ℓ).trans (if_pos hℓ))]
+              omega
+            · intro ℓ hℓ
+              by_contra hn
+              rw [Finsupp.mem_support_iff, hfv, if_neg hn] at hℓ
+              exact hℓ rfl
+          calc _ ≤ (T.finsuppAntidiag (2 * k - 2 * T.card)).card := by
+                apply card_le_card_of_injOn f hf
+                intro a ha b hb hab
+                simp only [coe_filter, Set.mem_setOf_eq] at ha hb
+                obtain ⟨ha, hTa⟩ := ha
+                obtain ⟨hb, hTb⟩ := hb
+                obtain ⟨h1, h2⟩ := hmem a ha
+                obtain ⟨h1', h2'⟩ := hmem b hb
+                funext ℓ
+                have hfa := DFunLike.congr_fun hab ℓ
+                rw [hfv, hfv] at hfa
+                by_cases hℓ : ℓ ∈ T
+                · rw [if_pos hℓ, if_pos hℓ] at hfa
+                  have ga : 2 ≤ (a ℓ : ℕ) := by
+                    rw [← hTa] at hℓ
+                    have := (mem_filter.1 hℓ).2
+                    have := h2 ℓ
+                    omega
+                  have gb : 2 ≤ (b ℓ : ℕ) := by
+                    rw [← hTb] at hℓ
+                    have := (mem_filter.1 hℓ).2
+                    have := h2' ℓ
+                    omega
+                  apply Fin.ext; omega
+                · have ea : (a ℓ : ℕ) = 0 := by
+                    by_contra h
+                    exact hℓ (hTa ▸ mem_filter.2 ⟨mem_univ _, h⟩)
+                  have eb : (b ℓ : ℕ) = 0 := by
+                    by_contra h
+                    exact hℓ (hTb ▸ mem_filter.2 ⟨mem_univ _, h⟩)
+                  apply Fin.ext; omega
+            _ ≤ 4^k := by
+                rw [card_finsuppAntidiag_nat_eq_choose]
+                calc _ ≤ 2 ^ (T.card + (2 * k - 2 * T.card) - 1) := Nat.choose_le_two_pow _ _
+                  _ ≤ 2 ^ (2 * k) := Nat.pow_le_pow_right (by norm_num) (by omega)
+                  _ = 4^k := by rw [pow_mul]; norm_num
+      _ = _ := by simp
+  have hT0 : (0:ℝ) ≤ (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card : ℝ) := by positivity
+  have hAB : ((A m k * B m k : ℕ) : ℝ) ≤ 4 ^ k * ((((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card : ℝ) * (k:ℝ)^k) ^ 2 := by
+    have h1 := abound
+    have h2 := bbound
+    have h3 : A m k * B m k ≤ (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * 4^k) * (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * k^(2*k)) := Nat.mul_le_mul h1 h2
+    have h4 : ((A m k * B m k : ℕ) : ℝ) ≤ ((((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * 4^k) * (((univ : Finset (Finset (Fin m))).filter (fun T => T.card ≤ k)).card * k^(2*k)) : ℕ) := by exact_mod_cast h3
+    refine h4.trans (le_of_eq ?_)
+    push_cast
+    rw [mul_pow, ← pow_mul, mul_comm k 2, pow_mul]
+    ring
+  calc _ ≤ _ := hAB
+    _ ≤ 4 ^ k * ((Real.exp 1 * m)^k) ^ 2 := by gcongr
+    _ = _ := by
+      rw [← pow_mul, mul_comm k 2, pow_mul, mul_pow, mul_pow]
+      ring
+
 
 -- SKETCH (D5): `rcases lt_or_ge m (2 * k)`; in the first case use `count_small` and
 -- `2^(4k) = 16^k ≤ (4 e²)^k` (`pow_le_pow_left₀`, `Real.exp_one_gt_d9`, `nlinarith`);

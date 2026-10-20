@@ -139,7 +139,36 @@ theorem integral_exp_mul_le_rpow (μ : Measure Ω) [IsProbabilityMeasure μ] (F 
     (hF : Measurable F) (b γ : ℝ) (hb : 0 < b) (hγ0 : 0 ≤ γ) (hγb : γ ≤ b)
     (hint : Integrable (fun ω => Real.exp (b * F ω)) μ) :
     ∫ ω, Real.exp (γ * F ω) ∂μ ≤ (∫ ω, Real.exp (b * F ω) ∂μ) ^ (γ / b) := by
-  sorry
+  rcases hγ0.eq_or_lt with h0 | hpos
+  · subst h0
+    simp
+  have hfi : Integrable (fun ω => Real.exp (γ * F ω)) μ := by
+    refine Integrable.mono' ((integrable_const (1:ℝ)).add hint)
+      (by fun_prop : Measurable fun ω => Real.exp (γ * F ω)).aestronglyMeasurable
+      (Filter.Eventually.of_forall fun ω => ?_)
+    rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+    rcases le_total (F ω) 0 with h | h
+    · have : Real.exp (γ * F ω) ≤ 1 := Real.exp_le_one_iff.2 (by nlinarith)
+      have := Real.exp_pos (b * F ω)
+      simp only [Pi.add_apply]; linarith
+    · have : Real.exp (γ * F ω) ≤ Real.exp (b * F ω) := Real.exp_le_exp.2 (by nlinarith)
+      simp only [Pi.add_apply]; linarith
+  set p : ℝ := b / γ with hp
+  have hp1 : 1 ≤ p := by rw [hp, le_div_iff₀ hpos]; linarith
+  have hpow : ∀ ω, (Real.exp (γ * F ω)) ^ p = Real.exp (b * F ω) := by
+    intro ω
+    rw [← Real.exp_mul]; congr 1; rw [hp]; field_simp
+  have hgi : Integrable ((fun x : ℝ => x ^ p) ∘ fun ω => Real.exp (γ * F ω)) μ := by
+    simpa [Function.comp_def, hpow] using hint
+  have hJ := (convexOn_rpow hp1).map_integral_le (continuousOn_id.rpow_const
+      (fun x _ => Or.inr (by linarith))) isClosed_Ici
+    (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le) hfi hgi
+  simp only [hpow] at hJ
+  have h0 : 0 ≤ ∫ ω, Real.exp (γ * F ω) ∂μ := integral_nonneg fun ω => (Real.exp_pos _).le
+  have := Real.rpow_le_rpow (Real.rpow_nonneg h0 p) hJ (by positivity : (0:ℝ) ≤ 1 / p)
+  rw [← Real.rpow_mul h0, mul_one_div_cancel (by linarith), Real.rpow_one] at this
+  have e : γ / b = 1 / p := by rw [hp]; field_simp
+  rw [e]; exact this
 
 -- SKETCH: Hölder `integral_mul_le_Lp_mul_Lq_of_nonneg hs.symm` with `f = B.indicator 1`
 -- and `g = exp ∘ F` (both nonnegative; `MemLp` of the indicator from `memLp_indicator_const`

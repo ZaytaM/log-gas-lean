@@ -114,7 +114,33 @@ theorem square_completion {q : ℕ} (A : Matrix (Fin q) (Fin q) ℝ) (hA : A.Pos
 eq. `eq:coarse-partition-estimate` (A.7) is standard). -/
 theorem exists_sqrt_inv {q : ℕ} (A : Matrix (Fin q) (Fin q) ℝ) (hA : A.PosDef) :
     ∃ L : Matrix (Fin q) (Fin q) ℝ, L * Lᵀ = A⁻¹ ∧ Lᵀ * A * L = 1 := by
-  sorry
+  open scoped MatrixOrder in
+  focus
+    classical
+    have hI : A⁻¹.PosSemidef := hA.inv.posSemidef
+    have hnn : (0 : Matrix (Fin q) (Fin q) ℝ) ≤ A⁻¹ := by
+      exact Matrix.nonneg_iff_posSemidef.mpr hI
+    have hLL : CFC.sqrt A⁻¹ * CFC.sqrt A⁻¹ = A⁻¹ := CFC.sqrt_mul_sqrt_self _ hnn
+    have hLh : (CFC.sqrt A⁻¹).IsHermitian := by
+      exact (Matrix.nonneg_iff_posSemidef.mp (CFC.sqrt_nonneg _)).isHermitian
+    have hLT : (CFC.sqrt A⁻¹)ᵀ = CFC.sqrt A⁻¹ := by
+      have := hLh.eq
+      simpa [Matrix.conjTranspose_eq_transpose_of_trivial] using this
+    generalize CFC.sqrt A⁻¹ = L at hLL hLh hLT
+    have hdet : IsUnit L.det := by
+      have h1 : IsUnit (L * L).det := by
+        rw [hLL, isUnit_iff_ne_zero]; exact (hA.inv.det_pos).ne'
+      rw [Matrix.det_mul] at h1
+      exact (IsUnit.mul_iff.mp h1).1
+    have hU : IsUnit L := (Matrix.isUnit_iff_isUnit_det L).mpr hdet
+    have hAd : IsUnit A.det := isUnit_iff_ne_zero.mpr hA.det_pos.ne'
+    have hAA : A * A⁻¹ = 1 := Matrix.mul_nonsing_inv _ hAd
+    refine ⟨L, by rw [hLT, hLL], ?_⟩
+    rw [hLT]
+    rw [← hLL] at hAA
+    apply (Matrix.isUnit_iff_isUnit_det L |>.mpr hdet |> fun h => (IsUnit.mul_left_inj h).mp)
+    calc L * A * L * L = L * (A * (L * L)) := by simp only [mul_assoc]
+      _ = 1 * L := by rw [hAA, mul_one, one_mul]
 
 /-- The standard Gaussian measure on `ℝ^q = Fin q → ℝ`, as a product of `gaussianReal 0 1`. -/
 noncomputable def stdGauss (q : ℕ) : Measure (Fin q → ℝ) :=

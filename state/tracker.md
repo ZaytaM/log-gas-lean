@@ -36,3 +36,4 @@
 | Date | Phase | Open lemmas | Closed tonight | Attempts | Advisor calls | Tokens (M) |
 | 2026-10-19 | 0–4 (Phase 5 file missing) | 115 | 0 | n/a | 0 | n/a |
 | Date | Phase | Open lemmas | Closed tonight | Attempts | Advisor calls | Tokens (M) |
+| Date | Phase | Open lemmas | Closed tonight | Attempts | Advisor calls | Tokens (M) |

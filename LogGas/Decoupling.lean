@@ -263,7 +263,29 @@ theorem count_reduction (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m)) :
 `A B_k ≤ 2^{4k} m^{2k}`. -/
 theorem count_small (m k : ℕ) (hmk : m < 2 * k) :
     ((A m k * B m k : ℕ) : ℝ) ≤ 2 ^ (4 * k) * (m : ℝ) ^ (2 * k) := by
-  sorry
+  have hA : A m k ≤ 2 ^ (4 * k) := by
+    have h1 : A m k ≤ ((univ : Finset (Fin m)).finsuppAntidiag (2 * k)).card := by
+      unfold A
+      apply Finset.card_le_card_of_injOn
+        (fun a => Finsupp.equivFunOnFinite.symm (fun i => (a i : ℕ)))
+      · intro a ha
+        simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_ofPred_eq] at ha
+        simp [Finset.mem_finsuppAntidiag, ha.1]
+      · intro a _ b _ hab
+        funext i
+        have := DFunLike.congr_fun hab i
+        simpa [Fin.ext_iff] using this
+    rw [Finset.card_finsuppAntidiag_nat_eq_choose] at h1
+    simp only [Finset.card_univ, Fintype.card_fin] at h1
+    refine h1.trans ((Nat.choose_le_two_pow _ _).trans ?_)
+    exact Nat.pow_le_pow_right (by norm_num) (by omega)
+  have hB : B m k ≤ m ^ (2 * k) := by
+    calc B m k ≤ Fintype.card (Fin (2 * k) → Fin m) := Finset.card_filter_le _ _
+      _ = m ^ (2 * k) := by simp
+  rw [Nat.cast_mul]
+  have : ((A m k : ℕ) : ℝ) ≤ 2 ^ (4 * k) := by exact_mod_cast hA
+  have : ((B m k : ℕ) : ℝ) ≤ (m : ℝ) ^ (2 * k) := by exact_mod_cast hB
+  gcongr
 
 -- SKETCH (D5, case m ≥ 2k): the active labels of a surviving vector/word form a set `T` of
 -- size `n ≤ k`; there are `∑_{n ≤ k} m.choose n ≤ (e m / k)^k` such sets

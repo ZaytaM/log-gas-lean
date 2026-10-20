@@ -20,3 +20,13 @@ so the report is ready by 09:00.
 
 Claude Code flags used: `-p`, `--model`, `--max-turns`, `--output-format json`,
 `--dangerously-skip-permissions`. Verify with `claude --help` after an update.
+
+Run hygiene (added 2026-10-20 after the first night failed silently)
+- The run clears `wt/` and all `wip/*` branches at the start; a branch with unmerged
+  commits is kept as `failed/<lemma>-<run>` for inspection.
+- Worker STATUS values: closed | partial | stuck | timeout | failed (model never ran) | unknown.
+- If the baseline build fails or the model is unavailable for every worker (session or
+  usage limit), the run writes a stub report, commits, and exits 1. Check `logs/<run>/summary.txt`.
+- `scripts/quota_error.py` decides "model unavailable" for workers, advisor, reporter and orchestrator.
+- `state/tracker.md` rows are written by the script, not the reporter.
+- `scripts/pipeline.conf.cheap` holds the low-cost defaults (sonnet workers, $40 cap, advisor on).

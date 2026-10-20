@@ -12,14 +12,7 @@ mkdir -p logs
 LOG=logs/orchestrate_$(date +%Y%m%d_%H%M%S).log
 for model in $MODEL_ORCH $MODEL_ORCH_FALLBACK; do
   claude -p --model $model --max-turns 60 --dangerously-skip-permissions --output-format json "$prompt" > $LOG.json 2> $LOG.err
-  if python3 - "$LOG.json" "$LOG.err" <<'PY'
-import json,sys,re
-pat=re.compile(r'rate.?limit|usage.?limit|quota|exceeded|out of credits|insufficient|429|overloaded|not available|unknown model',re.I)
-try: d=json.load(open(sys.argv[1]))
-except Exception: sys.exit(0)
-if d.get('is_error') or (not d.get('result') and pat.search(json.dumps(d)+open(sys.argv[2]).read())): sys.exit(0)
-sys.exit(1)
-PY
+  if python3 scripts/quota_error.py "$LOG.json" "$LOG.err"
   then echo "$model unavailable, trying fallback"; continue; fi
   python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("result",""))' $LOG.json | tee $LOG
   echo "orchestrator model used: $model" | tee -a $LOG; break

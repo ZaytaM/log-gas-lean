@@ -341,7 +341,10 @@ theorem stilde_split (K : SingularKernel μE bx G d Cc V) (x y : E) :
 /-- `(Q_{J,x} s_r)(y, x) = (Q_{J,y} s_r)(x, y)` for even `s_r`. -/
 theorem QJx_ker_swap (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s') (x y : E) :
     QJx bx (ker s') y x = QJy bx (ker s') x y := by
-  sorry
+  unfold QJx QJy ker
+  congr 1
+  funext z
+  rw [← neg_sub, hs'.even]
 
 -- SKETCH: both sides are the double average `∬ s'(x' - y') dν_{b(x)}(x') dν_{b(y)}(y')`
 -- in the two orders (`QJ_apply_of_mem` twice), equal by Fubini `integral_integral_swap`

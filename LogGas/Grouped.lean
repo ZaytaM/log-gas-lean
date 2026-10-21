@@ -303,7 +303,9 @@ theorem block_exp_bound (H : Hyp μ ν Y h κ) (T : Finset (Fin m)) (hT : 1 ≤ 
     (hvan : ∀ i j, (i ∉ T ∨ j ∉ T) → ∀ x y, h i j x y = 0) (θ : ℝ)
     (hθ : Cu * κ * |θ| < 1) :
     ∫ ω, Real.exp (θ * S h Y ω / T.card) ∂μ ≤ 2 / (1 - (Cu * κ * |θ|) ^ 2) := by
-  sorry
+  have key := LogGas.Decoupling.exp_bound (Hyp.reindex H (T.orderEmbOfFin rfl)) hT θ hθ
+  have hS := S_reindex h Y T rfl hvan
+  simpa [hS] using key
 
 -- SKETCH: if `T = ∅` then `S h Y = 0` by `hvan` (`Finset.sum_eq_zero`), the integrand is `1`
 -- and `∫ 1 ∂μ = 1 ≤ 8/3` (`integral_const`, `measure_univ`).  Otherwise put

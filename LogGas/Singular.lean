@@ -487,7 +487,32 @@ omit [MeasurableAdd₂ E] [MeasurableNeg E] [PseudoMetricSpace E] [OpensMeasurab
 `W_N(K) = 2 S / N` with `S` of `LogGas.Decoupling`. -/
 theorem W_eq_S (K : E → E → ℝ) (hK : ∀ x y, K x y = K y x) (X : Fin N → Ω → E) (ω : Ω) :
     W K X ω = 2 * S (fun _ _ => K) X ω / N := by
-  sorry
+  have hsplit : ∀ i : Fin N, ∑ j ∈ Finset.univ.erase i, K (X i ω) (X j ω)
+      = ∑ j ∈ Finset.Ioi i, K (X i ω) (X j ω) + ∑ j ∈ Finset.Iio i, K (X i ω) (X j ω) := by
+    intro i
+    have : Finset.univ.erase i = Finset.Ioi i ∪ Finset.Iio i := by
+      ext j
+      simp only [Finset.mem_erase, Finset.mem_univ, and_true, Finset.mem_union, Finset.mem_Ioi,
+        Finset.mem_Iio]
+      constructor
+      · intro h; exact (lt_or_gt_of_ne h).symm
+      · rintro (h | h)
+        · exact h.ne'
+        · exact h.ne
+    rw [this, Finset.sum_union]
+    rw [Finset.disjoint_left]
+    intro j h1 h2
+    simp only [Finset.mem_Ioi, Finset.mem_Iio] at h1 h2
+    exact lt_asymm h1 h2
+  have hcomm : ∑ i : Fin N, ∑ j ∈ Finset.Iio i, K (X i ω) (X j ω)
+      = ∑ i : Fin N, ∑ j ∈ Finset.Ioi i, K (X i ω) (X j ω) := by
+    rw [Finset.sum_comm' (t' := Finset.univ) (s' := fun j => Finset.Ioi j)]
+    · refine Finset.sum_congr rfl fun j _ => Finset.sum_congr rfl fun i _ => hK _ _
+    · intro i j
+      simp
+  unfold W S
+  simp only [hsplit, Finset.sum_add_distrib, hcomm]
+  ring
 
 -- SKETCH: `Finset.measurable_sum` twice and `hK.comp ((hX i).prodMk (hX j))`, then
 -- `Measurable.const_mul`.

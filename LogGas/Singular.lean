@@ -271,7 +271,10 @@ theorem Sub.self (K : SingularKernel μE bx G d Cc V) : K.Sub K.s :=
 -- `min_le_left`.
 /-- Truncations `s_r ∧ R`, `R ≥ 0`, are sub-kernels. -/
 theorem Sub.trunc (K : SingularKernel μE bx G d Cc V) {R : ℝ} (hR : 0 ≤ R) : K.Sub (trunc R K.s) := by
-  sorry
+  refine ⟨K.s_meas.min measurable_const, fun z => ?_, fun z => ?_, fun z => min_le_left _ _⟩
+  · show min (K.s (-z)) R = min (K.s z) R
+    rw [K.s_even]
+  · exact le_min (K.s_nonneg z) hR
 
 -- SKETCH: `K.c_def ▸ integral_nonneg K.s_nonneg`.
 /-- `0 ≤ c_r`. -/

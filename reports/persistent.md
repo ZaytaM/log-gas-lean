@@ -1,20 +1,19 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T19:26:08+00:00
+Updated: 2026-10-21T19:39:59+00:00
 
-State: stopped.
+State: complete.
 Workers configured: 6; active: 0.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 
-- closed: 100
-- pending: 7
+- closed: 107
 
 Attempts: 295; reported cost: $36.4072; attempts with unknown/incomplete usage: 0.
 Queue is eligible to dispatch work.
 
 Costs are client estimates and do not measure subscription allowance precisely.
 Closed means the target proof passed source, build and axiom checks on main.
-Waiting_dependencies means a proof is present but its transitive axiom audit is not yet clean; no model worker is spent on it.
+Waiting_dependencies / waiting_saved_dependencies means a complete proof awaits prerequisite proofs and a clean axiom audit; no model worker is spent on it.
 
 ## Needs attention
 

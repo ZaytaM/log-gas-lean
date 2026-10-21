@@ -1489,7 +1489,24 @@ theorem ae_labels_mem (bx : Boxes μE M) (L : Fin N → Fin M) :
 "`L` is a good label vector". -/
 theorem goodEvent_ae_iff (bx : Boxes μE M) (L : Fin N → Fin M) (δ : ℝ) :
     ∀ᵐ x ∂(labelMeasure bx L), x ∈ goodEvent (coord N) bx δ ↔ GoodLabel L δ := by
-  sorry
+  have h : ∀ᵐ x ∂(labelMeasure bx L), ∀ i, x i ∈ bx.A (L i) := by
+    unfold labelMeasure
+    rw [ae_all_iff]
+    intro i
+    exact (Measure.quasiMeasurePreserving_eval (fun i => boxMeasure bx (L i)) i).ae
+      (ae_mem_boxMeasure bx (L i))
+  filter_upwards [h] with x hx
+  have key : ∀ a, occupancy (coord N) (bx.A a) x = labelCount L a := by
+    intro a
+    unfold occupancy labelCount
+    rw [Finset.card_filter]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    by_cases hi : L i = a
+    · subst hi; simp [coord, hx i]
+    · have : x i ∉ bx.A a := fun hm =>
+        Set.disjoint_left.1 (bx.disj hi) (hx i) hm
+      simp [coord, this, hi]
+  simp only [goodEvent, GoodLabel, Set.mem_setOf_eq, key]
 
 -- SKETCH: `goodEvent_preimage` and `lintegral_map` (`measurableSet_goodEvent`,
 -- `Measurable.indicator`, `measurable_pi_lambda`) move the integral to `μ.map (fun ω i => X i ω)

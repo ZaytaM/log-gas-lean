@@ -582,7 +582,31 @@ theorem holder_split (μ : Measure Ω) (A : Set Ω) (hA : MeasurableSet A) (F G 
     ∫⁻ ω, A.indicator (fun ω => ENNReal.ofReal (Real.exp ((F ω + G ω) / 2))) ω ∂μ
       ≤ (∫⁻ ω, ENNReal.ofReal (Real.exp (F ω)) ∂μ) ^ (1 / 2 : ℝ)
         * (∫⁻ ω, A.indicator (fun ω => ENNReal.ofReal (Real.exp (G ω))) ω ∂μ) ^ (1 / 2 : ℝ) := by
-  sorry
+  have hp : (2:ℝ).HolderConjugate 2 := by
+    rw [Real.holderConjugate_iff]; norm_num
+  set f : Ω → ENNReal := fun ω => ENNReal.ofReal (Real.exp (F ω / 2)) with hf
+  set g : Ω → ENNReal := fun ω => A.indicator (fun ω => ENNReal.ofReal (Real.exp (G ω / 2))) ω with hg
+  have hfm : AEMeasurable f μ := (ENNReal.measurable_ofReal.comp (Real.measurable_exp.comp (hF.div_const 2))).aemeasurable
+  have hgm : AEMeasurable g μ := (Measurable.indicator (ENNReal.measurable_ofReal.comp (Real.measurable_exp.comp (hG.div_const 2))) hA).aemeasurable
+  have h := ENNReal.lintegral_mul_le_Lp_mul_Lq μ hp hfm hgm
+  have e1 : ∀ ω, A.indicator (fun ω => ENNReal.ofReal (Real.exp ((F ω + G ω) / 2))) ω = (f * g) ω := by
+    intro ω
+    by_cases hω : ω ∈ A
+    · simp only [hg, hf, Set.indicator_of_mem hω, Pi.mul_apply]
+      rw [← ENNReal.ofReal_mul (Real.exp_pos _).le, ← Real.exp_add]; congr 2; ring
+    · simp [hg, hω]
+  have e2 : ∀ ω, (f ω) ^ (2:ℝ) = ENNReal.ofReal (Real.exp (F ω)) := by
+    intro ω
+    simp only [hf]
+    rw [ENNReal.ofReal_rpow_of_nonneg (Real.exp_pos _).le (by norm_num), ← Real.exp_mul]; congr 2; ring
+  have e3 : ∀ ω, (g ω) ^ (2:ℝ) = A.indicator (fun ω => ENNReal.ofReal (Real.exp (G ω))) ω := by
+    intro ω
+    by_cases hω : ω ∈ A
+    · simp only [hg, Set.indicator_of_mem hω]
+      rw [ENNReal.ofReal_rpow_of_nonneg (Real.exp_pos _).le (by norm_num), ← Real.exp_mul]; congr 2; ring
+    · simp [hg, hω]
+  simp only [e1, e2, e3] at *
+  simpa using h
 
 variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 

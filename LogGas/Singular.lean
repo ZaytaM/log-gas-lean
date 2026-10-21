@@ -492,7 +492,81 @@ theorem hker_centered_right (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ
 /-- Eq. (5.2), "`a_r` has zero average in each variable under `μ`", first variable. -/
 theorem aker_centered_left (K : SingularKernel μE bx G d Cc V) (y : E) :
     ∫ x, aker bx K.s K.c x y ∂μE = 0 := by
-  sorry
+  classical
+  have hs : Integrable K.s μE := K.s_int
+  have hIQJ : ∀ f : E → ℝ, Integrable (QJ bx f) μE := by
+    intro f
+    unfold QJ
+    exact integrable_finsetSum _ fun a _ => (integrable_const _).indicator (bx.meas a)
+  have hQ : ∀ f : E → ℝ, Integrable f μE → ∫ x, QJ bx f x ∂μE = ∫ x, f x ∂μE := by
+    intro f hf
+    have hμ := μE_eq_sum_boxMeasure bx
+    have hint : ∀ a, Integrable f (boxMeasure bx a) := fun a =>
+      (hf.smul_measure (c := (M : ℝ≥0∞)) (ENNReal.natCast_ne_top M)).mono_measure
+        (boxMeasure_le bx a)
+    have hR : ∫ x, f x ∂μE = ((M : ℝ≥0∞)⁻¹).toReal • ∑ a, ∫ x, f x ∂(boxMeasure bx a) := by
+      calc ∫ x, f x ∂μE = ∫ x, f x ∂((M : ℝ≥0∞)⁻¹ • ∑ a, boxMeasure bx a) := by rw [← hμ]
+        _ = _ := by
+          rw [integral_smul_measure, integral_finsetSum_measure (fun a _ => hint a)]
+    have hL : ∫ x, QJ bx f x ∂μE
+        = ((M : ℝ≥0∞)⁻¹).toReal • ∑ a, ∫ x, f x ∂(boxMeasure bx a) := by
+      unfold QJ
+      rw [integral_finsetSum _ fun a _ => (integrable_const _).indicator (bx.meas a),
+        Finset.smul_sum]
+      refine Finset.sum_congr rfl fun a _ => ?_
+      rw [integral_indicator_const _ (bx.meas a)]
+      simp [Measure.real, bx.vol a]
+    rw [hL, hR]
+  obtain ⟨b, hb⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ y)
+  have hi1 : Integrable (fun x => ker K.s x y) μE := hs.comp_sub_right y
+  have h1 : ∫ x, QJx bx (ker K.s) x y ∂μE = K.c := by
+    unfold QJx
+    rw [hQ _ hi1]
+    simp only [ker]
+    rw [SingularKernel.integral_ker_left, K.c_def]
+  have hF : Integrable (Function.uncurry fun x y' => K.s (x - y'))
+      (μE.prod (boxMeasure bx b)) := by
+    have hm : AEStronglyMeasurable (Function.uncurry fun x y' => K.s (x - y'))
+        (μE.prod (boxMeasure bx b)) :=
+      (K.s_meas.comp measurable_sub).aestronglyMeasurable
+    rw [integrable_prod_iff' hm]
+    refine ⟨Filter.Eventually.of_forall fun y' => hs.comp_sub_right y', ?_⟩
+    have : (fun y' => ∫ x, ‖Function.uncurry (fun x y' => K.s (x - y')) (x, y')‖ ∂μE)
+        = fun _ => ∫ z, ‖K.s z‖ ∂μE := by
+      funext y'
+      exact SingularKernel.integral_ker_left (fun z => ‖K.s z‖) y'
+    rw [this]
+    exact integrable_const _
+  have e2 : ∀ x, QJy bx (ker K.s) x y = ∫ y', K.s (x - y') ∂(boxMeasure bx b) := fun x =>
+    QJ_apply_of_mem bx _ hb
+  have hi2 : Integrable (fun x => QJy bx (ker K.s) x y) μE := by
+    simp_rw [e2]
+    exact hF.integral_prod_left
+  have h2 : ∫ x, QJy bx (ker K.s) x y ∂μE = K.c := by
+    simp_rw [e2]
+    rw [integral_integral_swap hF]
+    simp only [SingularKernel.integral_ker_left, K.c_def, integral_const, measure_univ,
+      ENNReal.toReal_one, one_smul]
+    simp [K.c_def]
+  have h3 : ∫ x, QJx bx (QJy bx (ker K.s)) x y ∂μE = K.c := by
+    unfold QJx
+    rw [hQ _ hi2]
+    exact h2
+  have hI1 : Integrable (fun x => QJx bx (ker K.s) x y) μE := hIQJ _
+  have hI3 : Integrable (fun x => QJx bx (QJy bx (ker K.s)) x y) μE := hIQJ _
+  unfold aker
+  have e : ∫ x, (QJx bx (ker K.s) x y + QJy bx (ker K.s) x y
+        - QJx bx (QJy bx (ker K.s)) x y - K.c) ∂μE
+      = (∫ x, QJx bx (ker K.s) x y ∂μE) + (∫ x, QJy bx (ker K.s) x y ∂μE)
+        - (∫ x, QJx bx (QJy bx (ker K.s)) x y ∂μE) - K.c := by
+    have hA : Integrable (fun x => QJx bx (ker K.s) x y + QJy bx (ker K.s) x y) μE :=
+      hI1.add hi2
+    have hB : Integrable (fun x => QJx bx (ker K.s) x y + QJy bx (ker K.s) x y
+        - QJx bx (QJy bx (ker K.s)) x y) μE := hA.sub hI3
+    rw [integral_sub hB (integrable_const _), integral_sub hA hI3, integral_add hI1 hi2]
+    simp
+  rw [e, h1, h2, h3]
+  ring
 
 -- SKETCH: `aker_symm` and `aker_centered_left`.
 /-- Eq. (5.2), centering of `a_r` under `μ` in the second variable. -/

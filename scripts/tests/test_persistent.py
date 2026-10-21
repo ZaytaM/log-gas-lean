@@ -135,6 +135,25 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.05)
         self.fail('Timed out: '+log.read_text())
 
+    def test_close_rearms_axiom_waiting_tasks(self):
+        spec = importlib.util.spec_from_file_location('rearm_test_runner', SCRIPTS/'persistent.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        db = sqlite3.connect(':memory:')
+        db.executescript(module.SCHEMA)
+        later = time.time() + 43200
+        rows = [('A', 'pending', 'Candidate failed axiom check; checkpoint retained'),
+                ('B', 'pending', 'Integration build/axiom check failed; worker proof retained'),
+                ('C', 'pending', 'Candidate proof did not build; checkpoint retained'),
+                ('D', 'blocked', 'Candidate failed axiom check; checkpoint retained')]
+        for name, state, error in rows:
+            db.execute('INSERT INTO tasks(id,file,module,name,state,not_before,error) VALUES(?,?,?,?,?,?,?)',
+                       ('M:' + name, 'M.lean', 'M', name, state, later, error))
+        with db: self.assertEqual(module.rearm_after_close(db), 2)
+        due = dict(db.execute('SELECT name, not_before FROM tasks').fetchall())
+        self.assertEqual((due['A'], due['B']), (0, 0))
+        self.assertEqual((due['C'], due['D']), (later, later))
+
     def test_discovery_waits_for_dependency_axioms(self):
         spec = importlib.util.spec_from_file_location('discovery_test_runner', SCRIPTS/'persistent.py')
         module = importlib.util.module_from_spec(spec)

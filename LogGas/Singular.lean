@@ -990,7 +990,14 @@ theorem aker_integral_le_right (K : SingularKernel μE bx G d Cc V) (x : E) :
 /-- Eq. (5.5), second bound in the other variable: `∫ |a_r(x, y)| dμ(x) ≤ 4 c_r`. -/
 theorem aker_integral_le_left (K : SingularKernel μE bx G d Cc V) (y : E) :
     ∫ x, |aker bx K.s K.c x y| ∂μE ≤ 4 * K.c := by
-  sorry
+  have hsym : ∀ x y, aker bx K.s K.c x y = aker bx K.s K.c y x := fun x y => by
+    unfold aker
+    have h1 := QJxQJy_ker_swap K (SingularKernel.Sub.self K) x y
+    have h2 := QJx_ker_swap K (SingularKernel.Sub.self K) x y
+    have h3 := QJx_ker_swap K (SingularKernel.Sub.self K) y x
+    linarith
+  have h := aker_integral_le_right K y
+  simpa only [hsym _ y] using h
 
 -- SKETCH: pointwise, with `u = |f x| / κ ≥ 0`: `u^p / p! = u * (u^(p-1) / p!) ≤ u * (u^(p-1)/(p-1)!)
 -- ≤ u * exp u` (`Real.pow_div_factorial_le_exp`, `Nat.factorial_succ`, `Nat.succ_pred_eq_of_pos`),

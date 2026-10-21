@@ -1,17 +1,18 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T04:43:52+00:00
+Updated: 2026-10-21T04:48:12+00:00
 
 State: running.
-Workers configured: 6; active: 0.
+Workers configured: 6; active: 5.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 
 - blocked: 4
-- closed: 77
-- pending: 24
+- closed: 78
+- pending: 18
+- running: 5
 - waiting_dependencies: 2
 
-Attempts: 188; reported cost: $27.4602; attempts with unknown/incomplete usage: 0.
+Attempts: 194; reported cost: $27.5485; attempts with unknown/incomplete usage: 5.
 Queue is eligible to dispatch work.
 
 Costs are client estimates and do not measure subscription allowance precisely.

@@ -268,7 +268,18 @@ theorem iid_exp_sum {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (hX_law : ∀ i, μ.map (X i) = ν) (φ : α → ℝ) (hφ : Measurable φ) (C : ℝ)
     (hφC : ∀ x, |φ x| ≤ C) :
     ∫ ω, Real.exp (∑ i, φ (X i ω)) ∂μ = (∫ x, Real.exp (φ x) ∂ν) ^ N := by
-  sorry
+  have h1 : ∀ ω, Real.exp (∑ i, φ (X i ω)) = ∏ i : Fin N, Real.exp (φ (X i ω)) :=
+    fun ω => Real.exp_sum _ _
+  simp_rw [h1]
+  rw [hX_indep.integral_fun_prod_comp (f := fun _ x => Real.exp (φ x))
+    (fun i => (hX_meas i).aemeasurable)
+    (fun i => (Real.measurable_exp.comp hφ).aestronglyMeasurable)]
+  have h2 : ∀ i, ∫ ω, Real.exp (φ (X i ω)) ∂μ = ∫ x, Real.exp (φ x) ∂ν := by
+    intro i
+    rw [← hX_law i]
+    exact (integral_map (hX_meas i).aemeasurable
+      (Real.measurable_exp.comp hφ).aestronglyMeasurable).symm
+  simp [h2]
 
 end Abstract
 

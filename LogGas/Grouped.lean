@@ -56,7 +56,73 @@ theorem greedy_edge_coloring {V : Type*} [Fintype V] [DecidableEq V] (G : Simple
     [DecidableRel G.Adj] (K : ℕ) (hK : 1 ≤ K) (hdeg : ∀ v, G.degree v ≤ K - 1) :
     ∃ c : V → V → Fin (2 * K - 1), (∀ a b, c a b = c b a) ∧
       ∀ a b b', G.Adj a b → G.Adj a b' → b ≠ b' → c a b ≠ c a b' := by
-  sorry
+  have key : ∀ s : Finset (Sym2 V), ∃ f : Sym2 V → Fin (2 * K - 1),
+      ∀ e ∈ s, ∀ e' ∈ s, e ∈ G.edgeSet → e' ∈ G.edgeSet → e ≠ e' →
+        (∃ v, v ∈ e ∧ v ∈ e') → f e ≠ f e' := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty => exact ⟨fun _ => ⟨0, by omega⟩, by simp⟩
+    | insert a s has ih =>
+      obtain ⟨f, hf⟩ := ih
+      by_cases ha : a ∈ G.edgeSet
+      · induction a using Sym2.ind with
+        | _ u v =>
+        have huv : G.Adj u v := ha
+        set B : Finset (Sym2 V) :=
+          ((G.incidenceFinset u ∪ G.incidenceFinset v).filter (· ∈ s)) with hB
+        have hcard : (B.image f).card < 2 * K - 1 := by
+          calc (B.image f).card ≤ B.card := Finset.card_image_le
+            _ ≤ (G.incidenceFinset u ∪ G.incidenceFinset v).card := Finset.card_filter_le _ _
+            _ ≤ (G.incidenceFinset u).card + (G.incidenceFinset v).card :=
+                Finset.card_union_le _ _
+            _ ≤ (K - 1) + (K - 1) := by
+                rw [G.card_incidenceFinset_eq_degree, G.card_incidenceFinset_eq_degree]
+                exact Nat.add_le_add (hdeg u) (hdeg v)
+            _ < 2 * K - 1 := by omega
+        obtain ⟨col, hcol⟩ : ∃ col : Fin (2 * K - 1), col ∉ B.image f := by
+          by_contra hcon
+          push_neg at hcon
+          have : (Finset.univ : Finset (Fin (2 * K - 1))) ⊆ B.image f := fun x _ => hcon x
+          have := Finset.card_le_card this
+          simp at this
+          omega
+        refine ⟨Function.update f s(u, v) col, ?_⟩
+        intro e he e' he' hE hE' hne ⟨w, hw, hw'⟩
+        have key2 : ∀ x ∈ s, x ∈ G.edgeSet → (∃ w, w ∈ s(u, v) ∧ w ∈ x) →
+            col ≠ f x := by
+          intro x hx hxe ⟨w, hw, hwx⟩ hceq
+          apply hcol
+          rw [Finset.mem_image]
+          refine ⟨x, ?_, hceq.symm⟩
+          rw [hB, Finset.mem_filter, Finset.mem_union]
+          refine ⟨?_, hx⟩
+          rw [Sym2.mem_iff] at hw
+          rcases hw with rfl | rfl
+          · left; rw [SimpleGraph.mem_incidenceFinset]; exact ⟨hxe, hwx⟩
+          · right; rw [SimpleGraph.mem_incidenceFinset]; exact ⟨hxe, hwx⟩
+        rw [Finset.mem_insert] at he he'
+        rcases he with rfl | he <;> rcases he' with rfl | he'
+        · exact absurd rfl hne
+        · rw [Function.update_self, Function.update_of_ne (by rintro rfl; exact has he')]
+          exact key2 _ he' hE' ⟨w, hw, hw'⟩
+        · rw [Function.update_self, Function.update_of_ne (by rintro rfl; exact has he)]
+          exact (key2 _ he hE ⟨w, hw', hw⟩).symm
+        · rw [Function.update_of_ne (by rintro rfl; exact has he),
+            Function.update_of_ne (by rintro rfl; exact has he')]
+          exact hf e he e' he' hE hE' hne ⟨w, hw, hw'⟩
+      · refine ⟨f, ?_⟩
+        intro e he e' he' hE hE' hne hw
+        rw [Finset.mem_insert] at he he'
+        rcases he with rfl | he
+        · exact absurd hE ha
+        rcases he' with rfl | he'
+        · exact absurd hE' ha
+        exact hf e he e' he' hE hE' hne hw
+  obtain ⟨f, hf⟩ := key Finset.univ
+  refine ⟨fun a b => f s(a, b), fun a b => by simp only [Sym2.eq_swap (a := a)], ?_⟩
+  intro a b b' hab hab' hbb
+  refine hf _ (Finset.mem_univ _) _ (Finset.mem_univ _) hab hab' ?_ ⟨a, by simp, by simp⟩
+  intro h; exact hbb (Sym2.congr_right.mp h)
 
 /-! ### Restriction and reindexing of the one-block hypotheses -/
 

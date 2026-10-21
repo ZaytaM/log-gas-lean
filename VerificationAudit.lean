@@ -22,7 +22,7 @@ def audit (target : Name) : CommandElabM Unit := do
   for (n, ci) in env.constants.toList do
     let some idx := env.getModuleIdxFor? n | continue
     let provider := env.header.moduleNames[idx]!
-    unless provider == target || (target == `Solution && (`LogGas).isPrefixOf provider) do
+    unless provider == target || ((target == `Solution || target == `PaperSolution) && (`LogGas).isPrefixOf provider) do
       continue
     count := count + 1
     if ci.isUnsafe then throwError "Unsafe declaration: {n}"
@@ -31,19 +31,22 @@ def audit (target : Name) : CommandElabM Unit := do
     for ax in axioms do
       unless ax == `propext || ax == `Classical.choice || ax == `Quot.sound do
         throwError "Forbidden axiom {ax} in {n}"
-    if (`LogGasChallenge).isPrefixOf n then
+    if (`LogGasChallenge).isPrefixOf n || (`LogGasPaper).isPrefixOf n then
+      -- Compare specification definitions. Additional proved inhabitants belong
+      -- only to the solution and are checked separately against the target.
+      unless ci matches .defnInfo _ do continue
       declarations := declarations.push <| Json.mkObj [
         ("name", toJson n.toString), ("type", toJson (toString (canonical ci.type))),
         ("body", match ci with
           | .defnInfo d => toJson (toString (canonical d.value))
           | _ => Json.null)]
   let modules := env.header.moduleNames.map Name.toString
-  if target == `Challenge then
+  if target == `Challenge || target == `PaperChallenge then
     for n in env.header.moduleNames do
-      if (`LogGas).isPrefixOf n || n == `Solution then
+      if (`LogGas).isPrefixOf n || n == `Solution || n == `PaperSolution then
         throwError "Project proof imported into Challenge: {n}"
-  if target == `Solution then
-    if env.header.moduleNames.contains `Challenge then
+  if target == `Solution || target == `PaperSolution then
+    if env.header.moduleNames.contains `Challenge || env.header.moduleNames.contains `PaperChallenge then
       throwError "Challenge imported into Solution"
   logInfo m!"VERIFICATION_JSON {Json.compress <| Json.mkObj [
     ("target", toJson target.toString), ("count", toJson count),

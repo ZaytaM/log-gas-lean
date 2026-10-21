@@ -102,10 +102,10 @@ def main():
                     if not (ROOT/n['source']).exists() or
                     ('\\label{'+n['label']+'}') not in (ROOT/n['source']).read_text()]
     record('source-locators', not bad_locators, {'invalid': bad_locators})
-    raw = (ROOT / 'Challenge.lean').read_text()
+    raw = (ROOT / 'Challenge.lean').read_text() + '\n' + (ROOT / 'PaperChallenge.lean').read_text()
     imports = re.findall(r'^import\s+(\S+)', mask_comments(raw), re.M)
     record('challenge-direct-imports', bool(imports) and all(m == 'Mathlib' or m.startswith('Mathlib.') for m in imports), imports)
-    proof_text = '\n'.join(mask_comments(p.read_text()) for p in [ROOT/'LogGas.lean', *sorted((ROOT/'LogGas').rglob('*.lean')), ROOT/'Solution.lean', ROOT/'Challenge.lean'])
+    proof_text = '\n'.join(mask_comments(p.read_text()) for p in [ROOT/'LogGas.lean', *sorted((ROOT/'LogGas').rglob('*.lean')), ROOT/'Solution.lean', ROOT/'Challenge.lean', ROOT/'PaperSolution.lean', ROOT/'PaperChallenge.lean'])
     forbidden = re.findall(r'\b(?:sorry|admit|axiom|unsafe|native_decide)\b|skipKernelTC', proof_text)
     record('source-admissions', not forbidden, forbidden)
     lock = ROOT/'verification/dependency-lock.json'
@@ -137,7 +137,7 @@ def main():
             lake += ['-f', str(fresh_config)]
             record('fresh-directory', True, {'build_dir': build_dir, 'initially_exists': False})
         run('lean-version', lake + ['env','lean','--version'])
-        built = run('project-build', lake + ['build','LogGas','Challenge','Solution','VerificationAudit'])
+        built = run('project-build', lake + ['build','LogGas','Challenge','Solution','PaperChallenge','PaperSolution','VerificationAudit'])
         if built:
             if args.fresh:
                 run('fresh-lean-path', lake + ['env','printenv','LEAN_PATH'])
@@ -148,7 +148,7 @@ def main():
                 record('fresh-project-artifacts', bool(list((ROOT/build_dir).rglob('*.olean'))),
                        {'count': len(list((ROOT/build_dir).rglob('*.olean')))})
             envs = {}
-            for module in ['Mathlib', 'Challenge', 'Solution']:
+            for module in ['Mathlib', 'Challenge', 'Solution', 'PaperChallenge', 'PaperSolution']:
                 source = ROOT/'.lake'/('Verify'+module+'.lean')
                 source.write_text(f'import {module}\nimport VerificationAudit\nrun_cmd LogGasAudit.audit `{module}\n')
                 if run(module.lower()+'-environment', lake + ['env','lean',str(source)]):
@@ -165,6 +165,15 @@ def main():
                 (output/'environments.json').write_text(json.dumps(envs,indent=2)+'\n')
             else:
                 record('independent-definition-parity', False, 'Environment export missing')
+            if 'PaperChallenge' in envs and 'PaperSolution' in envs:
+                left = {x['name']: x for x in envs['PaperChallenge']['definitions']}
+                right = {x['name']: x for x in envs['PaperSolution']['definitions']}
+                record('paper-definition-parity', bool(left) and all(right.get(n) == v for n,v in left.items()),
+                       {'different': sorted(n for n in left if left[n] != right.get(n))})
+                extra = set(envs['PaperChallenge']['modules']) - set(envs.get('Mathlib',{}).get('modules',[])) - {'PaperChallenge'}
+                record('paper-challenge-mathlib-closure', not extra, sorted(extra))
+            else:
+                record('paper-definition-parity', False, 'Paper environment export missing')
             if 'Mathlib' in envs and 'Challenge' in envs:
                 extra = set(envs['Challenge']['modules']) - set(envs['Mathlib']['modules']) - {'Challenge'}
                 record('challenge-mathlib-closure', not extra, {'extra_modules': sorted(extra)})
@@ -176,7 +185,14 @@ def main():
                 'example : LogGasChallenge.bulkStatement := LogGasChallenge.bulk\n' +
                 '#print axioms LogGasChallenge.principal\n#print axioms LogGasChallenge.bulk\n')
             run('target-proof-contracts', lake + ['env','lean',str(source)])
+            source = ROOT/'.lake'/'VerifyPaperTargets.lean'
+            source.write_text('import PaperSolution\n' +
+                'example : LogGasPaper.PaperTheorem := LogGasPaper.main\n' +
+                'example : LogGasPaper.LogKernelExists := LogGasPaper.kernel_exists\n' +
+                '#print axioms LogGasPaper.main\n#print axioms LogGasPaper.kernel_exists\n')
+            run('paper-proof-contracts', lake + ['env','lean',str(source)])
             run('lean-kernel-replay', lake + ['env','leanchecker','Solution'])
+            run('paper-kernel-replay', lake + ['env','leanchecker','PaperSolution'])
             # The environment scan includes generated/private local declarations.
             # Source parser counts are supplementary, never the whole-graph count.
         if args.comparator_argv:
@@ -200,7 +216,7 @@ def main():
     record('distinct-reviewers', len(identities) == 2 and len(set(identities)) == 2, identities)
     record('frozen-inputs-unchanged', freeze() == hashes, 'Rehashed source, contracts, configuration, prompts and harness')
     result = dict(recorded_utc=stamp, overall='passed' if all(c['status']=='passed' for c in checks) else 'incomplete',
-                  checks=checks, scope='Existing proof graph plus conditional H1/H2 target; paper fidelity is separately reviewed.')
+                  checks=checks, scope='Conditional H1/H2 theorem plus full paper theorem and normalized-kernel existence; independent fidelity review required.')
     (output/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     lines = ['# Final verification', '', 'Overall: **'+result['overall']+'**.', '',
              *[f'- {c["status"]}: {c["name"]}' for c in checks], '',

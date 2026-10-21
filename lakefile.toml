@@ -16,3 +16,9 @@ name = "Solution"
 
 [[lean_lib]]
 name = "VerificationAudit"
+
+[[lean_lib]]
+name = "PaperChallenge"
+
+[[lean_lib]]
+name = "PaperSolution"

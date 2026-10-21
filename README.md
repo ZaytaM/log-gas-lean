@@ -10,7 +10,28 @@ bulk theorem `LogGas.Bulk.lemma41` and principal theorem
 state did not certify those absent declarations. See
 [the independent specification, dependency contracts and final verification](verification/README.md).
 
-The controller keeps six Sonnet workers busy across Claude allowance resets.
+The construction campaign uses one Claude Opus 5.5 coordinator and up to six
+Sonnet workers. It creates missing modules/lemmas, reviews exact candidate patches,
+and integrates only rebuilt results. Start/manage it with:
+
+```
+bash scripts/campaign.sh install  # reboot recovery + watchdog + start
+bash scripts/campaign.sh status
+bash scripts/campaign.sh stop
+```
+
+The previous `service.sh` proof-only queue is retained for history and must remain
+stopped while the campaign owns main. Runtime state is in
+`state/runtime/campaign/`, preserved checkouts in `wt/campaign/`, progress in
+`reports/campaign.md`, and per-call usage in `state/campaign-usage.tsv`.
+Coordinator and worker costs are client estimates; missing usage is unknown.
+There is no routine total cost cap.
+
+`PaperChallenge.lean` independently specifies the full paper theorem and kernel
+existence. `PaperSolution.lean` must prove both; compiling their definitions is
+not completion. The older H1/H2 Challenge remains an intermediate milestone.
+
+The legacy controller kept six Sonnet workers busy across Claude allowance resets.
 It waits automatically when an actual session, weekly, or rate limit is reached,
 then retries after the advertised reset time. When no reset time is available,
 it backs off from five minutes to one hour. Turn limits and individual errors

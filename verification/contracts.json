@@ -6,7 +6,9 @@
     "S8",
     "D7",
     "G3",
-    "B6"
+    "B6",
+    "KERNEL",
+    "PAPER"
   ],
   "allowed_axioms": [
     "propext",
@@ -283,6 +285,33 @@
       "label": "eq:compact-positive-log-split",
       "scope": "physical-application",
       "statement": "For the supplied kernel g satisfying H2, derive exponential slice integrability for every b<2d, using bounded bulk and the local logarithmic upper bound, with a finite uniform slice bound."
+    },
+    {
+      "id": "KERNEL",
+      "module": "PaperSolution",
+      "declarations": [
+        "LogGasPaper.kernel_exists"
+      ],
+      "depends_on": [],
+      "source": "notes/sec1-setting.tex",
+      "label": "eq:kernel-normalization",
+      "scope": "paper-target",
+      "statement": "Construct an integrable real periodic kernel with exactly the normalized Fourier coefficients, for every d >= 2; no assumed existence."
+    },
+    {
+      "id": "PAPER",
+      "module": "PaperSolution",
+      "declarations": [
+        "LogGasPaper.main"
+      ],
+      "depends_on": [
+        "KERNEL",
+        "M4"
+      ],
+      "source": "notes/sec1-setting.tex",
+      "label": "thm:principal",
+      "scope": "paper-target",
+      "statement": "Prove PaperTheorem under H1 only: construct the cutoff H2, establish domain/representative bridges, choose C before kernel representatives, N and beta."
     }
   ],
   "notes": "Missing auxiliary names are provisional task identifiers. A8 and M4 names are required by the original phase notes. This is a conservative milestone DAG, not an exhaustive dependency extraction from proof terms.",

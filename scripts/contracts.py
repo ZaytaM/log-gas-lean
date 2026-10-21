@@ -39,7 +39,8 @@ class Contracts:
 
     def inventory(self):
         return {d.name: (str(p.relative_to(self.root)), d)
-                for p in sorted((self.root / 'LogGas').rglob('*.lean'))
+                for p in [*sorted((self.root / 'LogGas').rglob('*.lean')),
+                          *[self.root/n for n in ('Solution.lean','PaperSolution.lean') if (self.root/n).exists()]]
                 for d in declarations(p.read_text())}
 
     def missing(self):

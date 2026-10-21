@@ -43,3 +43,10 @@ job	task	role	started	ended	outcome	estimated_usd	usage_json
 42	spec-ae	worker	1792625266.3217466	1792625336.3702145	interrupted	unknown	unknown
 43	physical-exp	worker	1792625266.6151824	1792625336.8745363	interrupted	unknown	unknown
 44	unknown	coordinator	1792625270.5581498	1792625336.877769	interrupted	unknown	unknown
+45	fourier-series	worker	1792625338.2957428	1792625402.02285	interrupted	unknown	unknown
+46	cutoff-radial	worker	1792625338.752144	1792625403.8307338	interrupted	unknown	unknown
+47	cutoff-sr	worker	1792625339.2223747	1792625404.23496	interrupted	unknown	unknown
+48	bulk-lemma41	worker	1792625339.6766913	1792625404.639352	interrupted	unknown	unknown
+49	main-holder	worker	1792625340.1343436	1792625404.6427135	interrupted	unknown	unknown
+50	main-param	worker	1792625340.6705477	1792625406.4491198	interrupted	unknown	unknown
+51	unknown	coordinator	1792625341.0708933	1792625406.4523377	interrupted	unknown	unknown

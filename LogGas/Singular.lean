@@ -78,7 +78,9 @@ instance isProbabilityMeasure_boxMeasure (bx : Boxes μE M) (a : Fin M) :
 -- (`ENNReal.smul_def`, `Measure.le_iff`).
 /-- `ν_a ≤ M μ`. -/
 theorem boxMeasure_le (bx : Boxes μE M) (a : Fin M) : boxMeasure bx a ≤ (M : ℝ≥0∞) • μE := by
-  sorry
+  refine Measure.le_iff'.2 fun s => ?_
+  simp only [boxMeasure, Measure.smul_apply, ENNReal.smul_def, ENNReal.coe_natCast, smul_eq_mul]
+  exact mul_le_mul_right (Measure.restrict_apply_le _ _) _
 
 -- SKETCH: `ae_smul_measure` (the `ℝ≥0`-smul is `ENNReal.smul_def`) and `ae_restrict_mem (bx.meas a)`.
 /-- `ν_a`-almost every point lies in `A_a`. -/

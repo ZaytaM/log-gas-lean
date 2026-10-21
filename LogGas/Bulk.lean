@@ -103,7 +103,10 @@ theorem gibbs_identity {α : Type*} [MeasurableSpace α] (ν : Measure α) [IsPr
 /-- The regularized Gram matrix `Σ_ε = Σ + ε·1` is positive definite. -/
 theorem posDef_add_smul_one {q : ℕ} (A : Matrix (Fin q) (Fin q) ℝ) (hA : A.PosSemidef)
     (ε : ℝ) (hε : 0 < ε) : (A + ε • (1 : Matrix (Fin q) (Fin q) ℝ)).PosDef := by
-  sorry
+  have h : (ε • (1 : Matrix (Fin q) (Fin q) ℝ)) = Matrix.diagonal (fun _ => ε) := by
+    ext i j; simp [Matrix.diagonal, Matrix.one_apply]
+  rw [h]
+  exact Matrix.PosDef.posSemidef_add hA (Matrix.PosDef.diagonal fun _ => hε)
 
 -- SKETCH (A.2)–(A.3), regularized: put `Aε := A + ε•1`, `p := Aε⁻¹ *ᵥ ℓ`, so `Aε *ᵥ p = ℓ`
 -- (`Matrix.mulVec_mulVec`, `Matrix.mul_nonsing_inv` with `(posDef_add_smul_one ..).isUnit`

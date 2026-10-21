@@ -48,6 +48,11 @@ that watchdog. Unexpected controller exits are retried by the supervisor.
 - Proofs introduced centrally also receive an axiom check. A proof whose prerequisites
   remain unfinished is `waiting_dependencies`; it is rechecked after source changes
   without launching another model worker.
+- Complete saved proofs are refreshed against current main and checked before any
+  model is called. A prerequisite merged during a worker run is also refreshed before
+  its candidate is audited. Complete candidates waiting on prerequisites use
+  `waiting_saved_dependencies` and are rechecked after source changes without new
+  model usage or increased attempt counts.
 - Each merge gets a full project build and another axiom check on main. A valid
   proof is recovered even if its worker finished at the turn limit.
 - Proofs, author flags, and usage reports are committed and pushed incrementally.

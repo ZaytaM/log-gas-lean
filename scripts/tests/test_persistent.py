@@ -145,14 +145,88 @@ class IntegrationTests(unittest.TestCase):
         rows = [('A', 'pending', 'Candidate failed axiom check; checkpoint retained'),
                 ('B', 'pending', 'Integration build/axiom check failed; worker proof retained'),
                 ('C', 'pending', 'Candidate proof did not build; checkpoint retained'),
-                ('D', 'blocked', 'Candidate failed axiom check; checkpoint retained')]
+                ('D', 'blocked', 'Candidate failed axiom check; checkpoint retained'),
+                ('E', 'waiting_saved_dependencies', 'Candidate failed axiom check; checkpoint retained')]
         for name, state, error in rows:
             db.execute('INSERT INTO tasks(id,file,module,name,state,not_before,error) VALUES(?,?,?,?,?,?,?)',
                        ('M:' + name, 'M.lean', 'M', name, state, later, error))
-        with db: self.assertEqual(module.rearm_after_close(db), 2)
+        with db: self.assertEqual(module.rearm_after_close(db), 3)
         due = dict(db.execute('SELECT name, not_before FROM tasks').fetchall())
-        self.assertEqual((due['A'], due['B']), (0, 0))
+        self.assertEqual((due['A'], due['B'], due['E']), (0, 0, 0))
         self.assertEqual((due['C'], due['D']), (later, later))
+
+    def recovery_runner(self):
+        spec = importlib.util.spec_from_file_location('saved_recovery_runner', self.root/'scripts/persistent.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        runner = module.Runner()
+        runner.log = lambda message: None
+        runner.report = lambda: None
+        runner.publish = lambda: None
+        runner.build = lambda *args, **kwargs: True
+        return module, runner
+
+    def saved_task(self, runner):
+        file = 'LogGas/T0.lean'
+        path = self.root/file
+        path.write_text('namespace T0\ntheorem prerequisite : True := by\n  sorry\ntheorem proof : True := by\n  sorry\nend T0\n')
+        self.git('add', file); self.git('commit', '-m', 'Dependent proof fixture')
+        task_id = 'LogGas.T0:T0.proof'
+        with runner.db:
+            runner.db.execute('INSERT INTO tasks(id,file,module,name,attempts) VALUES(?,?,?,?,?)',
+                              (task_id,file,'LogGas.T0','T0.proof',1))
+        task = runner.db.execute('SELECT * FROM tasks WHERE id=?',(task_id,)).fetchone()
+        wt, branch = runner.prepare(task)
+        saved = wt/file
+        saved.write_text(saved.read_text().replace('theorem proof : True := by\n  sorry',
+                                                'theorem proof : True := by\n  trivial'))
+        with runner.db:
+            runner.db.execute('UPDATE tasks SET worktree=?,branch=? WHERE id=?',(str(wt),branch,task_id))
+            job_id = runner.db.execute('INSERT INTO jobs(task,started,base_commit,outcome,cost,usage_known) VALUES(?,?,?,?,?,?)',
+                                      (task_id,time.time(),self.git('rev-parse','HEAD').strip(),'success',.2,1)).lastrowid
+        return runner.db.execute('SELECT * FROM tasks WHERE id=?',(task_id,)).fetchone(), runner.db.execute('SELECT * FROM jobs WHERE id=?',(job_id,)).fetchone()
+
+    def test_accept_refreshes_a_prerequisite_closed_during_worker_run(self):
+        module, runner = self.recovery_runner()
+        task, job = self.saved_task(runner)
+        path = self.root/task['file']
+        path.write_text(path.read_text().replace('theorem prerequisite : True := by\n  sorry',
+                                               'theorem prerequisite : True := by\n  trivial'))
+        self.git('add',task['file']); self.git('commit','-m','Close prerequisite while worker runs')
+        runner.axioms = lambda wt, *args: not any(d.sorry for d in module.declarations((wt/task['file']).read_text()))
+        runner.accept(task,job,'success')
+        self.assertEqual(runner.db.execute('SELECT state FROM tasks').fetchone()[0],'closed')
+        self.assertFalse(any(d.sorry for d in module.declarations(path.read_text())))
+        self.assertEqual(runner.db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],1)
+        runner.db.close()
+
+    def test_complete_saved_proof_is_rechecked_without_model_usage(self):
+        module, runner = self.recovery_runner()
+        task, job = self.saved_task(runner)
+        from unittest.mock import Mock
+        runner.accept = Mock()
+        real_popen = module.subprocess.Popen
+        def no_models(args, *other, **kwargs):
+            self.assertFalse(any('worker_exec.py' in str(a) or str(a)=='claude' for a in args))
+            return real_popen(args,*other,**kwargs)
+        with patch.object(module.subprocess,'Popen',side_effect=no_models):
+            runner.start(task)
+        self.assertEqual(runner.accept.call_args.args[2],'saved_proof_recheck')
+        self.assertEqual(runner.db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],1)
+        self.assertEqual(runner.db.execute('SELECT attempts FROM tasks').fetchone()[0],1)
+        self.assertEqual(runner.db.execute('SELECT SUM(cost) FROM jobs').fetchone()[0],.2)
+        runner.db.close()
+
+    def test_complete_candidate_waits_without_launching_more_workers(self):
+        module, runner = self.recovery_runner()
+        task,job = self.saved_task(runner)
+        runner.axioms = lambda *args: False
+        runner.accept(task,job,'success')
+        self.assertEqual(runner.db.execute('SELECT state FROM tasks').fetchone()[0],'waiting_saved_dependencies')
+        with runner.db: self.assertEqual(module.rearm_after_close(runner.db),1)
+        state,due = runner.db.execute('SELECT state,not_before FROM tasks').fetchone()
+        self.assertEqual((state,due),('pending',0))
+        runner.db.close()
 
     def test_discovery_waits_for_dependency_axioms(self):
         spec = importlib.util.spec_from_file_location('discovery_test_runner', SCRIPTS/'persistent.py')
@@ -249,6 +323,22 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(peak,6)
             self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE state='closed'").fetchone()[0],7)
 
+    def test_startup_recovers_untracked_report_files(self):
+        (self.root/'reports/persistent.md').write_text('Interrupted report\n')
+        (self.root/'state/worker_usage.tsv').write_text('Interrupted usage report\n')
+        p,log=self.launch('success'); p.wait(timeout=35)
+        self.assertEqual(p.returncode,0,log.read_text())
+        with self.db() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE state='closed'").fetchone()[0],7)
+
+    def test_startup_still_rejects_unexpected_untracked_files(self):
+        (self.root/'reports/unexpected.txt').write_text('Unrelated user work\n')
+        p,log=self.launch('success'); p.wait(timeout=10)
+        self.assertNotEqual(p.returncode,0)
+        self.assertIn('reports/unexpected.txt',log.read_text())
+        with self.db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],0)
+
     def test_single_controller_and_checkpoint_on_stop(self):
         p,log=self.launch('slow')
         self.wait_for(p,lambda db: db.execute('SELECT 1 FROM jobs WHERE pid IS NOT NULL').fetchone(),log)
@@ -267,7 +357,10 @@ class IntegrationTests(unittest.TestCase):
         self.wait_for(p,lambda db: db.execute('SELECT COUNT(*) FROM jobs WHERE pid IS NOT NULL').fetchone()[0]==3,log)
         p.kill();p.wait()
         p,log=self.launch('success')
-        self.wait_for(p,lambda db: db.execute("SELECT COUNT(*) FROM jobs WHERE outcome='interrupted'").fetchone()[0]==3,log)
+        # The job outcome is persisted before acceptance finishes restoring the task.
+        # Wait for both before overriding the test-only retry timers.
+        self.wait_for(p,lambda db: db.execute("SELECT COUNT(*) FROM jobs WHERE outcome='interrupted'").fetchone()[0]==3
+                      and db.execute("SELECT COUNT(*) FROM tasks WHERE state IN ('running','verifying')").fetchone()[0]==0,log)
         with self.db() as db: db.execute("UPDATE tasks SET not_before=0 WHERE state='pending'")
         p.wait(timeout=35)
         self.assertEqual(p.returncode,0,log.read_text())

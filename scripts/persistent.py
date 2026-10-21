@@ -131,7 +131,8 @@ def rearm_after_close(db):
     transaction. Returns the number of tasks re-armed.
     """
     clause = ' OR '.join('error LIKE ?' for _ in AXIOM_WAIT_ERRORS)
-    return db.execute(f"UPDATE tasks SET not_before=0 WHERE state='pending' AND not_before>0 AND ({clause})",
+    return db.execute(f"UPDATE tasks SET state='pending',not_before=0 WHERE "
+                      f"((state='pending' AND not_before>0) OR state='waiting_saved_dependencies') AND ({clause})",
                       AXIOM_WAIT_ERRORS).rowcount
 
 
@@ -183,8 +184,8 @@ class Runner:
                     self.db.execute("UPDATE tasks SET state=?,error=? WHERE id=?",
                         ('closed' if verified else 'waiting_dependencies',
                          '' if verified else 'Proof present; awaiting prerequisite proofs and a clean axiom audit', task['id']))
-            if newly_closed and (n := rearm_after_close(self.db)):
-                self.log(f'Discovery closed a target; re-armed {n} waiting task(s)')
+            if (newly_closed or changed) and (n := rearm_after_close(self.db)):
+                self.log(f'Source changed; re-armed {n} saved proof(s) for model-free verification')
         self._source_fingerprint = fingerprint
 
     def build(self, cwd, module=None, tag='build'):
@@ -266,6 +267,21 @@ class Runner:
                 self.db.execute("UPDATE tasks SET state='blocked',error=? WHERE id=?", (str(exc), task['id']))
             self.log(f'Needs attention: {task["name"]}: {exc}')
             return
+        # A complete checkpoint should be rechecked against today's prerequisites,
+        # without creating another model invocation or increasing its attempt count.
+        decl = next(d for d in declarations((worktree / task['file']).read_text()) if d.name == task['name'])
+        if not decl.sorry:
+            previous_job = self.db.execute('SELECT * FROM jobs WHERE task=? ORDER BY id DESC LIMIT 1', (task['id'],)).fetchone()
+            if previous_job:
+                with self.db:
+                    self.db.execute("UPDATE tasks SET worktree=?,branch=? WHERE id=?",
+                                    (str(worktree), branch, task['id']))
+                refreshed = self.db.execute('SELECT * FROM tasks WHERE id=?', (task['id'],)).fetchone()
+                audit_job = dict(previous_job)
+                audit_job['base_commit'] = checked(['git', 'rev-parse', 'main'])
+                self.log(f'Rechecking saved proof without a model call: {task["name"]}')
+                self.accept(refreshed, audit_job, 'saved_proof_recheck')
+                return
         prompt = (ROOT / 'prompts/worker.md').read_text()
         for key, value in {'LEMMA_FILE':task['file'], 'MODULE':task['module'],
                            'LEMMA_NAME':task['name'], 'MAX_ATTEMPTS':self.cfg.get('MAX_ATTEMPTS', '5')}.items():
@@ -357,12 +373,23 @@ class Runner:
                 if cmd(['git', 'diff', '--cached', '--quiet'])[0]: checked(['git', 'commit', '-m', f'Flag {task["name"]} for author review'])
                 state, error = 'blocked', 'Author review requested; see notes/flags'
             else:
+                # A prerequisite may have been merged while this worker was running.
+                # First validate its original scope above, then transplant ONLY its proof
+                # onto current main before building or inspecting transitive axioms.
+                latest = checked(['git', 'rev-parse', 'main'])
+                if latest != job['base_commit']:
+                    self.log(f'Refreshing saved proof against current main: {task["name"]}')
+                    worktree, _ = self.prepare(task)
+                    after = (worktree / task['file']).read_text()
+                    if not proof_only_change((ROOT / task['file']).read_text(), after, task['name']):
+                        raise ValueError('Refreshed proof changed material outside its target')
                 decl = next(d for d in declarations(after) if d.name == task['name'])
                 if decl.sorry:
                     error = outcome + ': partial proof checkpoint retained'
                 elif not self.build(worktree, task['module'], f'job-{job["id"]}-build'):
                     error = 'Candidate proof did not build; checkpoint retained'
                 elif not self.axioms(worktree, task, str(job['id'])):
+                    state = 'waiting_saved_dependencies'
                     error = 'Candidate failed axiom check; checkpoint retained'
                 else:
                     checked(['git', 'add', task['file']], worktree)
@@ -433,7 +460,7 @@ class Runner:
                 f'Automatic retry: {stamp(pause)} ({meta(self.db,"pause_reason")})' if pause > time.time() else 'Queue is eligible to dispatch work.', '',
                 'Costs are client estimates and do not measure subscription allowance precisely.',
                 'Closed means the target proof passed source, build and axiom checks on main.',
-                'Waiting_dependencies means a proof is present but its transitive axiom audit is not yet clean; no model worker is spent on it.', '', '## Needs attention', '']
+                'Waiting_dependencies / waiting_saved_dependencies means a complete proof awaits prerequisite proofs and a clean axiom audit; no model worker is spent on it.', '', '## Needs attention', '']
         body += [f'- {t["name"]}: {t["error"]}' for t in self.db.execute("SELECT name,error FROM tasks WHERE state='blocked'")]
         (ROOT / 'reports/persistent.md').write_text('\n'.join(body) + '\n')
         fields = ['id','task','started','ended','outcome','proof_result','cost','usage_known','turns','duration_ms','usage']
@@ -471,10 +498,11 @@ class Runner:
             cmd(['git', 'merge', '--abort'])
             checked(['git', 'reset', '--hard', integration_base])
             put_meta(self.db, 'integration_base', '')
-        dirty = checked(['git', 'status', '--porcelain'], strip=False)
+        dirty = checked(['git', 'status', '--porcelain', '--untracked-files=all'], strip=False)
         allowed = {'reports/persistent.md', 'state/worker_usage.tsv'}
         if dirty and any(line[3:] not in allowed for line in dirty.splitlines()):
-            raise RuntimeError('Main checkout has unexpected uncommitted files; inspect before starting')
+            raise RuntimeError('Main checkout has unexpected uncommitted files; inspect before starting: ' +
+                               ', '.join(line[3:] for line in dirty.splitlines() if line[3:] not in allowed))
         if dirty:
             checked(['git', 'add', *sorted(allowed)])
             checked(['git', 'commit', '-m', 'Recover interrupted queue report'])

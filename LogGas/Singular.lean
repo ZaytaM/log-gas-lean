@@ -2360,7 +2360,39 @@ theorem label_exp_bound_of_boxKernel [DecidableRel G.Adj] (hdeg : ∀ a, G.degre
     {h : E → E → ℝ} {κ : ℝ} (H : BoxKernel bx G h κ) (hN : 1 ≤ N) (L : Fin N → Fin M) (δ : ℝ)
     (hL : GoodLabel L δ) (t : ℝ) (ht : 0 ≤ t) (hδ : 8 * 3 ^ d * Cu * κ * t * δ ≤ 1 / 2) :
     ∫ x, Real.exp (t * W h (coord N) x) ∂(labelMeasure bx L) ≤ (8 / 3) ^ M := by
-  sorry
+  have hNpos : (0 : ℝ) < N := by exact_mod_cast hN
+  have hκ := H.κ_pos
+  have hCu : (0 : ℝ) < Cu := by unfold Cu; norm_num
+  have hae : ∀ᵐ x ∂(labelMeasure bx L),
+      Real.exp (t * W h (coord N) x) = Real.exp ((2 * t) * S (labelKer bx L h) (coord N) x / N) := by
+    filter_upwards [S_labelKer_ae bx L h] with x hx
+    rw [W_eq_S h H.symm, ← hx]
+    congr 1
+    ring
+  rw [integral_congr_ae hae]
+  have hδN : 0 ≤ δ * N :=
+    le_trans (Nat.cast_nonneg _) (hL (L ⟨0, by omega⟩))
+  have hfl : (⌊δ * N⌋₊ : ℝ) ≤ δ * N := Nat.floor_le hδN
+  have hG := grouped_exp_bound (hyp_labels H L) hN L ⌊δ * N⌋₊
+    (fun a => by
+      have h1 : ((univ.filter (fun i => L i = a)).card : ℝ) ≤ δ * N := hL a
+      exact Nat.le_floor h1)
+    G (3 ^ d) (Nat.one_le_pow _ _ (by norm_num)) hdeg
+    (fun i j hne hadj x y => by
+      unfold labelKer
+      by_cases hx : x ∈ bx.A (L i)
+      · by_cases hy : y ∈ bx.A (L j)
+        · simp [hx, hy, H.local_ _ _ hne hadj x hx y hy]
+        · simp [hy]
+      · simp [hx])
+    (2 * t) (by
+      rw [abs_of_nonneg (by positivity)]
+      have hc : (0 : ℝ) ≤ 4 * ((3 ^ d : ℕ) : ℝ) * Cu * κ * (2 * t) := by positivity
+      calc 4 * ((3 ^ d : ℕ) : ℝ) * Cu * κ * (2 * t) * (⌊δ * N⌋₊ : ℝ) / N
+          ≤ 4 * ((3 ^ d : ℕ) : ℝ) * Cu * κ * (2 * t) * (δ * N) / N := by gcongr
+        _ = 8 * 3 ^ d * Cu * κ * t * δ := by push_cast; field_simp; ring
+        _ ≤ 1 / 2 := hδ)
+  exact hG
 
 /-- The singular centered kernel and all its sub-kernels satisfy the generalized interface.
 No boundedness assumption is needed. -/
@@ -2402,7 +2434,7 @@ theorem label_exp_bound_trunc [DecidableRel G.Adj] (hdeg : ∀ a, G.degree a ≤
     (L : Fin N → Fin M) (δ : ℝ) (hL : GoodLabel L δ) (t : ℝ) (ht : 0 ≤ t)
     (hδ : 8 * 3 ^ d * Cu * kappaStar Cc V * t * δ ≤ 1 / 2) :
     ∫ x, Real.exp (t * W (hker bx (trunc R K.s)) (coord N) x) ∂(labelMeasure bx L) ≤ (8 / 3) ^ M := by
-  sorry
+  exact label_exp_bound_of_boxKernel hdeg (hker_trunc_boxKernel K hd hR) hN L δ hL t ht hδ
 
 -- SKETCH: `trunc n K.s z → K.s z` (eventually constant: `min_eq_left` once `K.s z ≤ n`,
 -- `tendsto_atTop_of_eventually_const` / `Filter.EventuallyEq.tendsto`).  The box averages
@@ -2497,7 +2529,83 @@ theorem label_exp_bound [DecidableRel G.Adj] (hdeg : ∀ a, G.degree a ≤ 3 ^ d
     (hδ : 8 * 3 ^ d * Cu * kappaStar Cc V * t * δ ≤ 1 / 2) :
     ∫⁻ x, ENNReal.ofReal (Real.exp (t * W (hker bx K.s) (coord N) x)) ∂(labelMeasure bx L)
       ≤ ENNReal.ofReal ((8 / 3) ^ M) := by
-  sorry
+  classical
+  have hmeas : ∀ n : ℕ, Measurable (fun x => ENNReal.ofReal
+      (Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x))) := by
+    intro n
+    have hW := measurable_W (hker bx (trunc (n : ℝ) K.s))
+      (measurable_hker (bx := bx) _ (K.s_meas.min measurable_const)) (coord N)
+      (fun i => measurable_pi_apply i)
+    exact (Real.measurable_exp.comp (hW.const_mul t)).ennreal_ofReal
+  have hle : ∀ n : ℕ, ∫⁻ x, ENNReal.ofReal
+      (Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x)) ∂(labelMeasure bx L)
+      ≤ ENNReal.ofReal ((8 / 3) ^ M) := by
+    intro n
+    have hn : (0 : ℝ) ≤ n := Nat.cast_nonneg n
+    have hC := SingularKernel.Cc_nonneg K
+    have hbd : ∀ x, |W (hker bx (trunc (n : ℝ) K.s)) (coord N) x| ≤ N * (n + 3 * Cc) := by
+      intro x
+      have hterm : ∀ i j, |hker bx (trunc (n : ℝ) K.s) (coord N i x) (coord N j x)|
+          ≤ n + 3 * Cc := by
+        intro i j
+        refine (hker_abs_le K (SingularKernel.Sub.trunc K hn) _ _).trans ?_
+        have : trunc (n : ℝ) K.s (coord N i x - coord N j x) ≤ n := min_le_right _ _
+        linarith
+      unfold W
+      rw [abs_mul]
+      have h1 : |∑ i, ∑ j ∈ Finset.univ.erase i,
+          hker bx (trunc (n : ℝ) K.s) (coord N i x) (coord N j x)| ≤ N * N * (n + 3 * Cc) := by
+        refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+        calc _ ≤ ∑ i : Fin N, (N : ℝ) * (n + 3 * Cc) := by
+              refine Finset.sum_le_sum fun i _ => ?_
+              refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+              refine (Finset.sum_le_sum fun j _ => hterm i j).trans ?_
+              rw [Finset.sum_const, nsmul_eq_mul]
+              refine mul_le_mul_of_nonneg_right ?_ (by positivity)
+              have := Finset.card_le_univ (Finset.univ.erase i)
+              simpa using (Nat.cast_le (α := ℝ)).2 this
+          _ = N * N * (n + 3 * Cc) := by
+              rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]; ring
+      rcases Nat.eq_zero_or_pos N with h0 | h0
+      · subst h0; simp
+      · have hNp : (0 : ℝ) < N := by exact_mod_cast h0
+        rw [abs_of_nonneg (by positivity : (0 : ℝ) ≤ 1 / (N : ℝ))]
+        calc 1 / (N : ℝ) * _ ≤ 1 / (N : ℝ) * (N * N * (n + 3 * Cc)) :=
+              mul_le_mul_of_nonneg_left h1 (by positivity)
+          _ = N * (n + 3 * Cc) := by field_simp
+    have hW := measurable_W (hker bx (trunc (n : ℝ) K.s))
+      (measurable_hker (bx := bx) _ (K.s_meas.min measurable_const)) (coord N)
+      (fun i => measurable_pi_apply i)
+    have hint : Integrable (fun x => Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x))
+        (labelMeasure bx L) := by
+      refine Integrable.of_bound (C := Real.exp (t * (N * (n + 3 * Cc))))
+        (Real.measurable_exp.comp (hW.const_mul t)).aestronglyMeasurable
+        (Filter.Eventually.of_forall fun x => ?_)
+      rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+      apply Real.exp_le_exp.2
+      exact mul_le_mul_of_nonneg_left ((le_abs_self _).trans (hbd x)) ht
+    rw [← ofReal_integral_eq_lintegral_ofReal hint (Filter.Eventually.of_forall fun x =>
+      (Real.exp_pos _).le)]
+    exact ENNReal.ofReal_le_ofReal
+      (label_exp_bound_trunc hdeg K hd hn hN L δ hL t ht hδ)
+  have hlim : ∀ x, Filter.Tendsto (fun n : ℕ => ENNReal.ofReal
+      (Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x))) Filter.atTop
+      (nhds (ENNReal.ofReal (Real.exp (t * W (hker bx K.s) (coord N) x)))) := by
+    intro x
+    refine (ENNReal.continuous_ofReal.tendsto _).comp
+      ((Real.continuous_exp.tendsto _).comp ((tendsto_const_nhds (x := t)).mul ?_))
+    unfold W
+    refine (tendsto_const_nhds (x := 1 / (N : ℝ))).mul ?_
+    refine tendsto_finsetSum _ fun i _ => tendsto_finsetSum _ fun j _ => ?_
+    exact hker_trunc_tendsto K _ _
+  calc _ = ∫⁻ x, Filter.liminf (fun n : ℕ => ENNReal.ofReal
+        (Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x))) Filter.atTop
+        ∂(labelMeasure bx L) := by
+        congr 1; funext x; exact (hlim x).liminf_eq.symm
+    _ ≤ Filter.liminf (fun n : ℕ => ∫⁻ x, ENNReal.ofReal
+        (Real.exp (t * W (hker bx (trunc (n : ℝ) K.s)) (coord N) x)) ∂(labelMeasure bx L))
+        Filter.atTop := lintegral_liminf_le hmeas
+    _ ≤ _ := Filter.liminf_le_of_frequently_le' (Filter.Frequently.of_forall hle)
 
 end Grouped
 
@@ -2541,7 +2649,118 @@ theorem lemma51 (d : ℕ) (hd : 1 ≤ d) (Cc V : ℝ) (t0 : ℝ) (ht0 : 0 < t0) 
           ∫ ω, (goodEvent X bx δ).indicator
               (fun ω => Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω)) ω ∂μ
             ≤ (8 / 3 : ℝ) ^ (((M : ℝ) + 1) / 2) := by
-  sorry
+  obtain ⟨r1, hr1, hA⟩ := aker_exp_bound (μE := μE) d hd Cc V t0 ht0
+  have hκ := kappaStar_pos Cc V
+  have hCu : 0 < Cu := by unfold Cu; norm_num
+  have h3 : (0 : ℝ) < 3 ^ d := by positivity
+  have hP : 0 < 16 * 3 ^ d * Cu * kappaStar Cc V * t0 := by positivity
+  refine ⟨1 / (16 * 3 ^ d * Cu * kappaStar Cc V * t0), r1, by positivity, hr1, ?_⟩
+  intro M bx G _ hdeg K hK δ hδ hδ0 Ω _ μ _ N hN X hXm hXi hXl t ht htt
+  have hδt : 8 * 3 ^ d * Cu * kappaStar Cc V * t * δ ≤ 1 / 2 := by
+    have h1 : δ * (16 * 3 ^ d * Cu * kappaStar Cc V * t0) ≤ 1 := by
+      rw [le_div_iff₀ hP] at hδ0; exact hδ0
+    have h2 : 0 ≤ 3 ^ d * Cu * kappaStar Cc V := by positivity
+    nlinarith [mul_nonneg h2 (mul_nonneg hδ.le (sub_nonneg.2 htt))]
+  have hmeas : Measurable (fun ω => Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω)) := by
+    have : Measurable (W (fun x y => K.stilde (x - y)) X) :=
+      measurable_W _ (by
+        have := K.s_meas
+        unfold SingularKernel.stilde
+        exact (this.comp measurable_sub).sub measurable_const) X hXm
+    exact (Real.measurable_exp.comp (this.const_mul _))
+  have hAm := measurableSet_goodEvent X hXm bx δ
+  have hHold := singular_holder μ _ hAm K X hXm t
+  -- first factor
+  have ha : ∫⁻ ω, ENNReal.ofReal (Real.exp (t * W (aker bx K.s K.c) X ω)) ∂μ
+      ≤ ENNReal.ofReal (8 / 3) := by
+    have hWm : Measurable (W (aker bx K.s K.c) X) :=
+      measurable_W _ (measurable_aker (bx := bx) K.s K.s_meas K.c) X hXm
+    have hWb : ∀ ω, |W (aker bx K.s K.c) X ω| ≤ 4 * Cc * N := by
+      intro ω
+      unfold W
+      have h0 : 0 ≤ 4 * Cc := le_trans (abs_nonneg _) (aker_abs_le K 0 0)
+      have hNp : (0 : ℝ) < N := by exact_mod_cast hN
+      rw [abs_mul, abs_of_pos (by positivity : (0:ℝ) < 1 / N)]
+      have : |∑ i, ∑ j ∈ Finset.univ.erase i, aker bx K.s K.c (X i ω) (X j ω)|
+          ≤ ∑ i : Fin N, ∑ j ∈ Finset.univ.erase i, (4 * Cc) := by
+        refine (Finset.abs_sum_le_sum_abs _ _).trans (Finset.sum_le_sum fun i _ => ?_)
+        refine (Finset.abs_sum_le_sum_abs _ _).trans (Finset.sum_le_sum fun j _ => ?_)
+        exact aker_abs_le K _ _
+      have h2 : ∑ i : Fin N, ∑ j ∈ Finset.univ.erase i, (4 * Cc) ≤ N * N * (4 * Cc) := by
+        simp only [Finset.sum_const, Finset.card_erase_of_mem (Finset.mem_univ _),
+          Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+        have : ((N - 1 : ℕ) : ℝ) ≤ N := by exact_mod_cast Nat.sub_le N 1
+        nlinarith [mul_le_mul_of_nonneg_right this h0, Nat.cast_nonneg (α := ℝ) N]
+      calc 1 / (N:ℝ) * _ ≤ 1 / (N:ℝ) * (N * N * (4 * Cc)) :=
+            mul_le_mul_of_nonneg_left (this.trans h2) (by positivity)
+        _ = 4 * Cc * N := by field_simp
+    have hint : Integrable (fun ω => Real.exp (t * W (aker bx K.s K.c) X ω)) μ := by
+      refine Integrable.of_bound (C := Real.exp (t * (4 * Cc * N)))
+        ((Real.measurable_exp.comp (hWm.const_mul t)).aestronglyMeasurable)
+        (Filter.Eventually.of_forall fun ω => ?_)
+      rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+      exact Real.exp_le_exp.2 (mul_le_mul_of_nonneg_left ((le_abs_self _).trans (hWb ω)) ht)
+    rw [← ofReal_integral_eq_lintegral_ofReal hint (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le)]
+    exact ENNReal.ofReal_le_ofReal (hA bx G K hK μ hN X hXm hXi hXl t ht htt)
+  -- second factor
+  have hb : ∫⁻ ω, (goodEvent X bx δ).indicator
+      (fun ω => ENNReal.ofReal (Real.exp (t * W (hker bx K.s) X ω))) ω ∂μ
+      ≤ ENNReal.ofReal ((8 / 3) ^ M) := by
+    classical
+    have hM0 : M ≠ 0 := by
+      rintro rfl
+      have h := bx.cover
+      have : (0 : E) ∈ (Set.univ : Set E) := trivial
+      rw [← h] at this
+      simp at this
+    have hF : Measurable (fun x : Fin N → E =>
+        ENNReal.ofReal (Real.exp (t * W (hker bx K.s) (coord N) x))) :=
+      ENNReal.measurable_ofReal.comp (Real.measurable_exp.comp
+        ((measurable_W _ (measurable_hker (bx := bx) K.s K.s_meas) (coord N)
+          (fun i => measurable_pi_apply i)).const_mul t))
+    have hdec := label_decomposition μ bx δ X hXm hXi hXl _ hF
+    refine le_trans (le_of_eq hdec) ?_
+    calc _ ≤ ∑ L : Fin N → Fin M, ((M : ℝ≥0∞) ^ N)⁻¹ * ENNReal.ofReal ((8 / 3) ^ M) := by
+          refine Finset.sum_le_sum fun L _ => ?_
+          split_ifs with hL
+          · exact mul_le_mul_right (label_exp_bound hdeg K hd hN L δ hL t ht hδt) _
+          · exact bot_le
+      _ = ENNReal.ofReal ((8 / 3) ^ M) := by
+          rw [Finset.sum_const, Finset.card_univ, Fintype.card_fun, Fintype.card_fin,
+            Fintype.card_fin, nsmul_eq_mul, ← mul_assoc, Nat.cast_pow,
+            ENNReal.mul_inv_cancel (pow_ne_zero _ (by exact_mod_cast hM0)) (ENNReal.pow_ne_top (ENNReal.natCast_ne_top M)), one_mul]
+  have hℓ : ∫⁻ ω, (goodEvent X bx δ).indicator
+      (fun ω => ENNReal.ofReal (Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω))) ω ∂μ
+      ≤ ENNReal.ofReal ((8 / 3 : ℝ) ^ (((M : ℝ) + 1) / 2)) := by
+    refine hHold.trans ?_
+    have e : ENNReal.ofReal ((8 / 3 : ℝ) ^ (((M : ℝ) + 1) / 2))
+        = ENNReal.ofReal (8 / 3) ^ (1 / 2 : ℝ) * ENNReal.ofReal ((8 / 3) ^ M) ^ (1 / 2 : ℝ) := by
+      rw [ENNReal.ofReal_rpow_of_nonneg (by norm_num) (by norm_num),
+        ENNReal.ofReal_rpow_of_nonneg (by positivity) (by norm_num),
+        ← ENNReal.ofReal_mul (by positivity)]
+      congr 1
+      rw [← Real.rpow_natCast, ← Real.rpow_mul (by norm_num), ← Real.rpow_add (by norm_num)]
+      congr 1; ring
+    rw [e]
+    exact mul_le_mul' (ENNReal.rpow_le_rpow ha (by norm_num))
+      (ENNReal.rpow_le_rpow hb (by norm_num))
+  have hfin : ∫⁻ ω, ENNReal.ofReal ((goodEvent X bx δ).indicator
+      (fun ω => Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω)) ω) ∂μ < ⊤ := by
+    refine lt_of_le_of_lt (le_of_eq ?_) (lt_of_le_of_lt hℓ ENNReal.ofReal_lt_top)
+    refine lintegral_congr fun ω => ?_
+    by_cases h : ω ∈ goodEvent X bx δ <;> simp [h]
+  have hnn : ∀ ω, 0 ≤ (goodEvent X bx δ).indicator
+      (fun ω => Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω)) ω :=
+    fun ω => Set.indicator_nonneg (fun _ _ => (Real.exp_pos _).le) ω
+  have hmeas2 := hmeas.indicator hAm
+  have hint : Integrable (fun ω => (goodEvent X bx δ).indicator
+      (fun ω => Real.exp ((t / 2) * W (fun x y => K.stilde (x - y)) X ω)) ω) μ :=
+    ⟨hmeas2.aestronglyMeasurable, (hasFiniteIntegral_iff_ofReal (Filter.Eventually.of_forall hnn)).2 hfin⟩
+  refine ⟨hint, ?_⟩
+  rw [integral_eq_lintegral_of_nonneg_ae (Filter.Eventually.of_forall hnn) hmeas2.aestronglyMeasurable]
+  refine ENNReal.toReal_le_of_le_ofReal (by positivity) (le_trans (le_of_eq ?_) hℓ)
+  refine lintegral_congr fun ω => ?_
+  by_cases h : ω ∈ goodEvent X bx δ <;> simp [h]
 
 end Main
 

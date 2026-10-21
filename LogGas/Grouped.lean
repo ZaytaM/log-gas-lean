@@ -321,7 +321,41 @@ theorem block_factor (H : Hyp μ ν Y h κ) (hm : 1 ≤ m) (T : Finset (Fin m)) 
     (hvan : ∀ i j, (i ∉ T ∨ j ∉ T) → ∀ x y, h i j x y = 0) (t : ℝ)
     (ht : Cu * κ * |t| * (2 * mstar) / m ≤ 1 / 2) :
     ∫ ω, Real.exp (t * S h Y ω / m) ∂μ ≤ 8 / 3 := by
-  sorry
+  have hκ := H.κ_pos
+  have hCu : (0:ℝ) < Cu := by unfold Cu; norm_num
+  have hmR : (0:ℝ) < m := by exact_mod_cast hm
+  rcases T.eq_empty_or_nonempty with rfl | hne
+  · have hS : ∀ ω, S h Y ω = 0 := by
+      intro ω
+      unfold S
+      apply Finset.sum_eq_zero
+      intro i _
+      apply Finset.sum_eq_zero
+      intro j _
+      exact hvan i j (Or.inl (Finset.notMem_empty _)) _ _
+    simp [hS]
+    norm_num
+  · have hT : 1 ≤ T.card := Finset.card_pos.2 hne
+    have hTR : (0:ℝ) < T.card := by exact_mod_cast hT
+    have hle : (T.card : ℝ) ≤ 2 * mstar := by exact_mod_cast hsize
+    set θ : ℝ := t * T.card / m with hθdef
+    have hx : Cu * κ * |θ| ≤ 1 / 2 := by
+      have : Cu * κ * |θ| = Cu * κ * |t| * T.card / m := by
+        rw [hθdef, abs_div, abs_mul, abs_of_pos hmR, abs_of_pos hTR]; ring
+      rw [this]
+      refine le_trans ?_ ht
+      gcongr
+    have hx0 : 0 ≤ Cu * κ * |θ| := by positivity
+    have key := block_exp_bound H T hT hvan θ (by linarith)
+    have heq : ∀ ω, θ * S h Y ω / T.card = t * S h Y ω / m := by
+      intro ω; rw [hθdef]; field_simp
+    simp only [heq] at key
+    refine key.trans ?_
+    have h1 : (Cu * κ * |θ|) ^ 2 ≤ (1/2)^2 := pow_le_pow_left₀ hx0 hx 2
+    have h2 : 2 / (1 - (Cu * κ * |θ|) ^ 2) ≤ 2 / (1 - (1/2:ℝ)^2) :=
+      div_le_div_of_nonneg_left (by norm_num) (by norm_num) (by linarith)
+    refine h2.trans ?_
+    norm_num
 
 end Blocks
 
@@ -455,7 +489,22 @@ theorem class_bound (hm : 1 ≤ m) {M : ℕ} (T : Fin M → Finset (Fin m))
     (mstar : ℕ) (hsize : ∀ b, (T b).card ≤ 2 * mstar) (t : ℝ)
     (ht : Cu * κ * |t| * (2 * mstar) / m ≤ 1 / 2) :
     ∫ ω, Real.exp (t * (∑ b, S (h' b) Y ω) / m) ∂μ ≤ (8 / 3) ^ M := by
-  sorry
+  rcases Nat.eq_zero_or_pos M with rfl | hM
+  · simp
+  have H0 := hH ⟨0, hM⟩
+  have hfac := class_mgf (μ := μ) H0.Y_meas H0.Y_indep T hT h'
+    (fun b => (hH b).h_meas) hvan (t / m)
+  have heq : ∀ ω, t * (∑ b, S (h' b) Y ω) / m = t / m * ∑ b, S (h' b) Y ω := by
+    intro ω; ring
+  simp_rw [heq]
+  rw [hfac]
+  calc ∏ b, ∫ ω, Real.exp (t / m * S (h' b) Y ω) ∂μ
+      ≤ ∏ _b : Fin M, (8 / 3 : ℝ) := by
+        refine Finset.prod_le_prod₀ (fun b _ => integral_nonneg fun ω => (Real.exp_pos _).le)
+          (fun b _ => ?_)
+        have := block_factor (hH b) hm (T b) mstar (hsize b) (hvan b) t ht
+        simpa only [div_mul_eq_mul_div] using this
+    _ = (8 / 3) ^ M := by simp [div_pow]
 
 end Classes
 
@@ -751,7 +800,180 @@ theorem grouped_exp_bound (H : Hyp μ ν Y h κ) (hm : 1 ≤ m) {M : ℕ} (grp :
     (hvan : ∀ i j, grp i ≠ grp j → ¬ G.Adj (grp i) (grp j) → ∀ x y, h i j x y = 0)
     (u : ℝ) (hu : 4 * K * Cu * κ * |u| * mstar / m ≤ 1 / 2) :
     ∫ ω, Real.exp (u * S h Y ω / m) ∂μ ≤ (8 / 3) ^ M := by
-  sorry
+  classical
+  have E : ∀ {n : ℕ} {ν' : Fin n → Measure E} [∀ i, IsProbabilityMeasure (ν' i)]
+      {Y' : Fin n → Ω → E} {h2 : Fin n → Fin n → E → E → ℝ}, Hyp μ ν' Y' h2 κ → 1 ≤ n →
+      ∀ θ : ℝ, Cu * κ * |θ| < 1 →
+      Integrable (fun ω => Real.exp (θ * S h2 Y' ω / n)) μ := by
+    intro n ν' _ Y' h2 H2 hn θ hθ
+    have hSm : Measurable (S h2 Y') := measurable_S H2.Y_meas H2.h_meas
+    have hnpos : (0:ℝ) < n := by exact_mod_cast hn
+    set a : ℕ → Ω → ℝ := fun k ω => 2 * ((|θ| / n) ^ (2 * k) * |S h2 Y' ω| ^ (2 * k)
+      / ((2 * k).factorial : ℝ)) with ha
+    have ha0 : ∀ k ω, 0 ≤ a k ω := fun k ω => by simp only [ha]; positivity
+    have ham : ∀ k, Measurable (a k) := fun k => by
+      simp only [ha]; fun_prop
+    have hai : ∀ k, Integrable (a k) μ := fun k => by
+      simp only [ha]
+      exact (((integrable_S_pow H2 (2 * k)).const_mul _).div_const _).const_mul _
+    have hint : ∀ k, ∫ ω, a k ω ∂μ ≤ 2 * (Cu * κ * |θ|) ^ (2 * k) := by
+      intro k
+      have h1 : ∫ ω, a k ω ∂μ = 2 * ((|θ| / n) ^ (2 * k) * (∫ ω, |S h2 Y' ω| ^ (2 * k) ∂μ)
+          / ((2 * k).factorial : ℝ)) := by
+        simp only [ha]
+        rw [integral_const_mul, integral_div, integral_const_mul]
+      rw [h1]
+      have hf : (0:ℝ) < ((2 * k).factorial : ℝ) := by exact_mod_cast Nat.factorial_pos _
+      rcases Nat.eq_zero_or_pos k with rfl | hk
+      · simp
+      · have hmb := moment_bound H2 k hk
+        have : (|θ| / n) ^ (2 * k) * (∫ ω, |S h2 Y' ω| ^ (2 * k) ∂μ) / ((2 * k).factorial : ℝ)
+            ≤ (Cu * κ * |θ|) ^ (2 * k) := by
+          rw [div_le_iff₀ hf]
+          calc (|θ| / n) ^ (2 * k) * (∫ ω, |S h2 Y' ω| ^ (2 * k) ∂μ)
+              ≤ (|θ| / n) ^ (2 * k) * ((Cu * κ * n) ^ (2 * k) * ((2 * k).factorial : ℝ)) := by
+                gcongr
+            _ = (Cu * κ * |θ|) ^ (2 * k) * ((2 * k).factorial : ℝ) := by
+                rw [← mul_assoc, ← mul_pow]
+                congr 2
+                field_simp
+        linarith
+    have hr0 : 0 ≤ Cu * κ * |θ| := by
+      have := H2.κ_pos; unfold Cu; positivity
+    have hgeo : Summable (fun k : ℕ => 2 * (Cu * κ * |θ|) ^ (2 * k)) := by
+      apply Summable.mul_left
+      have : (Cu * κ * |θ|) ^ 2 < 1 := by nlinarith
+      simpa [pow_mul] using summable_geometric_of_lt_one (by positivity) this
+    have hpt : ∀ ω, Real.exp (θ * S h2 Y' ω / n) ≤ ∑' k, a k ω := by
+      intro ω
+      have hs : HasSum (fun k => a k ω) (2 * Real.cosh (θ * S h2 Y' ω / n)) := by
+        have := (Real.hasSum_cosh (θ * S h2 Y' ω / n)).mul_left 2
+        convert this using 2 with k
+        simp only [ha]
+        rw [← pow_abs_two_mul (θ * S h2 Y' ω / n), abs_div, abs_mul, Nat.abs_cast]
+        ring
+      rw [hs.tsum_eq, Real.cosh_eq]
+      have := Real.exp_pos (-(θ * S h2 Y' ω / n))
+      linarith
+    refine ⟨(by fun_prop : Measurable fun ω => Real.exp (θ * S h2 Y' ω / n)).aestronglyMeasurable,
+      ?_⟩
+    unfold HasFiniteIntegral
+    calc ∫⁻ ω, ‖Real.exp (θ * S h2 Y' ω / n)‖ₑ ∂μ
+        ≤ ∫⁻ ω, ∑' k, ENNReal.ofReal (a k ω) ∂μ := by
+          apply lintegral_mono
+          intro ω
+          beta_reduce
+          rw [← ENNReal.ofReal_tsum_of_nonneg (fun k => ha0 k ω)
+            (by
+              have hs : HasSum (fun k => a k ω) (2 * Real.cosh (θ * S h2 Y' ω / n)) := by
+                have := (Real.hasSum_cosh (θ * S h2 Y' ω / n)).mul_left 2
+                convert this using 2 with k
+                simp only [ha]
+                rw [← pow_abs_two_mul (θ * S h2 Y' ω / n), abs_div, abs_mul, Nat.abs_cast]
+                ring
+              exact hs.summable)]
+          rw [Real.enorm_of_nonneg (Real.exp_pos _).le]
+          exact ENNReal.ofReal_le_ofReal (hpt ω)
+      _ = ∑' k, ∫⁻ ω, ENNReal.ofReal (a k ω) ∂μ := by
+          rw [lintegral_tsum]
+          intro k
+          exact (ENNReal.measurable_ofReal.comp (ham k)).aemeasurable
+      _ = ∑' k, ENNReal.ofReal (∫ ω, a k ω ∂μ) := by
+          congr 1; ext k
+          rw [ofReal_integral_eq_lintegral_ofReal (hai k) (Filter.Eventually.of_forall (ha0 k))]
+      _ ≤ ∑' k, ENNReal.ofReal (2 * (Cu * κ * |θ|) ^ (2 * k)) := by
+          gcongr with k
+          exact hint k
+      _ < ⊤ := by
+          rw [← ENNReal.ofReal_tsum_of_nonneg (fun k => by positivity) hgeo]
+          exact ENNReal.ofReal_lt_top
+  have hκ := H.κ_pos
+  obtain ⟨T, h', hT, hsz, hH, hv, hsum⟩ :=
+    class_decomposition H grp mstar hsize G K hK hdeg hvan
+  have hm0 : (0:ℝ) < m := by exact_mod_cast hm
+  have hK0 : (1:ℝ) ≤ K := by exact_mod_cast hK
+  have hCu : (0:ℝ) < Cu := by unfold Cu; norm_num
+  set f : Fin (2 * K) → Ω → ℝ := fun c ω => u * (∑ a, S (h' c a) Y ω) / m with hf
+  have hcard : ∀ c a, Cu * κ * |2 * K * u / m * ((T c a).card : ℝ)| ≤ 1 / 2 := by
+    intro c a
+    have h1 : |2 * (K:ℝ) * u / m * ((T c a).card : ℝ)| = 2 * K * |u| / m * (T c a).card := by
+      rw [abs_mul, abs_div, abs_mul, abs_mul, Nat.abs_cast, Nat.abs_cast, Nat.abs_cast]
+      norm_num
+    have h2 : ((T c a).card : ℝ) ≤ 2 * mstar := by exact_mod_cast hsz c a
+    calc Cu * κ * |2 * K * u / m * ((T c a).card : ℝ)|
+        = Cu * κ * (2 * K * |u| / m * (T c a).card) := by rw [h1]
+      _ ≤ Cu * κ * (2 * K * |u| / m * (2 * mstar)) := by gcongr
+      _ = 4 * K * Cu * κ * |u| * mstar / m := by ring
+      _ ≤ 1 / 2 := hu
+  have hblock : ∀ c a, Integrable (fun ω => Real.exp (2 * K * u / m * S (h' c a) Y ω)) μ := by
+    intro c a
+    by_cases h0 : (T c a).card = 0
+    · have hE : T c a = ∅ := Finset.card_eq_zero.mp h0
+      have hS : ∀ ω, S (h' c a) Y ω = 0 := by
+        intro ω
+        unfold S
+        exact Finset.sum_eq_zero fun i _ => Finset.sum_eq_zero fun j _ =>
+          hv c a i j (Or.inl (by simp [hE])) _ _
+      simp only [hS, mul_zero, Real.exp_zero]
+      exact integrable_const _
+    · have hpos : 1 ≤ (T c a).card := Nat.one_le_iff_ne_zero.mpr h0
+      have hnpos : (0:ℝ) < (T c a).card := by exact_mod_cast hpos
+      have hI := E (Hyp.reindex (hH c a) ((T c a).orderEmbOfFin rfl)) hpos
+        (2 * K * u / m * (T c a).card) (by linarith [hcard c a])
+      refine hI.congr (Filter.Eventually.of_forall fun ω => ?_)
+      beta_reduce
+      rw [S_reindex (h' c a) Y (T c a) rfl (fun i j hij x y => hv c a i j hij x y) ω]
+      congr 1
+      field_simp
+  have hint : ∀ c, Integrable (fun ω => Real.exp (((2 * K : ℕ) : ℝ) * f c ω)) μ := by
+    intro c
+    have hind := blocks_indep H.Y_meas H.Y_indep (T c) (hT c) (h' c)
+      (fun a i j => (hH c a).h_meas i j) (hv c)
+    have := hind.integrable_exp_mul_sum (t := 2 * K * u / m)
+      (fun a => measurable_S H.Y_meas (hH c a).h_meas) (s := Finset.univ)
+      (fun a _ => hblock c a)
+    refine this.congr (Filter.Eventually.of_forall fun ω => ?_)
+    beta_reduce
+    simp only [hf, Finset.sum_apply]
+    congr 1
+    push_cast
+    ring
+  have hfm : ∀ c, Measurable (f c) := fun c => by
+    simp only [hf]
+    have : ∀ a, Measurable (S (h' c a) Y) := fun a => measurable_S H.Y_meas (hH c a).h_meas
+    fun_prop
+  have heq : ∀ ω, u * S h Y ω / m = ∑ c, f c ω := by
+    intro ω
+    simp only [hf, hsum ω, ← Finset.sum_div, ← Finset.mul_sum]
+  have ht : Cu * κ * |((2 * K : ℕ) : ℝ) * u| * (2 * mstar) / m ≤ 1 / 2 := by
+    have : Cu * κ * |((2 * K : ℕ) : ℝ) * u| * (2 * mstar) / m
+        = 4 * K * Cu * κ * |u| * mstar / m := by
+      push_cast
+      rw [abs_mul, abs_of_nonneg (by positivity : (0:ℝ) ≤ 2 * K)]
+      ring
+    rw [this]; exact hu
+  have hbd := holder_classes μ (n := 2 * K) (by omega) f hfm hint
+  simp_rw [heq]
+  refine hbd.trans ?_
+  have hfac : ∀ c : Fin (2 * K), (∫ ω, Real.exp (((2 * K : ℕ) : ℝ) * f c ω) ∂μ)
+      ^ (1 / ((2 * K : ℕ) : ℝ)) ≤ ((8 / 3 : ℝ) ^ M) ^ (1 / ((2 * K : ℕ) : ℝ)) := by
+    intro c
+    apply Real.rpow_le_rpow (integral_nonneg fun ω => (Real.exp_pos _).le) _
+      (by positivity)
+    have := class_bound hm (T c) (hT c) (h' c) (hH c) (hv c) mstar (hsz c)
+      (((2 * K : ℕ) : ℝ) * u) ht
+    refine le_of_eq_of_le (integral_congr_ae (Filter.Eventually.of_forall fun ω => ?_)) this
+    beta_reduce
+    simp only [hf]
+    congr 1
+    ring
+  calc ∏ c : Fin (2 * K), (∫ ω, Real.exp (((2 * K : ℕ) : ℝ) * f c ω) ∂μ) ^ (1 / ((2 * K : ℕ) : ℝ))
+      ≤ ∏ c : Fin (2 * K), ((8 / 3 : ℝ) ^ M) ^ (1 / ((2 * K : ℕ) : ℝ)) :=
+        Finset.prod_le_prod₀ (fun c _ => Real.rpow_nonneg
+          (integral_nonneg fun ω => (Real.exp_pos _).le) _) (fun c _ => hfac c)
+    _ = (8 / 3 : ℝ) ^ M := by
+        rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin, ← Real.rpow_natCast,
+          ← Real.rpow_mul (by positivity), one_div_mul_cancel (by positivity), Real.rpow_one]
 
 end Grouped
 

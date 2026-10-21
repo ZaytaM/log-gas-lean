@@ -165,7 +165,9 @@ theorem integral_QJ (bx : Boxes μE M) (f : E → ℝ) (hf : Integrable f μE) :
 -- SKETCH: `Finset.sum_nonneg`, `Set.indicator_nonneg`, `integral_nonneg`.
 /-- Box averages of a nonnegative function are nonnegative. -/
 theorem QJ_nonneg (bx : Boxes μE M) (f : E → ℝ) (hf : ∀ x, 0 ≤ f x) (x : E) : 0 ≤ QJ bx f x := by
-  sorry
+  unfold QJ
+  refine Finset.sum_nonneg fun a _ => Set.indicator_nonneg (fun _ _ => ?_) x
+  exact integral_nonneg hf
 
 -- SKETCH: pick the box `a` with `x ∈ A a` (`bx.cover`, `Set.mem_iUnion`); `QJ_apply_of_mem`;
 -- `∫ f ∂ν_a = M * ∫ f ∂(μE.restrict (A a))` (`integral_smul_measure`, `ENNReal.toReal`) and

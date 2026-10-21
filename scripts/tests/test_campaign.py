@@ -146,6 +146,19 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(self.row()['state'],'needs_replan')
         self.assertIn('decide',(path/'LogGas/A.lean').read_text())
 
+    def test_unverified_partial_publishes_only_to_separate_branch(self):
+        path=self.prepare()
+        (path/'LogGas/A.lean').write_text('namespace LogGas.A\ntheorem x : True := by sorry\nend LogGas.A\n')
+        remote=Path(self.tmp.name)/'remote.git'
+        m.run(['git','init','--bare',str(remote)],self.root)
+        m.run(['git','remote','add','origin',str(remote)],self.root)
+        message=self.runner.checkpoint_partial(self.row())
+        self.assertIn('campaign/wip/task-a-1',message)
+        self.assertIn('trivial',(self.root/'LogGas/A.lean').read_text())
+        refs=m.run(['git','--git-dir',str(remote),'show-ref'],self.root)
+        self.assertIn('refs/heads/campaign/wip/task-a-1',refs)
+        self.assertNotIn('refs/heads/main',refs)
+
     def test_quota_preserves_usage_unknown_and_pauses_all_dispatch(self):
         self.c.execute("INSERT INTO jobs(role,started) VALUES('coordinator',0)");self.c.commit()
         j=self.c.execute('SELECT max(id) FROM jobs').fetchone()[0]

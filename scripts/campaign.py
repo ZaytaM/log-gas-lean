@@ -331,8 +331,26 @@ class Campaign:
             try:
                 self.candidate(task)
             except Exception as e:
+                checkpoint=''
+                try:checkpoint=self.checkpoint_partial(task)
+                except Exception as backup_error:checkpoint=' WIP push pending: '+str(backup_error)[-500:]
                 with self.c:
-                    self.c.execute("UPDATE tasks SET state='needs_replan',error=? WHERE id=?",(outcome+': '+str(e),task['id']))
+                    self.c.execute("UPDATE tasks SET state='needs_replan',error=? WHERE id=?",(outcome+': '+str(e)+checkpoint,task['id']))
+
+    def checkpoint_partial(self,task):
+        """Publish explicitly unverified work separately; never admit it onto main."""
+        spec=json.loads(task['spec']);path=Path(task['worktree'])
+        changed=set(git('diff','--name-only',task['base'],cwd=path).splitlines())
+        changed.update(git('ls-files','--others','--exclude-standard',cwd=path).splitlines())
+        if not changed:return ''
+        if changed-set(spec['files']):return ' Out-of-scope checkout retained privately.'
+        if any(not (path/f).is_file() or (path/f).is_symlink() for f in changed):return ' Invalid paths retained privately.'
+        git('add','--',*sorted(changed),cwd=path)
+        if git('diff','--cached','--name-only',cwd=path):
+            git('commit','-m','UNVERIFIED partial '+task['id'],cwd=path)
+        branch=f'campaign/wip/{task["id"]}-{task["attempt"]}'
+        git('push','origin','HEAD:refs/heads/'+branch,cwd=path)
+        return ' Unverified checkpoint: '+branch
 
     def scope(self,path,base,spec):
         changed=set(git('diff','--name-only',base,cwd=path).splitlines())

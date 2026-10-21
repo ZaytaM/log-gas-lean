@@ -556,7 +556,177 @@ theorem class_decomposition (H : Hyp μ ν Y h κ) {M : ℕ} (grp : Fin m → Fi
       (∀ c a, Hyp μ ν Y (h' c a) κ) ∧
       (∀ c a i j, (i ∉ T c a ∨ j ∉ T c a) → ∀ x y, h' c a i j x y = 0) ∧
       ∀ ω, S h Y ω = ∑ c, ∑ a, S (h' c a) Y ω := by
-  sorry
+  classical
+  obtain ⟨col, hsymm, hcol⟩ := greedy_edge_coloring G K hK hdeg
+  let Ed : Fin (2 * K) → Fin M → Fin M → Prop :=
+    fun c a b => a < b ∧ G.Adj a b ∧ (col a b).val = c.val
+  let R : Fin (2 * K) → Fin M → Fin M → Fin M → Prop := fun c a g g' =>
+    if c.val < 2 * K - 1 then (Ed c a g' ∧ g = a) ∨ (Ed c a g ∧ g' = a) else (g = a ∧ g' = a)
+  have huniq : ∀ x y y', G.Adj x y → G.Adj x y' → col x y = col x y' → y = y' := by
+    intro x y y' h1 h2 h3
+    by_contra hne
+    exact hcol x y y' h1 h2 hne h3
+  have hcv : ∀ x y y', G.Adj x y → G.Adj x y' → (col x y).val = (col x y').val → y = y' :=
+    fun x y y' h1 h2 h3 => huniq x y y' h1 h2 (Fin.ext h3)
+  let T : Fin (2 * K) → Fin M → Finset (Fin m) := fun c a => Finset.univ.filter (fun i =>
+      if c.val < 2 * K - 1 then (∃ b, Ed c a b) ∧ (grp i = a ∨ ∃ b, Ed c a b ∧ grp i = b)
+      else grp i = a)
+  have hRT : ∀ c a i j, R c a (grp i) (grp j) → i ∈ T c a ∧ j ∈ T c a := by
+    intro c a i j hR
+    simp only [R, T, Finset.mem_filter, Finset.mem_univ, true_and] at hR ⊢
+    split_ifs at hR ⊢ with hc
+    · rcases hR with ⟨hb, hg⟩ | ⟨hb, hg⟩
+      · exact ⟨⟨⟨_, hb⟩, Or.inl hg⟩, ⟨_, hb⟩, Or.inr ⟨_, hb, rfl⟩⟩
+      · exact ⟨⟨⟨_, hb⟩, Or.inr ⟨_, hb, rfl⟩⟩, ⟨_, hb⟩, Or.inl hg⟩
+    · exact hR
+  have hcs : ∀ x y, (col x y).val = (col y x).val := fun x y => by rw [hsymm x y]
+  have hcross : ∀ c a a' b b', Ed c a b → Ed c a' b' → a ≠ a' →
+      a ≠ b' ∧ b ≠ a' ∧ b ≠ b' := by
+    intro c a a' b b' ⟨hlt, hadj, hcv1⟩ ⟨hlt', hadj', hcv2⟩ hne
+    refine ⟨?_, ?_, ?_⟩
+    · rintro rfl
+      have h3 : a' = b := hcv a a' b hadj'.symm hadj (by rw [← hcs, hcv2, hcv1])
+      subst h3
+      exact lt_asymm hlt hlt'
+    · rintro rfl
+      have h3 : a = b' := hcv b a b' hadj.symm hadj' (by rw [← hcs, hcv1, hcv2])
+      subst h3
+      exact lt_asymm hlt hlt'
+    · rintro rfl
+      exact hne (hcv b a a' hadj.symm hadj'.symm (by rw [← hcs, hcv1, ← hcs, hcv2]))
+  have hdis : ∀ c a a', a ≠ a' → Disjoint (T c a) (T c a') := by
+    intro c a a' hne
+    rw [Finset.disjoint_left]
+    intro i hi hi'
+    simp only [T, Finset.mem_filter, Finset.mem_univ, true_and] at hi hi'
+    split_ifs at hi hi' with hc
+    · obtain ⟨⟨b1, hb1⟩, hi1⟩ := hi
+      obtain ⟨⟨b2, hb2⟩, hi2⟩ := hi'
+      rcases hi1 with h1 | ⟨b, hb, h1⟩ <;> rcases hi2 with h2 | ⟨b', hb', h2⟩
+      · exact hne (h1.symm.trans h2)
+      · exact (hcross c a a' b1 b' hb1 hb' hne).1 (h1.symm.trans h2)
+      · exact (hcross c a a' b b2 hb hb2 hne).2.1 (h1.symm.trans h2)
+      · exact (hcross c a a' b b' hb hb' hne).2.2 (h1.symm.trans h2)
+    · exact hne (hi.symm.trans hi')
+  have hcard : ∀ c a, (T c a).card ≤ 2 * mstar := by
+    intro c a
+    by_cases hc : c.val < 2 * K - 1
+    · by_cases hex : ∃ b, Ed c a b
+      · obtain ⟨b0, hb0⟩ := hex
+        have hsub : T c a ⊆ Finset.univ.filter (fun i => grp i = a) ∪
+            Finset.univ.filter (fun i => grp i = b0) := by
+          intro i hi
+          simp only [T, Finset.mem_filter, Finset.mem_univ, true_and, if_pos hc,
+            Finset.mem_union] at hi ⊢
+          rcases hi.2 with h | ⟨b, ⟨hl, ha, hv⟩, h⟩
+          · exact Or.inl h
+          · right
+            have : b = b0 := hcv a b b0 ha hb0.2.1 (by rw [hv, hb0.2.2])
+            rw [h, this]
+        calc (T c a).card ≤ _ := Finset.card_le_card hsub
+          _ ≤ _ := Finset.card_union_le _ _
+          _ ≤ mstar + mstar := Nat.add_le_add (hsize a) (hsize b0)
+          _ = 2 * mstar := by ring
+      · have : T c a = ∅ := by
+          ext i
+          simp only [T, Finset.mem_filter, Finset.mem_univ, true_and, if_pos hc,
+            Finset.notMem_empty, iff_false]
+          exact fun h => hex h.1
+        rw [this]; simp
+    · calc (T c a).card ≤ mstar := by
+            have := hsize a
+            simpa only [T, if_neg hc] using this
+        _ ≤ 2 * mstar := by omega
+  have hpt : ∀ g g' (v : ℝ), (g ≠ g' → ¬ G.Adj g g' → v = 0) →
+      ∑ c, ∑ a, (if R c a g g' then v else 0) = v := by
+    intro g g' v hv
+    have hsingle : ∀ c0 a0, R c0 a0 g g' → (∀ c a, R c a g g' → c = c0 ∧ a = a0) →
+        ∑ c, ∑ a, (if R c a g g' then v else 0) = v := by
+      intro c0 a0 hR hu
+      rw [Finset.sum_eq_single c0, Finset.sum_eq_single a0]
+      · rw [if_pos hR]
+      · intro a _ ha
+        rw [if_neg]
+        exact fun hr => ha (hu c0 a hr).2
+      · simp
+      · intro c _ hc
+        apply Finset.sum_eq_zero
+        intro a _
+        rw [if_neg]
+        exact fun hr => hc (hu c a hr).1
+      · simp
+    have hKpos : 0 < 2 * K - 1 := by omega
+    by_cases hg : g = g'
+    · subst hg
+      have hlast : (2 * K - 1 : ℕ) < 2 * K := by omega
+      refine hsingle ⟨2 * K - 1, hlast⟩ g ?_ ?_
+      · simp [R]
+      · intro c a hR
+        simp only [R] at hR
+        split_ifs at hR with hc
+        · rcases hR with ⟨⟨hl, _⟩, h2⟩ | ⟨⟨hl, _⟩, h2⟩ <;> subst h2 <;> exact absurd hl (lt_irrefl _)
+        · exact ⟨Fin.ext (by have := c.isLt; simp only; omega), hR.1.symm⟩
+    · by_cases hadj : G.Adj g g'
+      · rcases lt_or_gt_of_ne hg with hlt | hlt
+        · refine hsingle (Fin.castLE (by omega) (col g g')) g ?_ ?_
+          · have := (col g g').isLt
+            simp only [R, Fin.coe_castLE]
+            rw [if_pos this]
+            exact Or.inl ⟨⟨hlt, hadj, rfl⟩, trivial⟩
+          · intro c a hR
+            simp only [R] at hR
+            split_ifs at hR with hc
+            · rcases hR with ⟨⟨hl, ha, hcv⟩, h2⟩ | ⟨⟨hl, ha, hcv⟩, h2⟩
+              · subst h2
+                exact ⟨Fin.ext (by simp [hcv]), rfl⟩
+              · subst h2
+                exact absurd (lt_trans hl hlt) (lt_irrefl _)
+            · exact absurd (hR.1.trans hR.2.symm) hg
+        · refine hsingle (Fin.castLE (by omega) (col g' g)) g' ?_ ?_
+          · have := (col g' g).isLt
+            simp only [R, Fin.coe_castLE]
+            rw [if_pos this]
+            exact Or.inr ⟨⟨hlt, hadj.symm, rfl⟩, trivial⟩
+          · intro c a hR
+            simp only [R] at hR
+            split_ifs at hR with hc
+            · rcases hR with ⟨⟨hl, ha, hcv⟩, h2⟩ | ⟨⟨hl, ha, hcv⟩, h2⟩
+              · subst h2
+                exact absurd (lt_trans hl hlt) (lt_irrefl _)
+              · subst h2
+                exact ⟨Fin.ext (by simp [hcv]), rfl⟩
+            · exact absurd (hR.1.trans hR.2.symm) hg
+      · have := hv hg hadj
+        subst this
+        simp
+  refine ⟨T, fun c a => restrict h (fun i j => R c a (grp i) (grp j)), ?_, hcard, ?_, ?_, ?_⟩
+  · intro c a a' hne
+    exact hdis c a a' hne
+  · intro c a
+    exact LogGas.Grouped.Hyp.restrict H _
+  · intro c a i j hij x y
+    show (if R c a (grp i) (grp j) then h i j x y else 0) = 0
+    rw [if_neg]
+    intro hR
+    have := hRT c a i j hR
+    tauto
+  · intro ω
+    have hF : ∀ (F : Fin (2 * K) → Fin M → Fin m → Fin m → ℝ),
+        ∑ c, ∑ a, ∑ i, ∑ j ∈ Ioi i, F c a i j = ∑ i, ∑ j ∈ Ioi i, ∑ c, ∑ a, F c a i j := by
+      intro F
+      calc _ = ∑ c, ∑ i, ∑ a, ∑ j ∈ Ioi i, F c a i j :=
+            Finset.sum_congr rfl fun c _ => Finset.sum_comm
+        _ = ∑ i, ∑ c, ∑ a, ∑ j ∈ Ioi i, F c a i j := Finset.sum_comm
+        _ = ∑ i, ∑ c, ∑ j ∈ Ioi i, ∑ a, F c a i j :=
+            Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun c _ => Finset.sum_comm
+        _ = _ := Finset.sum_congr rfl fun i _ => Finset.sum_comm
+    simp only [S]
+    rw [hF (fun c a i j => restrict h (fun i j => R c a (grp i) (grp j)) i j (Y i ω) (Y j ω))]
+    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+    symm
+    refine hpt (grp i) (grp j) _ ?_
+    intro hne hnadj
+    exact hvan i j hne hnadj _ _
 
 -- SKETCH (G3): obtain `T, h'` from `class_decomposition`.  Put
 -- `f c ω := u * (∑ a, S (h' c a) Y ω) / m`, so `u * S h Y ω / m = ∑ c, f c ω`

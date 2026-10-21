@@ -688,7 +688,52 @@ variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 /-- Eq. `eq:physical-average-smallness` (5.5), first bound: `‖a_r‖_∞ ≤ C` (here `4C`). -/
 theorem aker_abs_le (K : SingularKernel μE bx G d Cc V) (x y : E) :
     |aker bx K.s K.c x y| ≤ 4 * Cc := by
-  sorry
+  have hM := SingularKernel.Mc_le K
+  have hc0 := SingularKernel.c_nonneg K
+  have hC := SingularKernel.Cc_nonneg K
+  have key : ∀ (f : E → ℝ) (B : ℝ) (x : E), (∀ z, 0 ≤ f z) → (∀ z, f z ≤ B) →
+      QJ bx f x ≤ B := by
+    intro f B x hf hB
+    obtain ⟨a, ha⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ x)
+    have hQ : QJ bx f x = ∫ y, f y ∂(boxMeasure bx a) := by
+      unfold QJ
+      rw [Finset.sum_eq_single a]
+      · simp [Set.indicator_of_mem ha]
+      · intro b _ hb
+        exact Set.indicator_of_notMem
+          (fun hxb => Set.disjoint_left.1 (bx.disj hb) hxb ha) _
+      · simp
+    rw [hQ]
+    calc ∫ y, f y ∂(boxMeasure bx a) ≤ ∫ _y, B ∂(boxMeasure bx a) :=
+          integral_mono_of_nonneg (Filter.Eventually.of_forall hf) (integrable_const B)
+            (Filter.Eventually.of_forall hB)
+      _ = B := by simp
+  have hA : QJx bx (ker K.s) x y ≤ M * K.c := by
+    unfold QJx
+    have := QJ_le bx (fun x' => ker K.s x' y) (fun z => K.s_nonneg _)
+      (K.s_int.comp_sub_right y) x
+    simpa [ker, SingularKernel.integral_ker_left K.s y, K.c_def] using this
+  have hBg : ∀ x y, QJy bx (ker K.s) x y ≤ M * K.c := by
+    intro x y
+    unfold QJy
+    have := QJ_le bx (fun y' => ker K.s x y') (fun z => K.s_nonneg _)
+      ((K.s_int.comp_sub_left x)) y
+    simpa [ker, SingularKernel.integral_ker_right K.s x, K.c_def] using this
+  have hB := hBg x y
+  have hA0 : 0 ≤ QJx bx (ker K.s) x y := QJ_nonneg bx _ (fun z => K.s_nonneg _) x
+  have hB0 : 0 ≤ QJy bx (ker K.s) x y := QJ_nonneg bx _ (fun z => K.s_nonneg _) y
+  have hC0 : 0 ≤ QJx bx (QJy bx (ker K.s)) x y :=
+    QJ_nonneg bx _ (fun z => QJ_nonneg bx _ (fun w => K.s_nonneg _) y) x
+  have hC1 : QJx bx (QJy bx (ker K.s)) x y ≤ M * K.c := by
+    unfold QJx
+    exact key _ _ x (fun z => QJ_nonneg bx _ (fun w => K.s_nonneg _) y)
+      (fun z => hBg z y)
+  have hcC : K.c ≤ Cc := by
+    have h1 : K.r ^ d ≤ 1 := pow_le_one₀ K.r_pos.le K.r_lt_one.le
+    nlinarith [K.c_le]
+  unfold aker
+  rw [abs_le]
+  constructor <;> linarith
 
 -- SKETCH: `|a_r| ≤ QJx + QJy + QJxQJy + c` (all terms nonnegative, `abs_sub`, `abs_add`),
 -- and "each averaging term has integral `c_r` in either variable": in the variable `y`,

@@ -1328,7 +1328,90 @@ variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 theorem log_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) (p : ℕ) (hp : 1 ≤ p) :
     ∫⁻ z, ENNReal.ofReal (max 0 (Real.log (K.r / dist z 0)) ^ p) ∂μE
       ≤ ENNReal.ofReal (V * K.r ^ d * p.factorial / d ^ p) := by
-  sorry
+  obtain ⟨q, rfl⟩ : ∃ q, p = q + 1 := ⟨p - 1, by omega⟩
+  have hdpos : (0:ℝ) < d := by exact_mod_cast hd
+  have hr := K.r_pos
+  have hV := K.V_nonneg
+  set g : E → ℝ := fun z => max 0 (Real.log (K.r / dist z 0)) with hg
+  have gmeas : Measurable g :=
+    measurable_const.max (Real.measurable_log.comp (measurable_const.div
+      (continuous_id.dist continuous_const).measurable))
+  have gnn : 0 ≤ᵐ[μE] g := Filter.Eventually.of_forall fun z => le_max_left _ _
+  have key := lintegral_comp_eq_lintegral_meas_lt_mul μE gnn gmeas.aemeasurable
+    (g := fun t : ℝ => ((q:ℝ) + 1) * t ^ q)
+    (fun t _ => (by fun_prop : Continuous fun t : ℝ => ((q:ℝ) + 1) * t ^ q).intervalIntegrable _ _)
+    ((ae_restrict_iff' measurableSet_Ioi).mpr (Filter.Eventually.of_forall fun t ht => by
+      have : (0:ℝ) < t := ht
+      positivity))
+  have hint : ∀ z, ∫ t in (0:ℝ)..g z, ((q:ℝ) + 1) * t ^ q = g z ^ (q + 1) := by
+    intro z
+    rw [intervalIntegral.integral_const_mul, integral_pow]
+    field_simp
+    simp
+  simp_rw [hint] at key
+  rw [key]
+  have hmeas : ∀ t : ℝ, 0 < t →
+      μE {a | t < g a} ≤ ENNReal.ofReal (V * K.r ^ d * Real.exp (-(d * t))) := by
+    intro t ht
+    have hsub : {a | t < g a} ⊆ Metric.ball (0:E) (K.r * Real.exp (-t)) := by
+      intro a ha
+      simp only [Set.mem_setOf_eq, hg] at ha
+      have h1 : t < Real.log (K.r / dist a 0) := by
+        rcases lt_max_iff.mp ha with h | h
+        · linarith
+        · exact h
+      rw [Metric.mem_ball]
+      by_cases h0 : dist a 0 = 0
+      · rw [h0, div_zero, Real.log_zero] at h1
+        linarith
+      · have hpos : 0 < dist a 0 := lt_of_le_of_ne dist_nonneg (Ne.symm h0)
+        rw [Real.lt_log_iff_exp_lt (div_pos hr hpos), lt_div_iff₀ hpos] at h1
+        rw [Real.exp_neg]
+        rw [← div_eq_mul_inv, lt_div_iff₀ (Real.exp_pos t)]
+        linarith
+    refine (measure_mono hsub).trans ?_
+    refine (K.ball_vol _ (by positivity) ?_).trans (le_of_eq ?_)
+    · exact mul_le_of_le_one_right hr.le (Real.exp_le_one_iff.mpr (by linarith))
+    · congr 1
+      rw [mul_pow, ← Real.exp_nat_mul]
+      ring_nf
+  have hI : ∫ t in Set.Ioi (0:ℝ), t ^ q * Real.exp (-(d * t))
+      = (q.factorial : ℝ) / (d:ℝ) ^ (q + 1) := by
+    have := Real.integral_rpow_mul_exp_neg_mul_Ioi (a := (q:ℝ) + 1) (r := d)
+      (by positivity) hdpos
+    simp only [add_sub_cancel_right, Real.rpow_natCast] at this
+    rw [Real.Gamma_nat_eq_factorial, ← Nat.cast_succ, Real.rpow_natCast] at this
+    rw [this, Nat.succ_eq_add_one, one_div, inv_pow]
+    ring
+  calc ∫⁻ t in Set.Ioi (0:ℝ), μE {a | t < g a} * ENNReal.ofReal (((q:ℝ) + 1) * t ^ q)
+      ≤ ∫⁻ t in Set.Ioi (0:ℝ), ENNReal.ofReal (V * K.r ^ d * (((q:ℝ) + 1) *
+          (t ^ q * Real.exp (-(d * t))))) := by
+        refine setLIntegral_mono' measurableSet_Ioi fun t ht => ?_
+        have ht' : (0:ℝ) < t := ht
+        refine (mul_le_mul_left (hmeas t ht') _).trans (le_of_eq ?_)
+        rw [← ENNReal.ofReal_mul (by positivity)]
+        congr 1
+        ring
+    _ = ENNReal.ofReal (∫ t in Set.Ioi (0:ℝ), V * K.r ^ d * (((q:ℝ) + 1) *
+          (t ^ q * Real.exp (-(d * t))))) := by
+        have hpos : 0 < ∫ t in Set.Ioi (0:ℝ), t ^ q * Real.exp (-(d * t)) := by
+          rw [hI]; positivity
+        have hi : IntegrableOn (fun t : ℝ => t ^ q * Real.exp (-(d * t))) (Set.Ioi 0) := by
+          by_contra hn
+          rw [integral_undef hn] at hpos
+          exact lt_irrefl _ hpos
+        symm
+        refine ofReal_integral_eq_lintegral_ofReal ?_ ?_
+        · exact (hi.const_mul ((q:ℝ) + 1)).const_mul (V * K.r ^ d)
+        · refine (ae_restrict_iff' measurableSet_Ioi).mpr (Filter.Eventually.of_forall fun t ht => ?_)
+          have : (0:ℝ) < t := ht
+          positivity
+    _ ≤ _ := by
+        refine ENNReal.ofReal_le_ofReal (le_of_eq ?_)
+        rw [integral_const_mul, integral_const_mul, hI]
+        rw [Nat.factorial_succ]
+        push_cast
+        ring
 
 -- SKETCH: `lintegral_mono_ae` with `K.s_log`, `hs'.le`, `hs'.nonneg` and
 -- `pow_le_pow_left₀` (`ENNReal.ofReal_le_ofReal`), then `log_moment`.

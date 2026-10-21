@@ -72,7 +72,11 @@ noncomputable def boxMeasure (bx : Boxes μE M) (a : Fin M) : Measure E :=
 /-- `ν_a` is a probability measure. -/
 instance isProbabilityMeasure_boxMeasure (bx : Boxes μE M) (a : Fin M) :
     IsProbabilityMeasure (boxMeasure bx a) := by
-  sorry
+  refine ⟨?_⟩
+  have hM : (M : ℝ≥0∞) ≠ 0 := Nat.cast_ne_zero.2 (Nat.pos_iff_ne_zero.1 a.pos)
+  simp only [boxMeasure, Measure.smul_apply, ENNReal.smul_def, ENNReal.coe_natCast, smul_eq_mul,
+    Measure.restrict_apply_univ, bx.vol a]
+  exact ENNReal.mul_inv_cancel hM (ENNReal.natCast_ne_top M)
 
 -- SKETCH: unfold `boxMeasure`; `Measure.restrict_le_self` and `Measure.smul_le_smul_left`
 -- (`ENNReal.smul_def`, `Measure.le_iff`).

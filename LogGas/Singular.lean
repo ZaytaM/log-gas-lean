@@ -1617,7 +1617,18 @@ theorem hyp_labels {h : E → E → ℝ} {κ : ℝ} (H : BoxKernel bx G h κ) (L
 /-- Under `𝔼_L`, `S` for the localized kernels coincides a.s. with `S` for `h`. -/
 theorem S_labelKer_ae (bx : Boxes μE M) (L : Fin N → Fin M) (h : E → E → ℝ) :
     ∀ᵐ x ∂(labelMeasure bx L), S (labelKer bx L h) (coord N) x = S (fun _ _ => h) (coord N) x := by
-  sorry
+  have hmem : ∀ᵐ x ∂(labelMeasure bx L), ∀ i, x i ∈ bx.A (L i) := by
+    rw [ae_all_iff]
+    intro i
+    have h1 : ∀ᵐ y ∂(boxMeasure bx (L i)), y ∈ bx.A (L i) := by
+      simp only [boxMeasure]
+      rw [Measure.ae_smul_measure_iff (by simp [Fin.pos (L i) |>.ne'])]
+      exact ae_restrict_mem (bx.meas _)
+    exact (Measure.ae_pi_le_pi (Filter.tendsto_eval_pi _ i |>.eventually h1))
+  filter_upwards [hmem] with x hx
+  unfold S
+  refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+  simp [labelKer, coord, hx i, hx j]
 
 -- SKETCH: `W_eq_S` with `H.symm` turns `t * W h` into `(2t) * S / N`; replace `S (fun _ _ => h)`
 -- by `S (labelKer bx L h)` a.e. (`S_labelKer_ae`, `integral_congr_ae`); apply

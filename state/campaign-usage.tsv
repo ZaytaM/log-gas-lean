@@ -26,3 +26,4 @@ job	task	role	started	ended	outcome	estimated_usd	usage_json
 25	main-holder	worker	1792623787.6222916	1792623849.9112542	interrupted	unknown	unknown
 26	main-param	worker	1792623788.0209537	1792623851.7175224	interrupted	unknown	unknown
 27	unknown	coordinator	1792623788.4355454	1792623851.7206864	interrupted	unknown	unknown
+28	unknown	coordinator	1792623853.426469	1792623914.1633954	interrupted	unknown	unknown

@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-21T23:03:05+00:00. State: running.
+Updated: 2026-10-21T23:04:11+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -27,15 +27,15 @@ Pause until (Unix UTC): 0; reason: none.
 | periodize | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
 | spec-ae | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
 | physical-exp | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| fourier-series | pending | 0 |  |
+| fourier-series | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
 | cutoff-radial | pending | 0 |  |
 | cutoff-sr | pending | 0 |  |
 | bulk-lemma41 | pending | 0 |  |
 | bulk-torus | pending | 0 |  |
-| main-holder | pending | 0 |  |
+| main-holder | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
 | main-bulkhyp | pending | 0 |  |
 | physical-sing | pending | 0 |  |
 | cutoff-st | pending | 0 |  |
 | cutoff-bcoef | pending | 0 |  |
 | cutoff-main | pending | 0 |  |
-| main-param | pending | 0 |  |
+| main-param | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |

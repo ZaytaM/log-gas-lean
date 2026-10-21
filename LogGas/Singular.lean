@@ -503,7 +503,65 @@ theorem hker_symm (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K
 `∫ h_r(x, y) dν_a(x) = 0` for every `a` and `y`. -/
 theorem hker_box_centered_left (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (a : Fin M) (y : E) : ∫ x, hker bx s' x y ∂(boxMeasure bx a) = 0 := by
-  sorry
+  have hμ : Integrable (fun p : E × E => s' (p.1 - p.2)) (μE.prod μE) := by
+    have hm : Measurable (fun p : E × E => s' (p.1 - p.2)) := hs'.meas.comp measurable_sub
+    refine (integrable_prod_iff hm.aestronglyMeasurable).2 ⟨?_, ?_⟩
+    · exact Filter.Eventually.of_forall fun x => (SingularKernel.Sub.integrable K hs').comp_sub_left x
+    · have : (fun x => ∫ y, ‖s' (x - y)‖ ∂μE) = fun _ => ∫ z, ‖s' z‖ ∂μE := by
+        funext x
+        exact integral_sub_left_eq_self (fun z => ‖s' z‖) μE x
+      rw [this]
+      exact integrable_const _
+  have hprod : ∀ a b : Fin M,
+      Integrable (fun p : E × E => s' (p.1 - p.2)) ((boxMeasure bx a).prod (boxMeasure bx b)) := by
+    intro a b
+    have hle : (boxMeasure bx a).prod (boxMeasure bx b) ≤
+        ((M : ℝ≥0∞) • μE).prod ((M : ℝ≥0∞) • μE) :=
+      Measure.prod_mono (boxMeasure_le bx a) (boxMeasure_le bx b)
+    rw [Measure.prod_smul_left, Measure.prod_smul_right, smul_smul] at hle
+    exact ((hμ.smul_measure (c := (M : ℝ≥0∞) * M)
+      (ENNReal.mul_ne_top (ENNReal.natCast_ne_top M) (ENNReal.natCast_ne_top M))).mono_measure hle)
+  have hg : ∀ a : Fin M, Integrable (fun x' => QJy bx (ker s') x' y) (boxMeasure bx a) := by
+    intro a
+    obtain ⟨b, hb⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ y)
+    have : (fun x' => QJy bx (ker s') x' y) = fun x' => ∫ y', s' (x' - y') ∂(boxMeasure bx b) := by
+      funext x'
+      exact QJ_apply_of_mem bx _ hb
+    rw [this]
+    exact (hprod a b).integral_prod_left
+  have hconst : ∀ (f : E → ℝ), Integrable (QJ bx f) (boxMeasure bx a) := by
+    intro f
+    unfold QJ
+    refine integrable_finsetSum _ fun c _ => ?_
+    exact (integrable_const _).indicator (bx.meas c)
+  have hG : Integrable (fun x' => ker s' x' y - QJy bx (ker s') x' y) (boxMeasure bx a) :=
+    (SingularKernel.integrable_ker_box_left K hs' a y).sub (hg a)
+  have heq : (fun x => hker bx s' x y) = fun x =>
+      (ker s' x y - QJy bx (ker s') x y) - QJ bx (fun x' => ker s' x' y - QJy bx (ker s') x' y) x := by
+    funext x
+    have h1 : QJ bx (fun x' => ker s' x' y - QJy bx (ker s') x' y) x
+        = QJx bx (ker s') x y - QJx bx (QJy bx (ker s')) x y := by
+      unfold QJx
+      show _ = QJ bx (fun x' => ker s' x' y) x - QJ bx (fun x' => QJy bx (ker s') x' y) x
+      unfold QJ
+      rw [← Finset.sum_sub_distrib]
+      refine Finset.sum_congr rfl fun c _ => ?_
+      by_cases hx : x ∈ bx.A c
+      · simp only [Set.indicator_of_mem hx]
+        exact integral_sub (SingularKernel.integrable_ker_box_left K hs' c y) (hg c)
+      · simp [Set.indicator_of_notMem hx]
+    unfold hker
+    rw [h1]; ring
+  have hQ : ∫ x, QJ bx (fun x' => ker s' x' y - QJy bx (ker s') x' y) x ∂(boxMeasure bx a)
+      = ∫ x, (ker s' x y - QJy bx (ker s') x y) ∂(boxMeasure bx a) := by
+    set g := fun x' => ker s' x' y - QJy bx (ker s') x' y with hgdef
+    have hae : (QJ bx g) =ᵐ[boxMeasure bx a]
+        fun _ => ∫ x', g x' ∂(boxMeasure bx a) := by
+      filter_upwards [ae_mem_boxMeasure bx a] with x hx
+      exact QJ_apply_of_mem bx g hx
+    rw [integral_congr_ae hae, integral_const]
+    simp
+  rw [heq, integral_sub hG (hconst _), hQ, sub_self]
 
 -- SKETCH: `hker = (ker - QJy ker) - QJx (ker - QJy ker)` (pointwise, `QJx` is linear:
 -- `QJ` of a difference is the difference of `QJ`s by `integral_sub`).  The first term

@@ -464,7 +464,31 @@ non-adjacent boxes. -/
 theorem hker_local (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s') {a b : Fin M}
     (hab : a ≠ b) (hadj : ¬ G.Adj a b) {x y : E} (hx : x ∈ bx.A a) (hy : y ∈ bx.A b) :
     hker bx s' x y = 0 := by
-  sorry
+  have hz : ∀ x' ∈ bx.A a, ∀ y' ∈ bx.A b, s' (x' - y') = 0 := fun x' hx' y' hy' =>
+    le_antisymm ((hs'.le _).trans (K.s_local a b hab hadj x' hx' y' hy').le) (hs'.nonneg _)
+  have h2 : ∀ x' ∈ bx.A a, QJy bx (ker s') x' y = 0 := by
+    intro x' hx'
+    unfold QJy
+    rw [QJ_apply_of_mem bx _ hy]
+    refine integral_eq_zero_of_ae ?_
+    filter_upwards [ae_mem_boxMeasure bx b] with y' hy'
+    exact hz x' hx' y' hy'
+  have h1 : QJx bx (ker s') x y = 0 := by
+    unfold QJx
+    rw [QJ_apply_of_mem bx _ hx]
+    refine integral_eq_zero_of_ae ?_
+    filter_upwards [ae_mem_boxMeasure bx a] with x' hx'
+    exact hz x' hx' y hy
+  have h3 : QJy bx (ker s') x y = 0 := h2 x hx
+  have h4 : QJx bx (QJy bx (ker s')) x y = 0 := by
+    unfold QJx
+    rw [QJ_apply_of_mem bx _ hx]
+    refine integral_eq_zero_of_ae ?_
+    filter_upwards [ae_mem_boxMeasure bx a] with x' hx'
+    exact h2 x' hx'
+  have h0 : ker s' x y = 0 := hz x hx y hy
+  unfold hker
+  rw [h0, h1, h3, h4]; ring
 
 end Split
 

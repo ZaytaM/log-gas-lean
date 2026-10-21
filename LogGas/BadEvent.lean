@@ -425,7 +425,27 @@ theorem Z_mono (hN : 2 ≤ N) (hX_meas : ∀ i, Measurable (X i))
     (hK_int : ∀ᵐ x ∂ν, Integrable (fun y => Real.exp ((b / 2) * g (x - y))) ν)
     (hKA : ∀ᵐ x ∂ν, ∫ y, Real.exp ((b / 2) * g (x - y)) ∂ν ≤ A) :
     Z μ γ g X ≤ Z μ b g X ^ (γ / b) ∧ Z μ b g X ^ (γ / b) ≤ A ^ (N - 1) := by
-  sorry
+  have hWm : Measurable (W (fun x y => g (x - y)) X) := by
+    unfold W
+    refine Measurable.const_mul (Finset.measurable_sum _ fun i _ => ?_) _
+    exact Finset.measurable_sum _ fun j _ => hg.comp ((hX_meas i).sub (hX_meas j))
+  have hc : ∀ c : ℝ, (fun ω => Real.exp (c * (W (fun x y => g (x - y)) X ω / 2))) =
+      fun ω => Real.exp ((c / 2) * W (fun x y => g (x - y)) X ω) := fun c => by
+    funext ω; congr 1; ring
+  have hint := integrable_exp_W μ ν hN hX_meas hX_indep hX_law g hg b A hA hK_int hKA
+  have h1 := integral_exp_mul_le_rpow μ (fun ω => W (fun x y => g (x - y)) X ω / 2)
+    (hWm.div_const 2) b γ hb hγ0 hγb (by
+      simpa only [hc] using hint)
+  have hZb := rough_bound μ ν hN hX_meas hX_indep hX_law g hg b A hA hK_int hKA
+  have hZ0 : 0 ≤ Z μ b g X := integral_nonneg fun ω => (Real.exp_pos _).le
+  refine ⟨?_, ?_⟩
+  · simpa only [Z, hc] using h1
+  · have hA1 : 1 ≤ A ^ (N - 1) := one_le_pow₀ hA
+    calc Z μ b g X ^ (γ / b) ≤ (A ^ (N - 1)) ^ (γ / b) :=
+          Real.rpow_le_rpow hZ0 hZb (div_nonneg hγ0 hb.le)
+      _ ≤ (A ^ (N - 1)) ^ (1 : ℝ) :=
+          Real.rpow_le_rpow_of_exponent_le hA1 ((div_le_one hb).2 hγb)
+      _ = A ^ (N - 1) := Real.rpow_one _
 
 end Rough
 

@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "roots": [
+    "M4",
+    "A8",
+    "S8",
+    "D7",
+    "G3",
+    "B6"
+  ],
+  "allowed_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "assumptions": {
+    "H1": "notes/hypotheses.md#h1",
+    "H2": "notes/hypotheses.md#h2"
+  },
+  "nodes": [
+    {
+      "id": "D7",
+      "module": "LogGas.Decoupling",
+      "declarations": [
+        "LogGas.Decoupling.exp_bound"
+      ],
+      "depends_on": [],
+      "source": "notes/sec6-lemma61.tex",
+      "label": "lem:canonical-array-exponential",
+      "scope": "source-conditional",
+      "statement": "Independent canonical arrays with integrable absolute powers, a.e. centering and factorial moment bounds; universal exponential estimate."
+    },
+    {
+      "id": "G3",
+      "module": "LogGas.Grouped",
+      "declarations": [
+        "LogGas.Grouped.grouped_exp_bound"
+      ],
+      "depends_on": [
+        "D7"
+      ],
+      "source": "notes/sec6-lemma61.tex",
+      "label": "eq:canonical-grouped-exponential",
+      "scope": "source-conditional",
+      "statement": "Grouped canonical arrays with bounded occupancy and graph degree; exponential estimate with constants independent of particle count."
+    },
+    {
+      "id": "B6",
+      "module": "LogGas.BadEvent",
+      "declarations": [
+        "LogGas.BadEvent.bad_gibbs_bound"
+      ],
+      "depends_on": [],
+      "source": "notes/sec3-badevent.tex",
+      "label": "eq:physical-bad-gibbs-bound",
+      "scope": "source-conditional",
+      "statement": "Bad-event Gibbs bound from explicit exponential slice integrability and binomial entropy; torus exponential integrability remains an application obligation."
+    },
+    {
+      "id": "S8",
+      "module": "LogGas.Singular",
+      "declarations": [
+        "LogGas.Singular.lemma51"
+      ],
+      "depends_on": [
+        "G3"
+      ],
+      "source": "notes/sec5-singular.tex",
+      "label": "lem:physical-local-count-bound",
+      "scope": "abstract-model",
+      "statement": "Short-range local-count bound under SingularKernel and Boxes hypotheses; actual torus/grid instances remain separate obligations."
+    },
+    {
+      "id": "A1",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.histogram_box"
+      ],
+      "depends_on": [],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Histogram splitting on equal-volume cells."
+    },
+    {
+      "id": "A2",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.empEnergy_split",
+        "LogGas.Bulk.empEnergy_le"
+      ],
+      "depends_on": [
+        "A1"
+      ],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Energy projection and empirical remainder estimate."
+    },
+    {
+      "id": "A3",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.dual_log_hls"
+      ],
+      "depends_on": [],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Dual entropy-energy inequality derived from H1 for the bulk kernel."
+    },
+    {
+      "id": "A4",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.ell_hist"
+      ],
+      "depends_on": [
+        "A1"
+      ],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Empirical linear functional equals the sample average."
+    },
+    {
+      "id": "A5",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.coarse_exp_bound"
+      ],
+      "depends_on": [
+        "A2",
+        "A3",
+        "A4"
+      ],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Finite-dimensional Gaussian coarse-energy partition bound, proved rather than assumed."
+    },
+    {
+      "id": "A6",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.rJ_bound"
+      ],
+      "depends_on": [
+        "PGRID"
+      ],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Uniformly small centered remainder from continuity and refining physical grids."
+    },
+    {
+      "id": "A7",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.W_le_coarse"
+      ],
+      "depends_on": [
+        "A2",
+        "A6"
+      ],
+      "source": "notes/appendixA.tex",
+      "label": "app:continuous-proof",
+      "scope": "source-conditional",
+      "statement": "Full empirical energy controlled by coarse energy, remainder and diagonal term."
+    },
+    {
+      "id": "A8",
+      "module": "LogGas.Bulk",
+      "declarations": [
+        "LogGas.Bulk.lemma41"
+      ],
+      "depends_on": [
+        "A5",
+        "A7",
+        "D7"
+      ],
+      "source": "notes/sec4-bulk.tex",
+      "label": "lem:continuous-entropy-partition",
+      "scope": "source-conditional",
+      "statement": "Continuous entropy-controlled bulk partition bound uniformly in N and beta below B."
+    },
+    {
+      "id": "M1",
+      "module": "LogGas.Main",
+      "declarations": [
+        "LogGas.Main.holder_split"
+      ],
+      "depends_on": [],
+      "source": "notes/sec2-cutoff.tex",
+      "label": "eq:physical-cutoff-holder",
+      "scope": "paper-target",
+      "statement": "Holder split of the full partition into good bulk/singular factors plus the bad contribution."
+    },
+    {
+      "id": "M2",
+      "module": "LogGas.Main",
+      "declarations": [
+        "LogGas.Main.bulk_hypothesis"
+      ],
+      "depends_on": [
+        "PSING"
+      ],
+      "source": "notes/sec2-cutoff.tex",
+      "label": "eq:physical-cutoff-holder",
+      "scope": "paper-target",
+      "statement": "H1 and H2 imply the bulk kernel hypotheses with the same B."
+    },
+    {
+      "id": "M3",
+      "module": "LogGas.Main",
+      "declarations": [
+        "LogGas.Main.parameter_choice"
+      ],
+      "depends_on": [
+        "B6",
+        "S8",
+        "PSING",
+        "PEXP"
+      ],
+      "source": "notes/sec2-cutoff.tex",
+      "label": "eq:physical-cutoff-holder",
+      "scope": "paper-target",
+      "statement": "Choose p,q,delta,J independently of N; force a negative bad-event exponent."
+    },
+    {
+      "id": "M4",
+      "module": "LogGas.Main",
+      "declarations": [
+        "LogGas.Main.theorem11"
+      ],
+      "depends_on": [
+        "M1",
+        "M2",
+        "M3",
+        "A8",
+        "B6",
+        "S8"
+      ],
+      "source": "notes/sec1-setting.tex",
+      "label": "thm:principal",
+      "scope": "paper-target",
+      "statement": "Under H1/H2 and 0 <= beta0 < B, exists a finite C before all N>=2 and beta in [0,beta0], bounding the physical partition function."
+    },
+    {
+      "id": "PGRID",
+      "module": "LogGas.Torus",
+      "declarations": [
+        "LogGas.Torus.grid"
+      ],
+      "depends_on": [],
+      "source": "notes/sec1-setting.tex",
+      "label": "eq:common-box-partition",
+      "scope": "physical-application",
+      "statement": "Actual period-one torus equal-volume boxes, periodic adjacency degree <= 3^d-1, and Euclidean ball-volume estimate."
+    },
+    {
+      "id": "PSING",
+      "module": "LogGas.Physical",
+      "declarations": [
+        "LogGas.Physical.singular_instance"
+      ],
+      "depends_on": [
+        "PGRID"
+      ],
+      "source": "notes/sec2-cutoff.tex",
+      "label": "eq:compact-positive-log-split",
+      "scope": "physical-application",
+      "statement": "H2 supplies an actual SingularKernel instance with justified representatives and uniform constants."
+    },
+    {
+      "id": "PEXP",
+      "module": "LogGas.Physical",
+      "declarations": [
+        "LogGas.Physical.log_exp_integrable"
+      ],
+      "depends_on": [],
+      "source": "notes/sec2-cutoff.tex",
+      "label": "eq:compact-positive-log-split",
+      "scope": "physical-application",
+      "statement": "For the supplied kernel g satisfying H2, derive exponential slice integrability for every b<2d, using bounded bulk and the local logarithmic upper bound, with a finite uniform slice bound."
+    }
+  ],
+  "notes": "Missing auxiliary names are provisional task identifiers. A8 and M4 names are required by the original phase notes. This is a conservative milestone DAG, not an exhaustive dependency extraction from proof terms.",
+  "sources": {
+    "notes/00-preamble-macros.tex": "8b20ad51627d3a669793e24867c6d1fbfcddd5a114b39f5a8573867e2ba290b9",
+    "notes/appendixA.tex": "9abd1493e5c5f69e264f08914c5792efc652a8b1fcc9e139a5744871ffb67b82",
+    "notes/sec1-setting.tex": "9f68ba0e70baf3280f8f3eed7b15142a8fc5408c06e31b24e6b56a54225bfa3a",
+    "notes/sec2-cutoff.tex": "982b3f8572ea1848a317f18589843487cb35f31ed717f8e8577fee957d8b6dc9",
+    "notes/sec3-badevent.tex": "a199394759bc217ffb73d55cc4b96c13c64cb76dbc5b7677c80d15fe757b38fa",
+    "notes/sec4-bulk.tex": "727c6fa54b165169de240aadbf0e0feee7c757510a5888746103d99475412158",
+    "notes/sec5-singular.tex": "202b3c541f2014713336fe4a0f75d7b8677452d33a28c93fc1376b9b4b47488d",
+    "notes/sec6-lemma61.tex": "0310364760d3c1e1d78acdb2e5650819a862dbc64287df5fb463ad49c8730870"
+  },
+  "proof_files": {
+    "LogGas/BadEvent.lean": "2d138676daf11018bce9ea3266b0397135aa58cd40d5f72eeb898cc2540d576e",
+    "LogGas/Bulk.lean": "7c4c31e5ab919ff33333f098f9b5b1ce5519bfe23e26685ea042f112279db918",
+    "LogGas/Decoupling.lean": "6ba322cfd5f9ac1666e77fb32fe12cc8a20475616c132fc139edb5e28193201b",
+    "LogGas/Grouped.lean": "40bdd2ce220bdb6a4a636ca10c5cb88e0e8d825d299866d4134cb46111567f7f",
+    "LogGas/Singular.lean": "f277fbe52c6dc935c8d7ca98d719928481acfbc3c0a7b6b6e115dab9266081e3",
+    "LogGas/Warmup.lean": "b6830cf927f0ed2c3906d208bc8380a65fea894ddaca5dc1507ea3c1643c9453"
+  }
+}

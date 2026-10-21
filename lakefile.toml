@@ -7,3 +7,12 @@ scope = "leanprover-community"
 
 [[lean_lib]]
 name = "LogGas"
+
+[[lean_lib]]
+name = "Challenge"
+
+[[lean_lib]]
+name = "Solution"
+
+[[lean_lib]]
+name = "VerificationAudit"

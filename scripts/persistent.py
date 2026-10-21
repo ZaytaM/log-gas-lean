@@ -18,6 +18,7 @@ import sys
 import time
 
 from runner_support import classify, declarations, proof_only_change, reset_time, standard_axioms
+from contracts import Contracts
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNTIME = ROOT / 'state/runtime'
@@ -140,6 +141,7 @@ class Runner:
     def __init__(self):
         self.db = connect()
         self.cfg = config()
+        self.contracts = Contracts(ROOT)
         self.active = {}
         self.stopping = False
         self.last_report = 0
@@ -161,7 +163,7 @@ class Runner:
                 for decl in declarations(source):
                     task_id = module + ':' + decl.name
                     seen[task_id] = decl
-                    if decl.sorry:
+                    if decl.sorry or decl.name in self.contracts.by_name:
                         self.db.execute('INSERT OR IGNORE INTO tasks(id,file,module,name) VALUES(?,?,?,?)',
                                         (task_id, file, module, decl.name))
         tasks = self.db.execute('SELECT * FROM tasks').fetchall()
@@ -187,6 +189,7 @@ class Runner:
             if (newly_closed or changed) and (n := rearm_after_close(self.db)):
                 self.log(f'Source changed; re-armed {n} saved proof(s) for model-free verification')
         self._source_fingerprint = fingerprint
+        put_meta(self.db, 'missing_contract_declarations', json.dumps(self.contracts.missing()))
 
     def build(self, cwd, module=None, tag='build'):
         args = ['lake', 'build'] + ([module] if module else [])
@@ -287,6 +290,7 @@ class Runner:
                            'LEMMA_NAME':task['name'], 'MAX_ATTEMPTS':self.cfg.get('MAX_ATTEMPTS', '5')}.items():
             prompt = prompt.replace('{' + key + '}', value)
         prompt += f'\nPrevious attempts: {task["attempts"]}. Last outcome: {task["error"][-1500:]}.\n'
+        prompt += self.contracts.packet(task['name'])
         notes = worktree / '.lake/worker-notes.md'
         if notes.exists():
             prompt += '\nSaved notes from the previous attempt:\n' + notes.read_text()[-3000:] + '\n'
@@ -460,8 +464,10 @@ class Runner:
                 f'Automatic retry: {stamp(pause)} ({meta(self.db,"pause_reason")})' if pause > time.time() else 'Queue is eligible to dispatch work.', '',
                 'Costs are client estimates and do not measure subscription allowance precisely.',
                 'Closed means the target proof passed source, build and axiom checks on main.',
+                'Queue completion does not certify source coverage or mathematical fidelity; run scripts/verify.py.',
                 'Waiting_dependencies / waiting_saved_dependencies means a complete proof awaits prerequisite proofs and a clean axiom audit; no model worker is spent on it.', '', '## Needs attention', '']
         body += [f'- {t["name"]}: {t["error"]}' for t in self.db.execute("SELECT name,error FROM tasks WHERE state='blocked'")]
+        body += ['- Missing required declaration: ' + name for name in self.contracts.missing()]
         (ROOT / 'reports/persistent.md').write_text('\n'.join(body) + '\n')
         fields = ['id','task','started','ended','outcome','proof_result','cost','usage_known','turns','duration_ms','usage']
         with (ROOT / 'state/worker_usage.tsv').open('w') as f:
@@ -529,8 +535,10 @@ class Runner:
                         self.finish(job, process.returncode, forced)
                 self.discover()
                 if not self.active and not self.db.execute("SELECT 1 FROM tasks WHERE state!='closed' LIMIT 1").fetchone():
-                    put_meta(self.db, 'service_state', 'complete')
-                    self.log('All discovered Lean obligations are closed; service complete')
+                    missing = self.contracts.missing()
+                    put_meta(self.db, 'service_state', 'needs_implementation' if missing else 'complete')
+                    self.log('Proof queue closed; required declarations missing: ' + ', '.join(missing)
+                             if missing else 'All discovered Lean obligations are closed; run final fidelity verification')
                     break
                 pause = float(meta(self.db, 'pause_until', '0'))
                 if not self.stopping and not (RUNTIME / 'stop').exists() and time.time() >= pause:
@@ -539,12 +547,17 @@ class Runner:
                     while len(self.active) < limit:
                         priority = self.cfg.get('PRIORITY_MODULES', '').split()
                         ranking = ('CASE WHEN module IN (' + ','.join('?' for _ in priority) + ') THEN 0 ELSE 1 END,') if priority else ''
-                        task = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY " + ranking + "attempts,last_attempt,id LIMIT 1", (time.time(), *priority)).fetchone()
+                        closed = {r[0] for r in self.db.execute("SELECT name FROM tasks WHERE state='closed'")}
+                        candidates = self.db.execute("SELECT * FROM tasks WHERE state='pending' AND not_before<=? ORDER BY " + ranking + "attempts,last_attempt,id", (time.time(), *priority)).fetchall()
+                        task = next((t for t in candidates if not self.contracts.waiting(t['name'], closed)), None)
                         if not task: break
                         self.start(task)
                 state = 'waiting_quota' if pause > time.time() else 'running'
                 if not self.active and state == 'running':
-                    state = 'waiting_retry' if self.db.execute("SELECT 1 FROM tasks WHERE state='pending' LIMIT 1").fetchone() else 'needs_attention'
+                    closed = {r[0] for r in self.db.execute("SELECT name FROM tasks WHERE state='closed'")}
+                    pending = self.db.execute("SELECT * FROM tasks WHERE state='pending'").fetchall()
+                    state = ('waiting_prerequisites' if pending and all(self.contracts.waiting(t['name'], closed) for t in pending)
+                             else 'waiting_retry' if pending else 'needs_attention')
                 put_meta(self.db, 'service_state', state)
                 if time.time() - self.last_report >= 300:
                     self.report()

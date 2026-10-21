@@ -3,6 +3,13 @@
 Lean 4 formalization of “An entropy bound for the attractive logarithmic gas”
 (Delgadino–Gvalani–Rosenzweig), running continuously on Dell3.
 
+**Final theorem verification is incomplete.** All 107 previously queued proof
+placeholders were closed, but the source-coverage gate now detects that the
+bulk theorem `LogGas.Bulk.lemma41` and principal theorem
+`LogGas.Main.theorem11` were never implemented. The proof queue's old `complete`
+state did not certify those absent declarations. See
+[the independent specification, dependency contracts and final verification](verification/README.md).
+
 The controller keeps six Sonnet workers busy across Claude allowance resets.
 It waits automatically when an actual session, weekly, or rate limit is reached,
 then retries after the advertised reset time. When no reset time is available,
@@ -62,10 +69,13 @@ that watchdog. Unexpected controller exits are retried by the supervisor.
   and their files recovered. Partial proof snapshots and checkpoint refs survive
   retries. Restart recovery also rolls back an interrupted, unverified integration.
 
-The controller completes when all discovered source obligations are closed.
-This verifies the encoded statements; correspondence to the paper still needs
-mathematical review. When only blocked targets remain, the service stays alive
-and reports the needed author decisions.
+The controller also checks required source milestones. When existing proofs are
+closed but required declarations are absent, it reports `needs_implementation`
+and stops model dispatch. The watchdog respects that state; after implementing
+missing declarations, start the service explicitly. Final completion requires
+the separate build, source-coverage, target-contract and independent review gate:
+`python3 scripts/verify.py --fresh`. When only blocked existing targets remain,
+the service stays alive and reports the needed author decisions.
 
 ## Settings and tests
 

@@ -1,0 +1,371 @@
+{
+  "recorded_utc": "20261021T201628Z",
+  "overall": "incomplete",
+  "checks": [
+    {
+      "name": "source-coverage",
+      "status": "failed",
+      "detail": {
+        "missing": [
+          "LogGas.Bulk.histogram_box",
+          "LogGas.Bulk.empEnergy_split",
+          "LogGas.Bulk.empEnergy_le",
+          "LogGas.Bulk.dual_log_hls",
+          "LogGas.Bulk.ell_hist",
+          "LogGas.Bulk.coarse_exp_bound",
+          "LogGas.Bulk.rJ_bound",
+          "LogGas.Bulk.W_le_coarse",
+          "LogGas.Bulk.lemma41",
+          "LogGas.Main.holder_split",
+          "LogGas.Main.bulk_hypothesis",
+          "LogGas.Main.parameter_choice",
+          "LogGas.Main.theorem11",
+          "LogGas.Torus.grid",
+          "LogGas.Physical.singular_instance",
+          "LogGas.Physical.log_exp_integrable"
+        ],
+        "milestones": 19
+      }
+    },
+    {
+      "name": "source-provenance",
+      "status": "passed",
+      "detail": {
+        "changed_sources": []
+      }
+    },
+    {
+      "name": "source-locators",
+      "status": "passed",
+      "detail": {
+        "invalid": []
+      }
+    },
+    {
+      "name": "challenge-direct-imports",
+      "status": "passed",
+      "detail": [
+        "Mathlib"
+      ]
+    },
+    {
+      "name": "source-admissions",
+      "status": "passed",
+      "detail": []
+    },
+    {
+      "name": "dependency-lock",
+      "status": "passed",
+      "detail": "Runtime dependency manifest must equal the preserved Dell3 lock"
+    },
+    {
+      "name": "installed-dependency-revisions",
+      "status": "passed",
+      "detail": [
+        {
+          "name": "mathlib",
+          "expected": "625d8914199bc567cca9b91f90e8e5afafa5ae51",
+          "actual": "625d8914199bc567cca9b91f90e8e5afafa5ae51",
+          "exit_code": 0
+        },
+        {
+          "name": "plausible",
+          "expected": "c2d7840c65673533e15b499f25beecdc6227f7d8",
+          "actual": "c2d7840c65673533e15b499f25beecdc6227f7d8",
+          "exit_code": 0
+        },
+        {
+          "name": "LeanSearchClient",
+          "expected": "9d39f9bb0c30aa2f6200808805ff16e6ce950890",
+          "actual": "9d39f9bb0c30aa2f6200808805ff16e6ce950890",
+          "exit_code": 0
+        },
+        {
+          "name": "importGraph",
+          "expected": "b3cc36c295aa5e3e3c0197b09a6556298e710447",
+          "actual": "b3cc36c295aa5e3e3c0197b09a6556298e710447",
+          "exit_code": 0
+        },
+        {
+          "name": "proofwidgets",
+          "expected": "17137fad38a2cc782ff00b323a13c3a991d085ab",
+          "actual": "17137fad38a2cc782ff00b323a13c3a991d085ab",
+          "exit_code": 0
+        },
+        {
+          "name": "aesop",
+          "expected": "cbdde3aa2665915fb286c48bcd4cdf885c629511",
+          "actual": "cbdde3aa2665915fb286c48bcd4cdf885c629511",
+          "exit_code": 0
+        },
+        {
+          "name": "Qq",
+          "expected": "6d26f8bb4b2bb78f929ad160feac508866821316",
+          "actual": "6d26f8bb4b2bb78f929ad160feac508866821316",
+          "exit_code": 0
+        },
+        {
+          "name": "batteries",
+          "expected": "4453b52d2468f4c346a8711d728c0742e7483c9b",
+          "actual": "4453b52d2468f4c346a8711d728c0742e7483c9b",
+          "exit_code": 0
+        },
+        {
+          "name": "Cli",
+          "expected": "34d2efffcb6dc8d5f3537cf6a7f88bfaa999ec49",
+          "actual": "34d2efffcb6dc8d5f3537cf6a7f88bfaa999ec49",
+          "exit_code": 0
+        }
+      ]
+    },
+    {
+      "name": "fresh-directory",
+      "status": "passed",
+      "detail": {
+        "build_dir": ".lake/build-verification-20261021T201628Z-2353622",
+        "initially_exists": false
+      }
+    },
+    {
+      "name": "lean-version",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "--version"
+        ],
+        "exit_code": 0,
+        "seconds": 2.67
+      }
+    },
+    {
+      "name": "project-build",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "build",
+          "LogGas",
+          "Challenge",
+          "Solution",
+          "VerificationAudit"
+        ],
+        "exit_code": 0,
+        "seconds": 170.06
+      }
+    },
+    {
+      "name": "fresh-lean-path",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "printenv",
+          "LEAN_PATH"
+        ],
+        "exit_code": 0,
+        "seconds": 1.77
+      }
+    },
+    {
+      "name": "toolchain-prefix",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "--print-prefix"
+        ],
+        "exit_code": 0,
+        "seconds": 0.97
+      }
+    },
+    {
+      "name": "no-old-project-artifacts",
+      "status": "passed",
+      "detail": "/home/mgd885/lean-work/leanproj/.lake/packages/Cli/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/batteries/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/Qq/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/aesop/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/importGraph/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/plausible/.lake/build/lib/lean:/home/mgd885/lean-work/leanproj/.lake/packages/mathlib/.lake/build/lib/lean:/home/mgd885/work/loggas-verification-20261021/.lake/build-verification-20261021T201628Z-2353622/lib/lean:/home/mgd885/.elan/toolchains/leanprover--lean4---v4.36.0-rc1/lib/lean"
+    },
+    {
+      "name": "fresh-project-artifacts",
+      "status": "passed",
+      "detail": {
+        "count": 10
+      }
+    },
+    {
+      "name": "mathlib-environment",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "/home/mgd885/work/loggas-verification-20261021/.lake/VerifyMathlib.lean"
+        ],
+        "exit_code": 0,
+        "seconds": 29.86
+      }
+    },
+    {
+      "name": "challenge-environment",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "/home/mgd885/work/loggas-verification-20261021/.lake/VerifyChallenge.lean"
+        ],
+        "exit_code": 0,
+        "seconds": 29.46
+      }
+    },
+    {
+      "name": "solution-environment",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "/home/mgd885/work/loggas-verification-20261021/.lake/VerifySolution.lean"
+        ],
+        "exit_code": 0,
+        "seconds": 30.21
+      }
+    },
+    {
+      "name": "independent-definition-parity",
+      "status": "passed",
+      "detail": {
+        "challenge_declarations": 18,
+        "solution_declarations": 18,
+        "different": []
+      }
+    },
+    {
+      "name": "challenge-mathlib-closure",
+      "status": "passed",
+      "detail": {
+        "extra_modules": []
+      }
+    },
+    {
+      "name": "target-proof-contracts",
+      "status": "failed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "lean",
+          "/home/mgd885/work/loggas-verification-20261021/.lake/VerifyTargets.lean"
+        ],
+        "exit_code": 1,
+        "seconds": 28.1
+      }
+    },
+    {
+      "name": "lean-kernel-replay",
+      "status": "passed",
+      "detail": {
+        "command": [
+          "lake",
+          "-f",
+          "/home/mgd885/work/loggas-verification-20261021/lakefile.verification-20261021T201628Z.toml",
+          "env",
+          "leanchecker",
+          "Solution"
+        ],
+        "exit_code": 0,
+        "seconds": 47.43
+      }
+    },
+    {
+      "name": "external-comparator",
+      "status": "unperformed",
+      "detail": "No genuine Comparator runner configured; no external comparison pass is claimed."
+    },
+    {
+      "name": "frozen-inputs-unchanged",
+      "status": "passed",
+      "detail": "Rehashed source, contracts, configuration, prompts and harness"
+    },
+    {
+      "name": "review-mathematical-fidelity",
+      "status": "failed",
+      "detail": {
+        "role": "mathematical-fidelity",
+        "reviewer": "/root/fidelity_review",
+        "verdict": "findings",
+        "matches_freeze": true,
+        "receipt_sha256": "20a386d369da0d2cec38e436069f4dd5d15e7f2e7c21aa7c6ebd3940f9d84324"
+      }
+    },
+    {
+      "name": "review-lean-verification",
+      "status": "failed",
+      "detail": {
+        "role": "lean-verification",
+        "reviewer": "/root/verification_review",
+        "verdict": "findings",
+        "matches_freeze": true,
+        "receipt_sha256": "cbaa811f04a6c2e9232aa8f43356a1a0d1d0c33295e117441a1e4c216ca73bff"
+      }
+    },
+    {
+      "name": "distinct-reviewers",
+      "status": "passed",
+      "detail": [
+        "/root/fidelity_review",
+        "/root/verification_review"
+      ]
+    }
+  ],
+  "scope": "Existing proof graph plus conditional H1/H2 target; paper fidelity is separately reviewed.",
+  "source_run": "logs/verification/released-harness/result.json",
+  "source_run_sha256": "7743a2dad0dcc7f76c5c3a4ac21f1c4db15c67dc057190517ea8c86651e21d61",
+  "post_review_utc": "2026-10-21T20:24:37.360108+00:00",
+  "post_review_receipts": [
+    {
+      "role": "mathematical-fidelity",
+      "reviewer": "/root/fidelity_review",
+      "verdict": "findings",
+      "matches_freeze": true,
+      "receipt_sha256": "20a386d369da0d2cec38e436069f4dd5d15e7f2e7c21aa7c6ebd3940f9d84324"
+    },
+    {
+      "role": "lean-verification",
+      "reviewer": "/root/verification_review",
+      "verdict": "findings",
+      "matches_freeze": true,
+      "receipt_sha256": "cbaa811f04a6c2e9232aa8f43356a1a0d1d0c33295e117441a1e4c216ca73bff"
+    }
+  ],
+  "regression_tests": {
+    "tests": 23,
+    "status": "passed",
+    "seconds": 62.027,
+    "log": "logs/verification/regression-tests.log"
+  },
+  "note": "Compile/audit evidence is unchanged. The two review receipts were finalized afterward on the exact same input hashes; their findings keep the overall result incomplete."
+}

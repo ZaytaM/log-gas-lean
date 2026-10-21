@@ -3,6 +3,10 @@
 wt/
 logs/
 *.json
+!verification/contracts.json
+!verification/dependency-lock.json
+!verification/reviews/*.json
+lakefile.verification-*.toml
 .DS_Store
 
 # Persistent service state and isolated workers

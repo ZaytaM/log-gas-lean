@@ -13,7 +13,7 @@ case "${1:-status}" in
       [ -e state/runtime/stop ] && exit 0
       if [ -f state/runtime/queue.sqlite3 ]; then
         completed=$(python3 -c 'import sqlite3; c=sqlite3.connect("state/runtime/queue.sqlite3"); r=c.execute("SELECT value FROM meta WHERE key=?",("service_state",)).fetchone(); print(r[0] if r else "")')
-        [ "$completed" = complete ] && exit 0
+        case "$completed" in complete|needs_implementation) exit 0 ;; esac
       fi
     else
       rm -f state/runtime/stop

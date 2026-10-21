@@ -236,6 +236,7 @@ class IntegrationTests(unittest.TestCase):
         db.row_factory = sqlite3.Row
         db.executescript(module.SCHEMA)
         runner = module.Runner.__new__(module.Runner)
+        runner.contracts = module.Contracts(self.root)
         runner.db = db
         checked_names = []
         runner.axioms_many = lambda cwd, tasks: {task['name']: checked_names.append(task['name']) or False for task in tasks}
@@ -268,6 +269,7 @@ class IntegrationTests(unittest.TestCase):
         runtime.mkdir()
         (self.root/'logs/service').mkdir(parents=True)
         runner = module.Runner.__new__(module.Runner)
+        runner.contracts = module.Contracts(self.root)
         targets = [{'module':'T0', 'name':'T0.proof'}, {'module':'T1', 'name':'T1.proof'}]
         output = "'T0.proof' depends on axioms: [propext, Classical.choice, Quot.sound]\n'T1.proof' depends on axioms: [propext,\n sorryAx]\n"
         with patch.multiple(module, ROOT=self.root, RUNTIME=runtime):
@@ -308,6 +310,34 @@ class IntegrationTests(unittest.TestCase):
         with self.db() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE state='closed'").fetchone()[0],7)
             self.assertGreater(db.execute("SELECT COUNT(*) FROM jobs WHERE outcome='quota'").fetchone()[0],0)
+
+    def test_scheduler_waits_for_named_prerequisite(self):
+        (self.root/'verification').mkdir()
+        data = {'roots':['consumer'], 'nodes':[
+            {'id':'consumer','module':'T0','declarations':['T0.proof'],'depends_on':['prerequisite'],
+             'source':'LogGas/T0.lean','label':'fixture','scope':'test','statement':'Consumer'},
+            {'id':'prerequisite','module':'T1','declarations':['T1.proof'],'depends_on':[],
+             'source':'LogGas/T1.lean','label':'fixture','scope':'test','statement':'Prerequisite'}]}
+        (self.root/'verification/contracts.json').write_text(json.dumps(data))
+        self.git('add','verification'); self.git('commit','-m','Add dependency fixture')
+        p,log=self.launch('success'); p.wait(timeout=45)
+        self.assertEqual(p.returncode,0,log.read_text())
+        with self.db() as db:
+            closed = dict(db.execute("SELECT task,ended FROM jobs"))
+            t0 = db.execute("SELECT started FROM jobs WHERE task='LogGas.T0:T0.proof'").fetchone()[0]
+            self.assertGreaterEqual(t0, closed['LogGas.T1:T1.proof'])
+
+    def test_missing_required_declaration_prevents_complete_state(self):
+        (self.root/'verification').mkdir()
+        data = {'roots':['main'], 'nodes':[{'id':'main','module':'LogGas.Main',
+            'declarations':['LogGas.Main.theorem11'], 'depends_on':[], 'source':'LogGas/T0.lean',
+            'label':'fixture','scope':'test','statement':'Absent required final theorem'}]}
+        (self.root/'verification/contracts.json').write_text(json.dumps(data))
+        self.git('add','verification'); self.git('commit','-m','Require absent final theorem')
+        p,log=self.launch('success'); p.wait(timeout=45)
+        self.assertEqual(p.returncode,0,log.read_text())
+        with self.db() as db:
+            self.assertEqual(db.execute("SELECT value FROM meta WHERE key='service_state'").fetchone()[0], 'needs_implementation')
 
     def test_six_workers_can_run_concurrently(self):
         path=self.root/'scripts/pipeline.conf'

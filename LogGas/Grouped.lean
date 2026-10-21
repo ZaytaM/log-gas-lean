@@ -340,7 +340,47 @@ theorem holder_classes (μ : Measure Ω) [IsProbabilityMeasure μ] {n : ℕ} (hn
     (hint : ∀ c, Integrable (fun ω => Real.exp (n * f c ω)) μ) :
     ∫ ω, Real.exp (∑ c, f c ω) ∂μ
       ≤ ∏ c, (∫ ω, Real.exp (n * f c ω) ∂μ) ^ (1 / (n : ℝ)) := by
-  sorry
+  have hn0 : (0 : ℝ) < n := by exact_mod_cast hn
+  have hp : ∑ _c : Fin n, (1 / (n : ℝ)) = 1 := by
+    simp [Finset.sum_const, Finset.card_univ]; field_simp
+  have hI : ∀ c, 0 ≤ ∫ ω, Real.exp (n * f c ω) ∂μ :=
+    fun c => integral_nonneg (fun ω => (Real.exp_pos _).le)
+  have hmeas : ∀ c, Measurable (fun ω => ENNReal.ofReal (Real.exp (n * f c ω))) :=
+    fun c => ENNReal.measurable_ofReal.comp
+      (Real.measurable_exp.comp (measurable_const.mul (hf c)))
+  have key := ENNReal.lintegral_prod_norm_pow_le (μ := μ) Finset.univ
+    (f := fun c ω => ENNReal.ofReal (Real.exp (n * f c ω)))
+    (fun c _ => (hmeas c).aemeasurable) hp (fun _ _ => by positivity)
+  have hpt : ∀ ω, ∏ c : Fin n, ENNReal.ofReal (Real.exp (n * f c ω)) ^ (1 / (n : ℝ))
+      = ENNReal.ofReal (Real.exp (∑ c, f c ω)) := by
+    intro ω
+    have : ∀ c : Fin n, ENNReal.ofReal (Real.exp (n * f c ω)) ^ (1 / (n : ℝ))
+        = ENNReal.ofReal (Real.exp (f c ω)) := by
+      intro c
+      rw [ENNReal.ofReal_rpow_of_nonneg (Real.exp_pos _).le (by positivity),
+        ← Real.exp_mul]
+      congr 2
+      field_simp
+    simp_rw [this]
+    rw [← ENNReal.ofReal_prod_of_nonneg (fun c _ => (Real.exp_pos _).le), ← Real.exp_sum]
+  simp_rw [hpt] at key
+  have hR : ∀ c, ∫⁻ ω, ENNReal.ofReal (Real.exp (n * f c ω)) ∂μ
+      = ENNReal.ofReal (∫ ω, Real.exp (n * f c ω) ∂μ) := fun c =>
+    (ofReal_integral_eq_lintegral_ofReal (hint c)
+      (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le)).symm
+  simp_rw [hR] at key
+  have hrhs : ∏ c : Fin n, ENNReal.ofReal (∫ ω, Real.exp (n * f c ω) ∂μ) ^ (1 / (n : ℝ))
+      = ENNReal.ofReal (∏ c, (∫ ω, Real.exp (n * f c ω) ∂μ) ^ (1 / (n : ℝ))) := by
+    rw [ENNReal.ofReal_prod_of_nonneg (fun c _ => Real.rpow_nonneg (hI c) _)]
+    refine Finset.prod_congr rfl fun c _ => ?_
+    rw [ENNReal.ofReal_rpow_of_nonneg (hI c) (by positivity)]
+  rw [hrhs] at key
+  have hmeasS : Measurable (fun ω => Real.exp (∑ c, f c ω)) :=
+    Real.measurable_exp.comp (Finset.measurable_sum _ fun c _ => hf c)
+  rw [integral_eq_lintegral_of_nonneg_ae
+    (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le) hmeasS.aestronglyMeasurable]
+  exact ENNReal.toReal_le_of_le_ofReal
+    (Finset.prod_nonneg fun c _ => Real.rpow_nonneg (hI c) _) key
 
 section Grouped
 

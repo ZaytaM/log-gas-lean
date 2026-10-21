@@ -190,7 +190,11 @@ theorem measurable_QJy (bx : Boxes μE M) (K : E → E → ℝ) (hK : Measurable
 /-- `Q_J` is a projection: `∫ Q_J f dν_a = ∫ f dν_a`. -/
 theorem integral_QJ_box (bx : Boxes μE M) (f : E → ℝ) (a : Fin M) :
     ∫ x, QJ bx f x ∂(boxMeasure bx a) = ∫ x, f x ∂(boxMeasure bx a) := by
-  sorry
+  have h : ∀ᵐ x ∂(boxMeasure bx a), QJ bx f x = ∫ y, f y ∂(boxMeasure bx a) := by
+    filter_upwards [ae_mem_boxMeasure bx a] with x hx
+    exact QJ_apply_of_mem bx f hx
+  rw [integral_congr_ae h, integral_const]
+  simp
 
 -- SKETCH: write `∫ g ∂μE = M⁻¹ ∑ a, ∫ g ∂ν_a` for `g = QJ bx f` and `g = f` using
 -- `μE_eq_sum_boxMeasure`, `integral_smul_measure`, `integral_finset_sum_measure`

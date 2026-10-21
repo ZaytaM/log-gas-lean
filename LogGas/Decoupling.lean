@@ -1247,7 +1247,40 @@ theorem count_bound (m k : ℕ) :
 `𝔼|S|^{2k} ≤ (C_u κ m)^{2k} (2k)!` for every `k ≥ 1`. -/
 theorem moment_bound (H : Hyp μ ν Y h κ) (k : ℕ) (hk : 1 ≤ k) :
     ∫ ω, |S h Y ω| ^ (2 * k) ∂μ ≤ (Cu * κ * m) ^ (2 * k) * ((2 * k).factorial : ℝ) := by
-  sorry
+  have h1 := random_split H k
+  have h2 : (∑ I : Finset (Fin m), ∫ ω, |D h Y I ω| ^ (2 * k) ∂μ) / 2 ^ m
+      ≤ 2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) * (A m k * B m k : ℕ) := by
+    have hs := Finset.sum_le_sum (s := (Finset.univ : Finset (Finset (Fin m))))
+      (fun I _ => count_reduction H k I)
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_finset, Fintype.card_fin] at hs
+    rw [div_le_iff₀ (by positivity)]
+    simpa [nsmul_eq_mul, mul_comm] using hs
+  have h3 := count_bound m k
+  have hκ := H.κ_pos
+  have he : Real.exp 1 < 2.7182818286 := Real.exp_one_lt_d9
+  have hcu : (32 * Real.exp 1 ^ 2) ≤ Cu ^ 2 := by
+    unfold Cu; nlinarith [Real.exp_pos 1]
+  have hfac : (0:ℝ) ≤ ((2 * k).factorial : ℝ) := by positivity
+  have h4 : 2 ^ (2 * k) * (2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) *
+      (A m k * B m k : ℕ)) ≤ (Cu * κ * m) ^ (2 * k) * ((2 * k).factorial : ℝ) := by
+    have h5 : (2:ℝ) ^ (2 * k) * 2 ^ k * (4 * Real.exp 1 ^ 2) ^ k
+        = (32 * Real.exp 1 ^ 2) ^ k := by
+      rw [pow_mul, ← mul_pow, ← mul_pow]; congr 1; ring
+    have h6 : (32 * Real.exp 1 ^ 2) ^ k ≤ (Cu ^ 2) ^ k :=
+      pow_le_pow_left₀ (by positivity) hcu k
+    have h7 : (2:ℝ) ^ (2 * k) * (2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) *
+        (A m k * B m k : ℕ)) = (2:ℝ) ^ (2 * k) * 2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) *
+        (A m k * B m k : ℕ) := by ring
+    rw [h7]
+    calc _ ≤ (2:ℝ) ^ (2 * k) * 2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) *
+          ((4 * Real.exp 1 ^ 2) ^ k * (m : ℝ) ^ (2 * k)) := by gcongr
+      _ = (32 * Real.exp 1 ^ 2) ^ k * κ ^ (2 * k) * (m : ℝ) ^ (2 * k) * ((2 * k).factorial : ℝ) := by
+          rw [← h5]; ring
+      _ ≤ (Cu ^ 2) ^ k * κ ^ (2 * k) * (m : ℝ) ^ (2 * k) * ((2 * k).factorial : ℝ) := by gcongr
+      _ = _ := by rw [← pow_mul, mul_pow, mul_pow]
+  calc _ ≤ _ := h1
+    _ ≤ _ := by gcongr
+    _ ≤ _ := h4
 
 -- SKETCH (D7, 6.13): pointwise `exp x ≤ 2 cosh x` (`Real.cosh_eq`, `Real.exp_pos`) and
 -- `cosh x = ∑' k, x^(2k)/(2k)!` (`Real.hasSum_cosh`), so with `x = θ S/m`,

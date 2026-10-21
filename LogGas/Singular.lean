@@ -1371,7 +1371,63 @@ with `κ(r) = (8C+1)/log(1/r)` (valid for all `0 < r < 1`). -/
 theorem aker_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) (p : ℕ) (hp : 1 ≤ p) :
     (∀ x, ∫ y, |aker bx K.s K.c x y| ^ p ∂μE ≤ 2 * kappa Cc K.r ^ p * p.factorial) ∧
     (∀ y, ∫ x, |aker bx K.s K.c x y| ^ p ∂μE ≤ 2 * kappa Cc K.r ^ p * p.factorial) := by
-  sorry
+  have hr := K.r_pos
+  have hr1 := K.r_lt_one
+  have hc0 : 0 ≤ K.c := K.c_def ▸ integral_nonneg K.s_nonneg
+  have hCc : 0 ≤ Cc := by
+    by_contra h
+    push_neg at h
+    have := K.c_le
+    have : Cc * K.r ^ d < 0 := mul_neg_of_neg_of_pos h (pow_pos hr d)
+    linarith
+  have hκ := kappa_pos Cc hCc hr hr1
+  have hL : 0 < Real.log (1 / K.r) := Real.log_pos (one_lt_one_div hr hr1)
+  set L := Real.log (1 / K.r) with hLdef
+  set E := Real.exp (L / 2) with hE
+  have hEpos : 0 < E := Real.exp_pos _
+  have hEE : K.r * (E * E) = 1 := by
+    rw [hE, ← Real.exp_add, add_halves, hLdef, Real.exp_log (by positivity)]
+    field_simp
+  have hLE : L < 2 * E := by
+    have := Real.add_one_le_exp (L / 2)
+    linarith
+  have hrEL : K.r * E * L ≤ 2 := by
+    by_contra h
+    push_neg at h
+    nlinarith [mul_pos hr hEpos]
+  have h1 : 4 * Cc / kappa Cc K.r ≤ L / 2 := by
+    unfold kappa
+    rw [div_div_eq_mul_div, div_le_iff₀ (by linarith)]
+    nlinarith
+  have h2 : Real.exp (4 * Cc / kappa Cc K.r) ≤ E := Real.exp_le_exp.2 h1
+  have h3 : K.c ≤ Cc * K.r := K.c_le.trans
+    (mul_le_mul_of_nonneg_left (pow_le_of_le_one hr.le hr1.le (by omega)) hCc)
+  have hsmall : 4 * K.c * Real.exp (4 * Cc / kappa Cc K.r) ≤ kappa Cc K.r := by
+    unfold kappa
+    rw [le_div_iff₀ hL]
+    have hX := Real.exp_pos (4 * Cc / kappa Cc K.r)
+    calc 4 * K.c * Real.exp (4 * Cc / kappa Cc K.r) * L
+        ≤ 4 * (Cc * K.r) * E * L := by gcongr
+      _ = 4 * Cc * (K.r * E * L) := by ring
+      _ ≤ 4 * Cc * 2 := by gcongr
+      _ ≤ 8 * Cc + 1 := by linarith
+  have hfac : (0 : ℝ) < kappa Cc K.r ^ p * p.factorial := by
+    have := Nat.factorial_pos p
+    positivity
+  have hmeas : Measurable (uncurry (aker bx K.s K.c)) := measurable_aker K.s K.s_meas K.c
+  constructor
+  · intro x
+    have := moment_of_exp μE (fun y => aker bx K.s K.c x y) (show Measurable (fun y => uncurry (aker bx K.s K.c) (x, y)) from
+        hmeas.comp measurable_prodMk_left)
+      (4 * Cc) (kappa Cc K.r) (4 * K.c) hκ (fun y => aker_abs_le K x y)
+      (aker_integral_le_right K x) hsmall p hp
+    linarith
+  · intro y
+    have := moment_of_exp μE (fun x => aker bx K.s K.c x y) (show Measurable (fun x => uncurry (aker bx K.s K.c) (x, y)) from
+        hmeas.comp measurable_prodMk_right)
+      (4 * Cc) (kappa Cc K.r) (4 * K.c) hκ (fun x => aker_abs_le K x y)
+      (aker_integral_le_left K y) hsmall p hp
+    linarith
 
 end Averaging
 

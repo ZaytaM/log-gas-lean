@@ -552,7 +552,9 @@ omit [MeasurableAdd₂ E] [MeasurableNeg E] [PseudoMetricSpace E] [OpensMeasurab
 /-- `W_N(K)` is measurable for a measurable kernel and measurable particles. -/
 theorem measurable_W (K : E → E → ℝ) (hK : Measurable (uncurry K)) (X : Fin N → Ω → E)
     (hX : ∀ i, Measurable (X i)) : Measurable (W K X) := by
-  sorry
+  unfold W
+  refine Measurable.const_mul (Finset.measurable_sum _ fun i _ => Finset.measurable_sum _ fun j _ => ?_) _
+  exact hK.comp ((hX i).prodMk (hX j))
 
 variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 

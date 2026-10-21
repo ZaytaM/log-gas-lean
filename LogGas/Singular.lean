@@ -482,7 +482,12 @@ theorem QJxQJy_ker_swap (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (h
 /-- `a_r` is a symmetric kernel. -/
 theorem aker_symm (K : SingularKernel μE bx G d Cc V) (x y : E) :
     aker bx K.s K.c x y = aker bx K.s K.c y x := by
-  sorry
+  have h1 := QJx_ker_swap K (SingularKernel.Sub.self K) x y
+  have h2 := QJx_ker_swap K (SingularKernel.Sub.self K) y x
+  have h3 := QJxQJy_ker_swap K (SingularKernel.Sub.self K) x y
+  unfold aker
+  rw [h1, ← h2, h3]
+  ring
 
 -- SKETCH: unfold `hker`, `ker`; `hs'.even` (`neg_sub`), `QJx_ker_swap`, `QJxQJy_ker_swap`.
 /-- `h_r` is a symmetric kernel (for every sub-kernel `s'`). -/

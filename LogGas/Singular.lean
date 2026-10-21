@@ -383,7 +383,14 @@ theorem measurable_aker (s : E → ℝ) (hs : Measurable s) (c : ℝ) :
 -- SKETCH: as `measurable_aker`.
 /-- `h_r` is measurable in both variables. -/
 theorem measurable_hker (s : E → ℝ) (hs : Measurable s) : Measurable (uncurry (hker bx s)) := by
-  sorry
+  have hk : Measurable (uncurry (ker s)) := hs.comp measurable_sub
+  have h1 := measurable_QJx bx (ker s) hk
+  have h2 := measurable_QJy bx (ker s) hk
+  have h3 := measurable_QJx bx (QJy bx (ker s)) h2
+  have : uncurry (hker bx s) = fun p => uncurry (ker s) p - uncurry (QJx bx (ker s)) p
+      - uncurry (QJy bx (ker s)) p + uncurry (QJx bx (QJy bx (ker s))) p := rfl
+  rw [this]
+  exact ((hk.sub h1).sub h2).add h3
 
 /-- Eq. `eq:physical-local-centering` (5.2): `s̃_r = a_r + h_r`. -/
 theorem stilde_split (K : SingularKernel μE bx G d Cc V) (x y : E) :

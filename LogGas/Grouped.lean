@@ -209,7 +209,9 @@ omit [IsProbabilityMeasure μ] [∀ i, IsProbabilityMeasure (ν i)] in
 /-- `S` is measurable for measurable variables and kernels. -/
 theorem measurable_S (hY : ∀ i, Measurable (Y i))
     (hh : ∀ i j, Measurable (Function.uncurry (h i j))) : Measurable (S h Y) := by
-  sorry
+  unfold S
+  refine Finset.measurable_sum _ fun i _ => Finset.measurable_sum _ fun j _ => ?_
+  exact (hh i j).comp ((hY i).prodMk (hY j))
 
 /-- A separate bounded-kernel utility. Boundedness is an explicit extra premise,
 not a consequence of the hypotheses of Lemma 6.1. -/

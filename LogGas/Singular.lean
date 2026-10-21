@@ -600,7 +600,130 @@ theorem aker_abs_le (K : SingularKernel μE bx G d Cc V) (x y : E) :
 /-- Eq. `eq:physical-average-smallness` (5.5), second bound: `∫ |a_r(x, y)| dμ(y) ≤ 4 c_r`. -/
 theorem aker_integral_le_right (K : SingularKernel μE bx G d Cc V) (x : E) :
     ∫ y, |aker bx K.s K.c x y| ∂μE ≤ 4 * K.c := by
-  sorry
+  classical
+  obtain ⟨a, ha⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ x)
+  have hMpos : (0:ℝ) < M := Nat.cast_pos.2 (Fin.pos a)
+  have hM0 : (M:ℝ) ≠ 0 := hMpos.ne'
+  have hν : ∀ (b : Fin M) (f : E → ℝ),
+      ∫ z, f z ∂(boxMeasure bx b) = M * ∫ z in bx.A b, f z ∂μE := by
+    intro b f
+    rw [boxMeasure, ENNReal.smul_def, integral_smul_measure]
+    simp only [ENNReal.coe_natCast, ENNReal.toReal_natCast, smul_eq_mul]
+  have hvol : ∀ b : Fin M, (μE.restrict (bx.A b)).real Set.univ = 1 / M := by
+    intro b
+    rw [Measure.real, Measure.restrict_apply_univ, bx.vol]
+    simp
+  have hP : ∀ g : E → ℝ, Integrable g μE →
+      Integrable (QJ bx g) μE ∧ ∫ y, QJ bx g y ∂μE = ∫ y, g y ∂μE := by
+    intro g hg
+    refine ⟨?_, ?_⟩
+    · unfold QJ
+      exact integrable_finsetSum _ fun b _ => (integrable_const _).indicator (bx.meas b)
+    · unfold QJ
+      rw [integral_finsetSum _ (fun b _ => (integrable_const _).indicator (bx.meas b))]
+      have : ∀ b, ∫ y, (bx.A b).indicator (fun _ => ∫ z, g z ∂(boxMeasure bx b)) y ∂μE
+          = ∫ z in bx.A b, g z ∂μE := by
+        intro b
+        rw [integral_indicator_const _ (bx.meas b), Boxes.real_vol, hν, smul_eq_mul]
+        field_simp
+      simp_rw [this]
+      rw [← integral_iUnion_fintype bx.meas bx.disj (fun b => hg.integrableOn), bx.cover,
+        setIntegral_univ]
+  have hS2 : Integrable (fun p : E × E => K.s (p.1 - p.2)) (μE.prod μE) := by
+    have := Integrable.convolution_integrand (ContinuousLinearMap.mul ℝ ℝ)
+      (integrable_const (1:ℝ) (μ := μE)) K.s_int (μ := μE) (ν := μE)
+    simpa using this
+  have hS3 : ∀ A B : Set E,
+      Integrable (fun p : E × E => K.s (p.1 - p.2)) ((μE.restrict A).prod (μE.restrict B)) :=
+    fun A B => hS2.mono_measure (Measure.prod_mono Measure.restrict_le_self Measure.restrict_le_self)
+  have hS4 : ∀ A : Set E,
+      Integrable (fun p : E × E => K.s (p.1 - p.2)) ((μE.restrict A).prod μE) :=
+    fun A => hS2.mono_measure (Measure.prod_mono Measure.restrict_le_self le_rfl)
+  have hT1 : ∀ y, QJx bx (ker K.s) x y = M * ∫ x' in bx.A a, K.s (x' - y) ∂μE := by
+    intro y
+    unfold QJx
+    rw [QJ_apply_of_mem bx _ ha, hν]
+    rfl
+  have hT1int : Integrable (fun y => QJx bx (ker K.s) x y) μE ∧
+      ∫ y, QJx bx (ker K.s) x y ∂μE = K.c := by
+    have hi : Integrable (fun y => ∫ x' in bx.A a, K.s (x' - y) ∂μE) μE :=
+      (hS4 (bx.A a)).integral_prod_right
+    simp_rw [hT1]
+    refine ⟨hi.const_mul _, ?_⟩
+    rw [integral_const_mul]
+    have hsw := integral_integral_swap (μ := μE.restrict (bx.A a)) (ν := μE)
+      (f := fun x' y => K.s (x' - y)) (hS4 _)
+    rw [← hsw]
+    simp_rw [SingularKernel.integral_ker_right K.s, K.c_def]
+    rw [integral_const, smul_eq_mul, hvol]
+    field_simp
+  have hT2 : ∀ y, QJy bx (ker K.s) x y = QJ bx (fun y' => K.s (x - y')) y := fun y => rfl
+  have hT2int : Integrable (fun y => QJy bx (ker K.s) x y) μE ∧
+      ∫ y, QJy bx (ker K.s) x y ∂μE = K.c := by
+    obtain ⟨h1, h2⟩ := hP _ (K.s_int.comp_sub_left x)
+    simp_rw [hT2]
+    refine ⟨h1, ?_⟩
+    rw [h2, SingularKernel.integral_ker_right K.s, K.c_def]
+  have hT3 : ∀ y, QJx bx (QJy bx (ker K.s)) x y
+      = QJ bx (fun y' => QJx bx (ker K.s) x y') y := by
+    intro y
+    obtain ⟨b, hb⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ y)
+    have e1 : QJx bx (QJy bx (ker K.s)) x y
+        = M * ∫ x'' in bx.A a, M * ∫ y' in bx.A b, K.s (x'' - y') ∂μE ∂μE := by
+      unfold QJx
+      rw [QJ_apply_of_mem bx _ ha, hν]
+      congr 1
+      refine integral_congr_ae (Filter.Eventually.of_forall fun x'' => ?_)
+      show QJ bx (fun y' => ker K.s x'' y') y = _
+      rw [QJ_apply_of_mem bx _ hb, hν]
+      rfl
+    have e2 : QJ bx (fun y' => QJx bx (ker K.s) x y') y
+        = M * ∫ y' in bx.A b, M * ∫ x'' in bx.A a, K.s (x'' - y') ∂μE ∂μE := by
+      rw [QJ_apply_of_mem bx _ hb, hν]
+      congr 1
+      refine integral_congr_ae (Filter.Eventually.of_forall fun y' => ?_)
+      exact hT1 y'
+    rw [e1, e2]
+    simp only [integral_const_mul]
+    rw [integral_integral_swap (μ := μE.restrict (bx.A a)) (ν := μE.restrict (bx.A b))
+      (f := fun x'' y' => K.s (x'' - y')) (hS3 _ _)]
+  have hT3int : Integrable (fun y => QJx bx (QJy bx (ker K.s)) x y) μE ∧
+      ∫ y, QJx bx (QJy bx (ker K.s)) x y ∂μE = K.c := by
+    obtain ⟨h1, h2⟩ := hP _ hT1int.1
+    simp_rw [hT3]
+    exact ⟨h1, h2.trans hT1int.2⟩
+  have hnn : ∀ y, 0 ≤ QJx bx (ker K.s) x y := fun y =>
+    QJ_nonneg bx _ (fun z => K.s_nonneg _) x
+  have hnn2 : ∀ y, 0 ≤ QJy bx (ker K.s) x y := fun y =>
+    QJ_nonneg bx _ (fun z => K.s_nonneg _) y
+  have hnn2' : ∀ x' y, 0 ≤ QJy bx (ker K.s) x' y := fun x' y =>
+    QJ_nonneg bx _ (fun z => K.s_nonneg _) y
+  have hnn3 : ∀ y, 0 ≤ QJx bx (QJy bx (ker K.s)) x y := fun y =>
+    QJ_nonneg bx (fun x' => QJy bx (ker K.s) x' y) (fun z => hnn2' z y) x
+  have hint : Integrable (fun y => QJx bx (ker K.s) x y + QJy bx (ker K.s) x y
+      + QJx bx (QJy bx (ker K.s)) x y + K.c) μE :=
+    ((hT1int.1.add hT2int.1).add hT3int.1).add (integrable_const _)
+  calc ∫ y, |aker bx K.s K.c x y| ∂μE
+      ≤ ∫ y, (QJx bx (ker K.s) x y + QJy bx (ker K.s) x y
+        + QJx bx (QJy bx (ker K.s)) x y + K.c) ∂μE := by
+        refine integral_mono_of_nonneg (Filter.Eventually.of_forall fun y => abs_nonneg _) hint
+          (Filter.Eventually.of_forall fun y => ?_)
+        have := K.c_nonneg
+        have h1 := hnn y
+        have h2 := hnn2 y
+        have h3 := hnn3 y
+        unfold aker
+        rw [abs_le]
+        constructor <;> linarith
+    _ = 4 * K.c := by
+        have h12 : Integrable (fun y => QJx bx (ker K.s) x y + QJy bx (ker K.s) x y) μE :=
+          hT1int.1.add hT2int.1
+        have h123 : Integrable (fun y => QJx bx (ker K.s) x y + QJy bx (ker K.s) x y
+            + QJx bx (QJy bx (ker K.s)) x y) μE := h12.add hT3int.1
+        rw [integral_add h123 (integrable_const _), integral_add h12 hT3int.1,
+          integral_add hT1int.1 hT2int.1, hT1int.2, hT2int.2, hT3int.2, integral_const]
+        simp
+        ring
 
 -- SKETCH: `aker_symm` and `aker_integral_le_right`.
 /-- Eq. (5.5), second bound in the other variable: `∫ |a_r(x, y)| dμ(x) ≤ 4 c_r`. -/

@@ -1003,7 +1003,10 @@ noncomputable def kappaStar (Cc V : ℝ) : ℝ := 2 * max V 1 * max (3 * Cc) 1
 -- SKETCH: `positivity` / `mul_pos` with `lt_max_of_lt_right one_pos`.
 /-- `κ_* > 0`. -/
 theorem kappaStar_pos (Cc V : ℝ) : 0 < kappaStar Cc V := by
-  sorry
+  unfold kappaStar
+  have h1 : (0:ℝ) < max V 1 := lt_max_of_lt_right one_pos
+  have h2 : (0:ℝ) < max (3 * Cc) 1 := lt_max_of_lt_right one_pos
+  positivity
 
 -- SKETCH: `|h|^p ≤ (s' + 3Cc)^p ≤ 2^(p-1) (s'^p + (3Cc)^p)` (`hker_abs_le`, `pow_le_pow_left₀`,
 -- `add_pow_le_pow_mul_pow_of_sq_le_sq` or `inner_le_nnorm_mul_nnorm`-free convexity:

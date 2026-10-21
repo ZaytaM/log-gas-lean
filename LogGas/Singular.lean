@@ -1676,7 +1676,73 @@ theorem hker_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {s' : E 
         ≤ ENNReal.ofReal (2 * kappaStar Cc V ^ p * p.factorial)) ∧
     (∀ x, ∫⁻ y, ENNReal.ofReal (|hker bx s' x y| ^ p) ∂(boxMeasure bx a)
         ≤ ENNReal.ofReal (2 * kappaStar Cc V ^ p * p.factorial)) := by
-  sorry
+  classical
+  have hC := SingularKernel.Cc_nonneg K
+  have hV := K.V_nonneg
+  have hκ := kappaStar_pos Cc V
+  have main : ∀ (f g : E → ℝ), (∀ x, |f x| ≤ g x + 3 * Cc) → (∀ x, 0 ≤ g x) →
+      ∫⁻ x, ENNReal.ofReal (g x ^ p) ∂(boxMeasure bx a) ≤ ENNReal.ofReal (V * p.factorial / d ^ p) →
+      ∫⁻ x, ENNReal.ofReal (|f x| ^ p) ∂(boxMeasure bx a)
+        ≤ ENNReal.ofReal (2 * kappaStar Cc V ^ p * p.factorial) := by
+    intro f g hf hg hint
+    have hpt : ∀ x, ENNReal.ofReal (|f x| ^ p) ≤
+        ENNReal.ofReal (2 ^ (p - 1)) * (ENNReal.ofReal (g x ^ p) + ENNReal.ofReal ((3 * Cc) ^ p)) := by
+      intro x
+      rw [← ENNReal.ofReal_add (pow_nonneg (hg x) p) (by positivity),
+        ← ENNReal.ofReal_mul (by positivity)]
+      apply ENNReal.ofReal_le_ofReal
+      exact (pow_le_pow_left₀ (abs_nonneg _) (hf x) p).trans (add_pow_le (hg x) (by linarith) p)
+    refine (lintegral_mono hpt).trans ?_
+    rw [lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+    rw [lintegral_add_right _ measurable_const, lintegral_const, measure_univ, mul_one]
+    refine (by gcongr : _ ≤ ENNReal.ofReal (2 ^ (p - 1)) * (ENNReal.ofReal (V * p.factorial / d ^ p) + ENNReal.ofReal ((3 * Cc) ^ p))).trans ?_
+    rw [← ENNReal.ofReal_add (by positivity) (by positivity),
+      ← ENNReal.ofReal_mul (by positivity)]
+    apply ENNReal.ofReal_le_ofReal
+    have hdp : (1 : ℝ) ≤ (d : ℝ) ^ p := one_le_pow₀ (by exact_mod_cast hd)
+    have hfac : (1 : ℝ) ≤ p.factorial := by exact_mod_cast p.factorial_pos
+    have hA : (1 : ℝ) ≤ max V 1 := le_max_right _ _
+    have hB : (1 : ℝ) ≤ max (3 * Cc) 1 := le_max_right _ _
+    have hVA : V ≤ max V 1 := le_max_left _ _
+    have hcB : 3 * Cc ≤ max (3 * Cc) 1 := le_max_left _ _
+    have hApow : max V 1 ≤ max V 1 ^ p := le_self_pow₀ hA (by omega)
+    have hBpow : (3 * Cc) ^ p ≤ max (3 * Cc) 1 ^ p := pow_le_pow_left₀ (by linarith) hcB p
+    have hBp1 : (1 : ℝ) ≤ max (3 * Cc) 1 ^ p := one_le_pow₀ hB
+    have hVd : V * p.factorial / d ^ p ≤ max V 1 ^ p * max (3 * Cc) 1 ^ p * p.factorial := by
+      rw [div_le_iff₀ (by linarith)]
+      have h1 : V ≤ max V 1 ^ p := hVA.trans hApow
+      have h2 : (1 : ℝ) ≤ max V 1 ^ p * max (3 * Cc) 1 ^ p := one_le_mul_of_one_le_of_one_le (one_le_pow₀ hA) hBp1
+      have h3 : V * p.factorial ≤ max V 1 ^ p * p.factorial := by gcongr
+      calc V * p.factorial ≤ max V 1 ^ p * p.factorial := h3
+        _ ≤ max V 1 ^ p * max (3 * Cc) 1 ^ p * p.factorial * 1 := by
+            rw [mul_one]; gcongr; exact le_mul_of_one_le_right (by positivity) hBp1
+        _ ≤ _ := by gcongr
+    have hcp : (3 * Cc) ^ p ≤ max V 1 ^ p * max (3 * Cc) 1 ^ p * p.factorial := by
+      calc (3 * Cc) ^ p ≤ max (3 * Cc) 1 ^ p := hBpow
+        _ = 1 * max (3 * Cc) 1 ^ p * 1 := by ring
+        _ ≤ _ := by
+          gcongr
+          · exact one_le_pow₀ hA
+    have hk : kappaStar Cc V ^ p = 2 ^ p * (max V 1 ^ p * max (3 * Cc) 1 ^ p) := by
+      unfold kappaStar; rw [mul_pow, mul_pow]; ring
+    have h2p : (2 : ℝ) ^ (p - 1) * 2 = 2 ^ p := by
+      rw [← pow_succ]; congr 1; omega
+    rw [hk]
+    have hpos : (0 : ℝ) ≤ 2 ^ (p - 1) := by positivity
+    calc (2 : ℝ) ^ (p - 1) * (V * p.factorial / d ^ p + (3 * Cc) ^ p)
+        ≤ 2 ^ (p - 1) * (2 * (max V 1 ^ p * max (3 * Cc) 1 ^ p * p.factorial)) := by
+          gcongr; linarith
+      _ = 2 ^ p * (max V 1 ^ p * max (3 * Cc) 1 ^ p) * p.factorial := by rw [← h2p]; ring
+      _ ≤ 2 * (2 ^ p * (max V 1 ^ p * max (3 * Cc) 1 ^ p)) * p.factorial := by
+          have : (0:ℝ) ≤ 2 ^ p * (max V 1 ^ p * max (3 * Cc) 1 ^ p) * p.factorial := by positivity
+          nlinarith
+  have bk := box_ker_moment K hd hs' a p hp
+  constructor
+  · intro y
+    exact main _ _ (fun x => hker_abs_le K hs' x y) (fun x => hs'.nonneg _) (bk.1 y)
+  · intro x
+    refine main _ (fun y => s' (x - y)) (fun y => ?_) (fun y => hs'.nonneg _) (bk.2 x)
+    exact hker_abs_le K hs' x y
 
 /-- Finite nonnegative moments imply genuine Bochner integrability, including for `s_r`.
 This avoids the convention that the integral of a nonintegrable function is zero. -/

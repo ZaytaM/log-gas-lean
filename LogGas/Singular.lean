@@ -673,7 +673,28 @@ theorem hker_box_centered_right (K : SingularKernel μE bx G d Cc V) {s' : E →
 /-- Eq. (5.2), "`h_r` has zero average in each variable under `μ`", first variable. -/
 theorem hker_centered_left (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (y : E) : ∫ x, hker bx s' x y ∂μE = 0 := by
-  sorry
+  have hQ : ∀ (f : E → ℝ) (a : Fin M), Integrable (QJ bx f) (boxMeasure bx a) := fun f a =>
+    MeasureTheory.integrable_finsetSum _ fun b _ => (integrable_const _).indicator (bx.meas b)
+  have hint : ∀ a : Fin M, Integrable (fun x => hker bx s' x y) (boxMeasure bx a) := by
+    intro a
+    have h3 : Integrable (fun x => QJy bx (ker s') x y) (boxMeasure bx a) := by
+      have hm : Measurable (fun x => QJy bx (ker s') x y) :=
+        (measurable_QJy bx (ker s') (hs'.meas.comp measurable_sub)).comp
+          (measurable_id.prodMk measurable_const)
+      refine Integrable.of_bound hm.aestronglyMeasurable (M * ∫ z, s' z ∂μE)
+        (Filter.Eventually.of_forall fun x => ?_)
+      have hnn : 0 ≤ QJy bx (ker s') x y := QJ_nonneg bx _ (fun z => hs'.nonneg _) y
+      rw [Real.norm_of_nonneg hnn]
+      have := QJ_le bx (fun y' => s' (x - y')) (fun z => hs'.nonneg _)
+        ((SingularKernel.Sub.integrable K hs').comp_sub_left x) y
+      rw [SingularKernel.integral_ker_right] at this
+      exact this
+    exact ((((SingularKernel.integrable_ker_box_left K hs' a y).sub (hQ _ a)).sub h3).add (hQ _ a))
+  have key : ∫ x, hker bx s' x y ∂μE
+      = ∫ x, hker bx s' x y ∂((M : ℝ≥0∞)⁻¹ • ∑ a, boxMeasure bx a) := by
+    rw [← μE_eq_sum_boxMeasure]
+  rw [key, integral_smul_measure, MeasureTheory.integral_finsetSum_measure (fun a _ => hint a)]
+  simp [hker_box_centered_left K hs']
 
 -- SKETCH: as `hker_centered_left`, from `hker_box_centered_right`.
 /-- Eq. (5.2), centering of `h_r` under `μ` in the second variable. -/

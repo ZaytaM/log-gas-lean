@@ -38,7 +38,27 @@ theorem jensen_avg_exp {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
     (hf_int : ∀ i, Integrable (fun ω => Real.exp (f i ω)) μ) :
     ∫ ω, Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω) ∂μ
       ≤ (1 / (N : ℝ)) * ∑ i, ∫ ω, Real.exp (f i ω) ∂μ := by
-  sorry
+  have hNpos : (0:ℝ) < N := by exact_mod_cast hN
+  have hpt : ∀ ω, Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω)
+      ≤ ∑ i, (1 / (N : ℝ)) * Real.exp (f i ω) := by
+    intro ω
+    have h := convexOn_exp.map_sum_le (t := (Finset.univ : Finset (Fin N)))
+      (w := fun _ => 1 / (N : ℝ)) (p := fun i => f i ω)
+      (fun _ _ => by positivity)
+      (by simp [Finset.sum_const, Finset.card_univ]; field_simp)
+      (fun _ _ => Set.mem_univ _)
+    simpa [smul_eq_mul, ← Finset.mul_sum] using h
+  have hint : Integrable (fun ω => ∑ i, (1 / (N : ℝ)) * Real.exp (f i ω)) μ :=
+    integrable_finsetSum _ (fun i _ => (hf_int i).const_mul _)
+  have hmeas : Measurable (fun ω => Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω)) :=
+    Real.measurable_exp.comp ((Finset.measurable_sum _ (fun i _ => hf_meas i)).const_mul _)
+  calc ∫ ω, Real.exp ((1 / (N : ℝ)) * ∑ i, f i ω) ∂μ
+      ≤ ∫ ω, ∑ i, (1 / (N : ℝ)) * Real.exp (f i ω) ∂μ := by
+        refine integral_mono_of_nonneg (Filter.Eventually.of_forall fun ω => (Real.exp_pos _).le)
+          hint (Filter.Eventually.of_forall hpt)
+    _ = (1 / (N : ℝ)) * ∑ i, ∫ ω, Real.exp (f i ω) ∂μ := by
+        rw [integral_finsetSum _ (fun i _ => (hf_int i).const_mul _), Finset.mul_sum]
+        simp [integral_const_mul]
 
 -- SKETCH (P0.B): Work with `lintegral` of the nonnegative integrand, so no
 -- integrability is needed up front.  By `iIndepFun_iff_map_fun_eq_pi_map`

@@ -381,7 +381,8 @@ theorem integrable_ker_box_left (K : SingularKernel μE bx G d Cc V) {s' : E →
 /-- `y ↦ s'(x - y)` is `ν_b`-integrable. -/
 theorem integrable_ker_box_right (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (b : Fin M) (x : E) : Integrable (fun y => s' (x - y)) (boxMeasure bx b) := by
-  sorry
+  have h : Integrable (fun y => s' (x - y)) μE := (Sub.integrable K hs').comp_sub_left x
+  exact (h.smul_measure (ENNReal.natCast_ne_top M)).mono_measure (boxMeasure_le bx b)
 
 end SingularKernel
 

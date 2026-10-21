@@ -113,7 +113,14 @@ noncomputable def QJy (bx : Boxes μE M) (K : E → E → ℝ) (x y : E) : ℝ :
 /-- On the box `A_a`, `Q_J f` is the constant `∫ f dν_a`. -/
 theorem QJ_apply_of_mem (bx : Boxes μE M) (f : E → ℝ) {a : Fin M} {x : E} (hx : x ∈ bx.A a) :
     QJ bx f x = ∫ y, f y ∂(boxMeasure bx a) := by
-  sorry
+  unfold QJ
+  rw [Finset.sum_eq_single a]
+  · exact Set.indicator_of_mem hx _
+  · intro b _ hb
+    refine Set.indicator_of_notMem ?_ _
+    intro hxb
+    exact Set.disjoint_left.mp (bx.disj hb) hxb hx
+  · simp
 
 -- SKETCH: `Finset.measurable_sum`, each summand `measurable_const.indicator (bx.meas a)`.
 /-- `Q_J f` is measurable (it is a finite sum of indicators of boxes times constants). -/

@@ -148,16 +148,21 @@ class Runner:
                     if decl.sorry:
                         self.db.execute('INSERT OR IGNORE INTO tasks(id,file,module,name) VALUES(?,?,?,?)',
                                         (task_id, file, module, decl.name))
-            for task in self.db.execute('SELECT * FROM tasks').fetchall():
+        tasks = self.db.execute('SELECT * FROM tasks').fetchall()
+        candidates = [task for task in tasks if task['id'] in seen and not seen[task['id']].sorry
+                      and (changed or task['state'] not in ('closed', 'waiting_dependencies'))]
+        # One Lean startup imports all needed modules and audits all targets. Do not hold
+        # a SQLite write transaction while Lean runs (monitoring must remain available).
+        audits = self.axioms_many(ROOT, candidates) if candidates else {}
+        with self.db:
+            for task in tasks:
                 decl = seen.get(task['id'])
                 if decl is None and task['state'] != 'closed':
                     self.db.execute("UPDATE tasks SET state='blocked',error='Declaration disappeared; inspect source' WHERE id=?", (task['id'],))
                 elif decl and decl.sorry and task['state'] in ('closed', 'waiting_dependencies'):
                     self.db.execute("UPDATE tasks SET state='pending',not_before=0,error='Source proof reopened' WHERE id=?", (task['id'],))
-                elif decl and not decl.sorry and (changed or task['state'] not in ('closed', 'waiting_dependencies')):
-                    # A centrally repaired proof can reference unfinished prerequisites.
-                    # Source without a literal sorry is not yet evidence of kernel closure.
-                    verified = self.axioms(ROOT, task, 'discover-' + hashlib.sha256(task['id'].encode()).hexdigest()[:16])
+                elif task['name'] in audits:
+                    verified = audits[task['name']]
                     self.db.execute("UPDATE tasks SET state=?,error=? WHERE id=?",
                         ('closed' if verified else 'waiting_dependencies',
                          '' if verified else 'Proof present; awaiting prerequisite proofs and a clean axiom audit', task['id']))
@@ -176,6 +181,21 @@ class Runner:
             code, output = cmd(['lake', 'env', 'lean', str(scratch)], cwd, 300)
             (ROOT / 'logs/service' / f'axioms-{tag}.log').write_text(output)
             return code == 0 and standard_axioms(output)
+        finally:
+            scratch.unlink(missing_ok=True)
+
+    def axioms_many(self, cwd, tasks):
+        scratch = RUNTIME / 'axioms-discovery.lean'
+        imports = ''.join('import ' + module + '\n' for module in sorted({t['module'] for t in tasks}))
+        scratch.write_text(imports + ''.join('#print axioms ' + t['name'] + '\n' for t in tasks))
+        try:
+            code, output = cmd(['lake', 'env', 'lean', str(scratch)], cwd, 300)
+            (ROOT / 'logs/service/axioms-discovery.log').write_text(output)
+            results = {t['name']: False for t in tasks}
+            if code == 0:
+                for match in re.finditer(r"'([^']+)' (?:depends on axioms:\s*\[[^]]*\]|does not depend on any axioms)", output, re.S):
+                    if match[1] in results: results[match[1]] = standard_axioms(match[0])
+            return results
         finally:
             scratch.unlink(missing_ok=True)
 
@@ -441,10 +461,13 @@ class Runner:
         put_meta(self.db, 'controller_start', process_start(os.getpid()))
         signal.signal(signal.SIGTERM, lambda *_: setattr(self, 'stopping', True))
         signal.signal(signal.SIGINT, lambda *_: setattr(self, 'stopping', True))
+        put_meta(self.db, 'service_state', 'verifying_baseline')
+        put_meta(self.db, 'heartbeat', time.time())
         self.log('Persistent controller starting; no task/cost stopping budget')
         try:
             if not self.build(ROOT, tag='baseline'): raise RuntimeError('Baseline build failed; see logs/service/baseline.log')
             self.recover()
+            put_meta(self.db, 'service_state', 'auditing_dependencies')
             self.discover()
             while not self.stopping and not (RUNTIME / 'stop').exists():
                 put_meta(self.db, 'heartbeat', time.time())

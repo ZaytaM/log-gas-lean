@@ -61,7 +61,9 @@ print(json.dumps({'is_error':mode=='turn_limit','subtype':'error_max_turns' if m
 FAKE_LAKE = r'''#!/usr/bin/env python3
 import pathlib,sys
 if sys.argv[1]=='env':
- print("'target' depends on axioms: [propext, Classical.choice, Quot.sound]")
+ import re
+ for name in re.findall(r'#print axioms (\S+)',pathlib.Path(sys.argv[-1]).read_text()):
+  print("'%s' depends on axioms: [propext, Classical.choice, Quot.sound]" % name)
 else: print('Build completed successfully')
 '''
 
@@ -137,7 +139,7 @@ class IntegrationTests(unittest.TestCase):
         runner = module.Runner.__new__(module.Runner)
         runner.db = db
         checked_names = []
-        runner.axioms = lambda cwd, task, tag: checked_names.append(task['name']) or False
+        runner.axioms_many = lambda cwd, tasks: {task['name']: checked_names.append(task['name']) or False for task in tasks}
         with patch.object(module, 'ROOT', self.root):
             runner.discover()
             path = self.root/'LogGas/T0.lean'
@@ -148,7 +150,7 @@ class IntegrationTests(unittest.TestCase):
             before = len(checked_names)
             runner.discover()
             self.assertEqual(len(checked_names), before)
-            runner.axioms = lambda *args: True
+            runner.axioms_many = lambda cwd, tasks: {task['name']: True for task in tasks}
             # Closing a prerequisite changes the sources, triggering a fresh audit.
             dep = self.root/'LogGas/T1.lean'
             dep.write_text(dep.read_text().replace('sorry', 'trivial'))
@@ -158,6 +160,23 @@ class IntegrationTests(unittest.TestCase):
             runner.discover()
             self.assertEqual(db.execute("SELECT state FROM tasks WHERE name='T0.proof'").fetchone()[0], 'pending')
         db.close()
+
+    def test_batched_axioms_keep_each_target_separate(self):
+        spec = importlib.util.spec_from_file_location('batch_audit_test_runner', SCRIPTS/'persistent.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        runtime = self.root/'state/runtime'
+        runtime.mkdir()
+        (self.root/'logs/service').mkdir(parents=True)
+        runner = module.Runner.__new__(module.Runner)
+        targets = [{'module':'T0', 'name':'T0.proof'}, {'module':'T1', 'name':'T1.proof'}]
+        output = "'T0.proof' depends on axioms: [propext, Classical.choice, Quot.sound]\n'T1.proof' depends on axioms: [propext,\n sorryAx]\n"
+        with patch.multiple(module, ROOT=self.root, RUNTIME=runtime):
+            with patch.object(module, 'cmd', return_value=(0, output)):
+                self.assertEqual(runner.axioms_many(self.root, targets), {'T0.proof':True, 'T1.proof':False})
+            with patch.object(module, 'cmd', return_value=(1, output)):
+                self.assertEqual(runner.axioms_many(self.root, targets), {'T0.proof':False, 'T1.proof':False})
+        self.assertFalse((runtime/'axioms-discovery.lean').exists())
 
     def test_more_than_five_tasks_and_completed_turn_limit(self):
         p,log=self.launch('turn_limit')

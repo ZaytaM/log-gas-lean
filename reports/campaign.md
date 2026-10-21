@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-21T23:13:31+00:00. State: running.
+Updated: 2026-10-21T23:27:46+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -17,25 +17,31 @@ Pause until (Unix UTC): 0; reason: none.
 | torus-base | done | 1 | Reviewed, rebuilt and merged at 6ccd5b171d8fa5d885e39376cc624e9a0a84e28b |
 | cutoff-profile | done | 1 | Reviewed, rebuilt and merged at 5664b223bea2917d1bacd2cc69b11106e5635f1b |
 | exp-integrable | done | 1 | Reviewed, rebuilt and merged at b49963fc4f70a3c93c9dcab8f9623b2a7ea65fc9 |
-| bulk-coarse | awaiting_review | 1 | Build/target checks passed; Opus review required |
+| bulk-coarse | done | 1 | Reviewed, rebuilt and merged at acafdc6733e11e02779f2f3c7c1bc4b731d5a6fc |
 | torus-grid | done | 1 | Reviewed, rebuilt and merged at d959746a9f0c1c3e4543f32d5740d024d92ca5db |
-| fourier-unique | awaiting_review | 1 | Build/target checks passed; Opus review required |
-| fourier-form | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| kernel-exists | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| cutoff-fourier | awaiting_review | 1 | Build/target checks passed; Opus review required |
-| torus-adj | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| periodize | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| spec-ae | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| physical-exp | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| fourier-series | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
+| fourier-unique | done | 1 | Reviewed, rebuilt and merged at 47f37c66bc31047f4801a4b13aa1f3268ca4ced6 |
+| fourier-form | running | 2 | Interrupted; inspect preserved checkout before retry |
+| kernel-exists | running | 2 | Interrupted; inspect preserved checkout before retry |
+| cutoff-fourier | done | 1 | Reviewed, rebuilt and merged at 69e2a6e55a28452629fa2c73cf15b4fb996776c8 |
+| torus-adj | running | 2 | Interrupted; inspect preserved checkout before retry |
+| periodize | running | 2 | Interrupted; inspect preserved checkout before retry |
+| spec-ae | running | 2 | Interrupted; inspect preserved checkout before retry |
+| physical-exp | running | 2 | Interrupted; inspect preserved checkout before retry |
+| fourier-series | pending | 1 | Interrupted; inspect preserved checkout before retry |
 | cutoff-radial | pending | 0 |  |
 | cutoff-sr | pending | 0 |  |
 | bulk-lemma41 | pending | 0 |  |
 | bulk-torus | pending | 0 |  |
-| main-holder | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
+| main-holder | pending | 1 | Interrupted; inspect preserved checkout before retry |
 | main-bulkhyp | pending | 0 |  |
 | physical-sing | pending | 0 |  |
 | cutoff-st | pending | 0 |  |
 | cutoff-bcoef | pending | 0 |  |
 | cutoff-main | pending | 0 |  |
-| main-param | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
+| main-param | pending | 1 | Interrupted; inspect preserved checkout before retry |
+| main-ae | pending | 0 |  |
+| main-bad | pending | 0 |  |
+| main-good | pending | 0 |  |
+| main-thm | pending | 0 |  |
+| paper-main | pending | 0 |  |
+| solutions | pending | 0 |  |

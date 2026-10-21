@@ -950,7 +950,23 @@ theorem singular_holder (μ : Measure Ω) (A : Set Ω) (hA : MeasurableSet A)
       ≤ (∫⁻ ω, ENNReal.ofReal (Real.exp (t * W (aker bx K.s K.c) X ω)) ∂μ) ^ (1 / 2 : ℝ)
         * (∫⁻ ω, A.indicator
             (fun ω => ENNReal.ofReal (Real.exp (t * W (hker bx K.s) X ω))) ω ∂μ) ^ (1 / 2 : ℝ) := by
-  sorry
+  have hak : Measurable (uncurry (aker bx K.s K.c)) := by
+    have hk : Measurable (uncurry (ker K.s)) := K.s_meas.comp measurable_sub
+    have h1 := measurable_QJx bx (ker K.s) hk
+    have h2 := measurable_QJy bx (ker K.s) hk
+    have h3 := measurable_QJx bx (QJy bx (ker K.s)) h2
+    have : uncurry (aker bx K.s K.c) = fun p => uncurry (QJx bx (ker K.s)) p
+        + uncurry (QJy bx (ker K.s)) p - uncurry (QJx bx (QJy bx (ker K.s))) p - K.c := rfl
+    rw [this]
+    exact ((h1.add h2).sub h3).sub measurable_const
+  have h := holder_split μ A hA (fun ω => t * W (aker bx K.s K.c) X ω)
+    (fun ω => t * W (hker bx K.s) X ω)
+    (measurable_W _ hak X hX |>.const_mul t)
+    (measurable_W _ (measurable_hker K.s K.s_meas) X hX |>.const_mul t)
+  have e : ∀ ω, (t / 2) * W (ker K.stilde) X ω
+      = (t * W (aker bx K.s K.c) X ω + t * W (hker bx K.s) X ω) / 2 := by
+    intro ω; rw [particle_sum_splitting]; ring
+  simpa only [e] using h
 
 end Holder
 

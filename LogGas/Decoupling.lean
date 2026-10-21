@@ -440,7 +440,113 @@ theorem vanishing_word (H : Hyp μ ν Y h κ) {n : ℕ} (I : Finset (Fin m))
     (row col : Fin n → Fin m) (hrow : ∀ v, row v ∈ I) (hcol : ∀ v, col v ∉ I)
     (hone : (∃ ℓ, mult row ℓ = 1) ∨ (∃ ℓ, mult col ℓ = 1)) :
     ∫ ω, word h Y row col ω ∂μ = 0 := by
-  sorry
+  classical
+  -- Core: a label `ℓ` occurring exactly once in the row word and never in the column word
+  -- kills the expectation (integrate out `Y ℓ` first).
+  have aux : ∀ (row col : Fin n → Fin m) (ℓ : Fin m), mult row ℓ = 1 → (∀ v, col v ≠ ℓ) →
+      ∫ ω, word h Y row col ω ∂μ = 0 := by
+    intro row col ℓ hℓ hc
+    obtain ⟨v0, hv0⟩ := Finset.card_eq_one.mp hℓ
+    have hv0' : ∀ v, row v = ℓ ↔ v = v0 := fun v => by
+      have := Finset.ext_iff.mp hv0 v
+      simpa using this
+    have hne : ∀ v, v ≠ v0 → row v ≠ ℓ := fun v hv h' => hv ((hv0' v).mp h')
+    haveI : Nonempty Ω := nonempty_of_isProbabilityMeasure μ
+    obtain ⟨ω₀⟩ := this
+    set x0 : E := Y ℓ ω₀
+    -- independence of `Y ℓ` and the remaining coordinates
+    have hind := H.Y_indep.indepFun_finset {ℓ} {ℓ}ᶜ (by simp) H.Y_meas
+    let ψ1 : (({ℓ} : Finset (Fin m)) → E) → E := fun w => w ⟨ℓ, by simp⟩
+    let ψ2 : ((({ℓ} : Finset (Fin m))ᶜ : Finset (Fin m)) → E) → (Fin m → E) :=
+      fun w j => if hj : j ∈ (({ℓ} : Finset (Fin m))ᶜ : Finset (Fin m)) then w ⟨j, hj⟩ else x0
+    have hψ1 : Measurable ψ1 := measurable_pi_apply _
+    have hψ2 : Measurable ψ2 := by
+      refine Measurable.of_eval (fun j => ?_)
+      by_cases hj : j ∈ (({ℓ} : Finset (Fin m))ᶜ : Finset (Fin m))
+      · simp only [ψ2, hj, dite_true]; exact measurable_pi_apply _
+      · simp only [ψ2, hj, dite_false]; exact measurable_const
+    have hind' := hind.comp hψ1 hψ2
+    set X : Ω → E := fun ω => Y ℓ ω with hX
+    set W : Ω → (Fin m → E) := fun ω => ψ2 (fun i => Y i ω) with hW
+    have hXm : Measurable X := H.Y_meas ℓ
+    have hWm : Measurable W := hψ2.comp (Measurable.of_eval (fun i => H.Y_meas i))
+    have hind'' : IndepFun X W μ := hind'
+    have hWc : ∀ j, j ≠ ℓ → ∀ ω, W ω j = Y j ω := by
+      intro j hj ω; simp [W, ψ2, hj]
+    -- the integrand as a function of `(x, w)`
+    let G : E × (Fin m → E) → ℝ := fun p =>
+      ∏ v, ext h (row v) (col v) (Function.update p.2 ℓ p.1 (row v))
+        (Function.update p.2 ℓ p.1 (col v))
+    have hGm : Measurable G := by
+      refine Finset.measurable_prod _ (fun v _ => ?_)
+      have hu : Measurable fun p : E × (Fin m → E) => Function.update p.2 ℓ p.1 :=
+        measurable_update'.comp (measurable_snd.prodMk measurable_fst)
+      exact (measurable_ext H _ _).comp
+        (((measurable_pi_apply (row v)).comp hu).prodMk ((measurable_pi_apply (col v)).comp hu))
+    have hup : ∀ ω, Function.update (W ω) ℓ (X ω) = fun j => Y j ω := by
+      intro ω; funext j
+      by_cases hj : j = ℓ
+      · subst hj; simp [X]
+      · simp [Function.update_of_ne hj, hWc j hj]
+    have hword : ∀ ω, word h Y row col ω = G (X ω, W ω) := by
+      intro ω; simp only [word, G, hup]
+    have hmap : μ.map (fun ω => (X ω, W ω)) = (μ.map X).prod (μ.map W) :=
+      hind''.map_prod_eq_prod_map_map hXm.aemeasurable hWm.aemeasurable
+    have hint : Integrable (fun p => G p) ((μ.map X).prod (μ.map W)) := by
+      rw [← hmap, integrable_map_measure hGm.aestronglyMeasurable (hXm.prodMk hWm).aemeasurable]
+      have := integrable_word H row col
+      refine this.congr (Filter.Eventually.of_forall fun ω => ?_)
+      simp [Function.comp, hword]
+    have h1 : ∫ ω, word h Y row col ω ∂μ = ∫ p, G p ∂((μ.map X).prod (μ.map W)) := by
+      rw [← hmap, integral_map (hXm.prodMk hWm).aemeasurable hGm.aestronglyMeasurable]
+      exact integral_congr_ae (Filter.Eventually.of_forall fun ω => hword ω)
+    rw [h1, integral_prod_symm _ hint]
+    -- inner integral vanishes almost surely
+    have hX_law : μ.map X = ν ℓ := H.Y_law ℓ
+    have hc0 := hc v0
+    have hae : ∀ᵐ w ∂(μ.map W), ∫ x, ext h ℓ (col v0) x (w (col v0)) ∂(ν ℓ) = 0 := by
+      have hmp : Measure.map (fun w : Fin m → E => w (col v0)) (μ.map W) = ν (col v0) := by
+        rw [Measure.map_map (measurable_pi_apply _) hWm, ← H.Y_law (col v0)]
+        congr 1; funext ω; exact hWc _ hc0 ω
+      have hq : QuasiMeasurePreserving (fun w : Fin m → E => w (col v0)) (μ.map W)
+          (ν (col v0)) := ⟨measurable_pi_apply _, hmp.le.absolutelyContinuous⟩
+      exact QuasiMeasurePreserving.ae hq (ext_centered H ℓ (col v0))
+    have : ∀ᵐ w ∂(μ.map W), ∫ x, G (x, w) ∂(μ.map X) = 0 := by
+      filter_upwards [hae] with w hw
+      rw [hX_law]
+      have : ∀ x, G (x, w) = ext h ℓ (col v0) x (w (col v0)) *
+          ∏ v ∈ Finset.univ.erase v0,
+            ext h (row v) (col v) (w (row v)) (w (col v)) := by
+        intro x
+        simp only [G]
+        rw [← Finset.mul_prod_erase _ _ (Finset.mem_univ v0)]
+        congr 1
+        · rw [(hv0' v0).mpr rfl]; simp [hc0]
+        · refine Finset.prod_congr rfl (fun v hv => ?_)
+          have hv' := Finset.ne_of_mem_erase hv
+          rw [Function.update_of_ne (hne v hv'), Function.update_of_ne (hc v)]
+      simp_rw [this]
+      rw [integral_mul_const, hw, zero_mul]
+    rw [integral_congr_ae this]; simp
+  rcases hone with ⟨ℓ, hℓ⟩ | ⟨ℓ, hℓ⟩
+  · refine aux row col ℓ hℓ (fun v hv => ?_)
+    have h1 : ∃ v, row v = ℓ := by
+      by_contra hno
+      push_neg at hno
+      simp [mult, hno] at hℓ
+    obtain ⟨u, hu⟩ := h1
+    exact hcol v (hv ▸ hu ▸ hrow u)
+  · have hsw : word h Y row col = word h Y col row := by
+      funext ω; simp only [word]
+      exact Finset.prod_congr rfl (fun v _ => (ext_symm h _ _ _ _).symm)
+    rw [hsw]
+    refine aux col row ℓ hℓ (fun v hv => ?_)
+    have h1 : ∃ v, col v = ℓ := by
+      by_contra hno
+      push_neg at hno
+      simp [mult, hno] at hℓ
+    obtain ⟨u, hu⟩ := h1
+    exact hcol u (hu ▸ hv ▸ hrow v)
 
 -- SKETCH (6.9): with `a = mult row ℓ ≥ 1`, Hölder with `a` equal exponents `1/a`:
 -- `|∫ ∏_v f_v| ≤ ∫ ∏_v |f_v| ≤ ∏_v (∫ |f_v|^a)^(1/a)` (`abs_integral_le_integral_abs`,

@@ -204,7 +204,19 @@ theorem integral_QJ_box (bx : Boxes μE M) (f : E → ℝ) (a : Fin M) :
 /-- `Q_J` preserves the `μ`-integral: `∫ Q_J f dμ = ∫ f dμ`. -/
 theorem integral_QJ (bx : Boxes μE M) (f : E → ℝ) (hf : Integrable f μE) :
     ∫ x, QJ bx f x ∂μE = ∫ x, f x ∂μE := by
-  sorry
+  have hint : ∀ g : E → ℝ, Integrable g μE → ∀ a, Integrable g (boxMeasure bx a) := fun g hg a =>
+    (hg.smul_measure (ENNReal.natCast_ne_top M)).mono_measure (boxMeasure_le bx a)
+  have hsum : ∀ g : E → ℝ, Integrable g μE →
+      ∫ x, g x ∂μE = (M : ℝ)⁻¹ * ∑ a, ∫ x, g x ∂(boxMeasure bx a) := by
+    intro g hg
+    have h := congrArg (fun m : Measure E => ∫ x, g x ∂m) (μE_eq_sum_boxMeasure bx)
+    rw [h, integral_smul_measure, integral_finsetSum_measure (fun a _ => hint g hg a)]
+    simp
+  have hQ : Integrable (QJ bx f) μE := by
+    unfold QJ
+    exact MeasureTheory.integrable_finsetSum _ fun a _ => (integrable_const _).indicator (bx.meas a)
+  rw [hsum _ hQ, hsum _ hf]
+  simp only [integral_QJ_box]
 
 -- SKETCH: `Finset.sum_nonneg`, `Set.indicator_nonneg`, `integral_nonneg`.
 /-- Box averages of a nonnegative function are nonnegative. -/
@@ -2029,7 +2041,33 @@ theorem label_decomposition (μ : Measure Ω) [IsProbabilityMeasure μ] (bx : Bo
     ∫⁻ ω, (goodEvent X bx δ).indicator (fun ω => F (fun i => X i ω)) ω ∂μ
       = ∑ L : Fin N → Fin M,
           if GoodLabel L δ then ((M : ℝ≥0∞) ^ N)⁻¹ * ∫⁻ x, F x ∂(labelMeasure bx L) else 0 := by
-  sorry
+  have hmeasX : Measurable (fun ω i => X i ω) := Measurable.of_eval hX_meas
+  have hmap : μ.map (fun ω i => X i ω) = Measure.pi (fun _ : Fin N => μE) := by
+    rw [(iIndepFun_iff_map_fun_eq_pi_map (fun i => (hX_meas i).aemeasurable)).1 hX_indep]
+    simp_rw [hX_law]
+  have hG : MeasurableSet (goodEvent (coord N) bx δ) :=
+    measurableSet_goodEvent (coord N) (fun i => measurable_pi_apply i) bx δ
+  have h1 : ∫⁻ ω, (goodEvent X bx δ).indicator (fun ω => F (fun i => X i ω)) ω ∂μ
+      = ∫⁻ x, (goodEvent (coord N) bx δ).indicator F x ∂(Measure.pi (fun _ : Fin N => μE)) := by
+    rw [← hmap, lintegral_map ((hF.indicator hG)) hmeasX]
+    rfl
+  rw [h1, pi_eq_sum_labels bx, lintegral_smul_measure, lintegral_finsetSum_measure, smul_eq_mul,
+    Finset.mul_sum]
+  · refine Finset.sum_congr rfl fun L _ => ?_
+    by_cases hL : GoodLabel L δ
+    · simp only [hL, if_true]
+      congr 1
+      refine lintegral_congr_ae ?_
+      filter_upwards [goodEvent_ae_iff bx L δ] with x hx
+      simp [Set.indicator_apply, hx.2 hL]
+    · simp only [hL, if_false]
+      have : ∫⁻ x, (goodEvent (coord N) bx δ).indicator F x ∂(labelMeasure bx L) = 0 := by
+        rw [← lintegral_zero (μ := labelMeasure bx L)]
+        refine lintegral_congr_ae ?_
+        filter_upwards [goodEvent_ae_iff bx L δ] with x hx
+        have : x ∉ goodEvent (coord N) bx δ := fun h => hL (hx.1 h)
+        simp [this]
+      simp [this]
 
 -- SKETCH: start from `label_decomposition` and group the label vectors by their occupancy
 -- `labelCount L` (`Finset.sum_fiberwise_of_maps_to` into `Finset.Nat.antidiagonalTuple M N`,
@@ -2240,7 +2278,76 @@ theorem label_exp_bound_trunc [DecidableRel G.Adj] (hdeg : ∀ a, G.degree a ≤
 /-- `h_r^R → h_r` pointwise as the truncation level `R = n → ∞`. -/
 theorem hker_trunc_tendsto (K : SingularKernel μE bx G d Cc V) (x y : E) :
     Tendsto (fun n : ℕ => hker bx (trunc n K.s) x y) atTop (𝓝 (hker bx K.s x y)) := by
-  sorry
+  have hn : ∀ z, Tendsto (fun n : ℕ => trunc (n : ℝ) K.s z) atTop (𝓝 (K.s z)) := by
+    intro z
+    obtain ⟨N, hN⟩ := exists_nat_ge (K.s z)
+    refine tendsto_const_nhds.congr' (eventually_atTop.2 ⟨N, fun n hn => ?_⟩)
+    exact (min_eq_left (hN.trans (Nat.cast_le.2 hn))).symm
+  have hker_meas : ∀ s' : E → ℝ, Measurable s' → Measurable (uncurry (ker s')) := fun s' hs' =>
+    hs'.comp (measurable_fst.sub measurable_snd)
+  have hQJ : ∀ (f : ℕ → E → ℝ) (g : E → ℝ),
+      (∀ a, Tendsto (fun n => ∫ x, f n x ∂(boxMeasure bx a)) atTop
+        (𝓝 (∫ x, g x ∂(boxMeasure bx a)))) →
+      ∀ x, Tendsto (fun n => QJ bx (f n) x) atTop (𝓝 (QJ bx g x)) := by
+    intro f g hlim x
+    unfold QJ
+    refine tendsto_finsetSum _ fun a _ => ?_
+    by_cases h : x ∈ bx.A a
+    · simpa [Set.indicator_of_mem h] using hlim a
+    · simp [Set.indicator_of_notMem h]
+  have hsub : ∀ n : ℕ, K.Sub (trunc (n : ℝ) K.s) := fun n =>
+    SingularKernel.Sub.trunc K (Nat.cast_nonneg n)
+  have hle : ∀ (n : ℕ) z, |trunc (n : ℝ) K.s z| ≤ K.s z := fun n z => by
+    rw [abs_of_nonneg ((hsub n).nonneg z)]; exact (hsub n).le z
+  -- term QJx
+  have hT2 : ∀ y x, Tendsto (fun n : ℕ => QJx bx (ker (trunc (n : ℝ) K.s)) x y) atTop
+      (𝓝 (QJx bx (ker K.s) x y)) := by
+    intro y x
+    refine hQJ (fun n x' => ker (trunc (n : ℝ) K.s) x' y) (fun x' => ker K.s x' y) (fun a => ?_) x
+    refine tendsto_integral_of_dominated_convergence (fun x' => K.s (x' - y))
+      (fun n => ?_) (SingularKernel.integrable_ker_box_left K (SingularKernel.Sub.self K) a y)
+      (fun n => ?_) ?_
+    · exact ((hsub n).meas.comp (measurable_id.sub measurable_const)).aestronglyMeasurable
+    · exact Filter.Eventually.of_forall fun x' => by
+        rw [Real.norm_eq_abs]; exact hle n _
+    · exact Filter.Eventually.of_forall fun x' => hn _
+  have hT3 : ∀ x y, Tendsto (fun n : ℕ => QJy bx (ker (trunc (n : ℝ) K.s)) x y) atTop
+      (𝓝 (QJy bx (ker K.s) x y)) := by
+    intro x y
+    refine hQJ (fun n y' => ker (trunc (n : ℝ) K.s) x y') (fun y' => ker K.s x y') (fun a => ?_) y
+    refine tendsto_integral_of_dominated_convergence (fun y' => K.s (x - y'))
+      (fun n => ?_) (SingularKernel.integrable_ker_box_right K (SingularKernel.Sub.self K) a x)
+      (fun n => ?_) ?_
+    · exact ((hsub n).meas.comp (measurable_const.sub measurable_id)).aestronglyMeasurable
+    · exact Filter.Eventually.of_forall fun y' => by
+        rw [Real.norm_eq_abs]; exact hle n _
+    · exact Filter.Eventually.of_forall fun y' => hn _
+  have hbd : ∀ (s' : E → ℝ), K.Sub s' → ∀ x' y, |QJy bx (ker s') x' y| ≤ M * K.c := by
+    intro s' hs' x' y
+    have h0 : 0 ≤ QJy bx (ker s') x' y := QJ_nonneg bx _ (fun y' => hs'.nonneg _) y
+    rw [abs_of_nonneg h0]
+    refine (QJ_le bx (fun y' => ker s' x' y') (fun y' => hs'.nonneg _) ?_ y).trans ?_
+    · exact (hs'.integrable K).comp_sub_left x'
+    · refine mul_le_mul_of_nonneg_left ?_ (Nat.cast_nonneg M)
+      show ∫ y', s' (x' - y') ∂μE ≤ K.c
+      rw [SingularKernel.integral_ker_right, ← K.c_def]
+      exact integral_mono (hs'.integrable K) K.s_int hs'.le
+  have hT4 : ∀ x y, Tendsto (fun n : ℕ => QJx bx (QJy bx (ker (trunc (n : ℝ) K.s))) x y) atTop
+      (𝓝 (QJx bx (QJy bx (ker K.s)) x y)) := by
+    intro x y
+    refine hQJ (fun n x' => QJy bx (ker (trunc (n : ℝ) K.s)) x' y)
+      (fun x' => QJy bx (ker K.s) x' y) (fun a => ?_) x
+    refine tendsto_integral_of_dominated_convergence (fun _ => (M : ℝ) * K.c)
+      (fun n => ?_) (integrable_const _) (fun n => ?_) ?_
+    · exact ((measurable_QJy bx _ (hker_meas _ (hsub n).meas)).comp
+        (measurable_id.prodMk measurable_const)).aestronglyMeasurable
+    · exact Filter.Eventually.of_forall fun x' => by
+        rw [Real.norm_eq_abs]; exact hbd _ (hsub n) x' y
+    · exact Filter.Eventually.of_forall fun x' => hT3 x' y
+  unfold hker
+  have h1 : Tendsto (fun n : ℕ => ker (trunc (n : ℝ) K.s) x y) atTop (𝓝 (ker K.s x y)) :=
+    hn (x - y)
+  exact ((h1.sub (hT2 y x)).sub (hT3 x y)).add (hT4 x y)
 
 -- Use `hker_boxKernel K hd K.Sub.self` and the grouped bound directly.
 -- Establish exponential integrability using the positive moment series before converting

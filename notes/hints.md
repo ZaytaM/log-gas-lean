@@ -29,3 +29,17 @@ lines under it. The advisor appends `VERDICT=strategy` payloads here automatical
   a Bochner bound to a lintegral bound.
 - Keep all definitions/statements and other proofs unchanged. The migration was applied
   centrally; workers repair only their assigned remaining proof.
+
+## Why candidates get BLOCKED (advisor, 2026-10-21)
+- The queue accepts edits to the target proof body only. Four complete, axiom-clean proofs
+  (`vanishing_word`, `label_decomposition`, `hker_trunc_tendsto`, `integral_QJ`) were rejected
+  for incidental edits: renaming deprecated lemma names inside *other* `-- SKETCH` comments
+  (`integral_finset_sum_measure` → `integral_finsetSum_measure`, `tendsto_finset_sum` →
+  `tendsto_finsetSum`), or adding a top-level auxiliary `theorem` before the target.
+- Do not touch comments or declarations outside your proof, even to fix stale names.
+- Put auxiliary facts inside the proof as `have aux : ∀ ..., ... := by ...`; never as a new
+  top-level declaration.
+- The old SKETCH names `integral_finset_sum_measure`, `tendsto_finset_sum`,
+  `integrable_finset_sum` are deprecated in this Mathlib; the current names are
+  `integral_finsetSum_measure`, `lintegral_finsetSum_measure`, `tendsto_finsetSum`,
+  `integrable_finsetSum`. Use the new names in proofs; leave the comments alone.

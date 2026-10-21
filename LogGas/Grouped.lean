@@ -281,7 +281,73 @@ theorem blocks_indep (hY_meas : ∀ i, Measurable (Y i)) (hY_indep : iIndepFun Y
     (hmeas : ∀ b i j, Measurable (Function.uncurry (h' b i j)))
     (hvan : ∀ b i j, (i ∉ T b ∨ j ∉ T b) → ∀ x y, h' b i j x y = 0) :
     iIndepFun (fun b ω => S (h' b) Y ω) μ := by
-  sorry
+  classical
+  let Φ : ∀ b, (T b → E) → ℝ := fun b z =>
+    ∑ i : T b, ∑ j : T b, if (i : Fin m) < j then h' b i j (z i) (z j) else 0
+  have hΦ : ∀ b, Measurable (Φ b) := by
+    intro b
+    refine Finset.measurable_sum _ fun i _ => Finset.measurable_sum _ fun j _ => ?_
+    by_cases hij : (i : Fin m) < j
+    · simp only [hij, if_true]
+      have : Measurable fun z : T b → E => Function.uncurry (h' b i j) (z i, z j) :=
+        (hmeas b i j).comp ((measurable_pi_apply i).prodMk (measurable_pi_apply j))
+      exact this
+    · simp only [hij, if_false]; exact measurable_const
+  have hsub : ∀ (b : Fin n) (f : Fin m → ℝ), (∀ i, i ∉ T b → f i = 0) →
+      ∑ i, f i = ∑ i : T b, f i := by
+    intro b f hf
+    rw [Finset.sum_coe_sort (T b) f]
+    exact (Finset.sum_subset (Finset.subset_univ _) (fun i _ hi => hf i hi)).symm
+  have hSΦ : ∀ b ω, S (h' b) Y ω = Φ b (fun i : T b => Y i ω) := by
+    intro b ω
+    unfold S
+    simp only [Φ]
+    have e1 : ∀ i : Fin m, ∑ j ∈ Finset.Ioi i, h' b i j (Y i ω) (Y j ω)
+        = ∑ j, if i < j then h' b i j (Y i ω) (Y j ω) else 0 := by
+      intro i
+      rw [← Finset.sum_filter]; congr 1; ext j; simp
+    simp_rw [e1]
+    rw [hsub b]
+    · refine Finset.sum_congr rfl fun i _ => ?_
+      rw [hsub b]
+      intro j hj
+      split_ifs
+      · exact hvan b i j (Or.inr hj) _ _
+      · rfl
+    · intro i hi
+      refine Finset.sum_eq_zero fun j _ => ?_
+      split_ifs
+      · exact hvan b i j (Or.inl hi) _ _
+      · rfl
+  have hfun : (fun b ω => S (h' b) Y ω) = fun b ω => Φ b (fun i : T b => Y i ω) := by
+    funext b ω; exact hSΦ b ω
+  rw [hfun, iIndepFun_iff_measure_inter_preimage_eq_mul]
+  intro s A hA
+  induction s using Finset.induction_on with
+  | empty =>
+    have h0 := hY_indep.measure_inter_preimage_eq_mul (∅ : Finset (Fin m))
+      (sets := fun _ => Set.univ) (by simp)
+    simpa using h0
+  | insert a s ha ih =>
+    have ih' := ih (fun i hi => hA i (Finset.mem_insert_of_mem hi))
+    have hdisj : Disjoint (T a) (s.biUnion T) := by
+      rw [Finset.disjoint_biUnion_right]
+      intro b hb
+      exact hT (fun hab => ha (hab ▸ hb))
+    have hind := hY_indep.indepFun_finset (T a) (s.biUnion T) hdisj hY_meas
+    let B : Set (↥(Finset.biUnion s T) → E) :=
+      ⋂ b ∈ s, {z | Φ b (fun i : T b => z ⟨i, Finset.mem_biUnion.2 ⟨b, ‹_›, i.2⟩⟩) ∈ A b}
+    have hB : MeasurableSet B := by
+      simp only [B]
+      refine MeasurableSet.iInter fun b => MeasurableSet.iInter fun hb => ?_
+      exact (hΦ b).comp (measurable_pi_iff.2 fun i => measurable_pi_apply _) (hA b (Finset.mem_insert_of_mem hb))
+    have hAa : MeasurableSet (Φ a ⁻¹' A a) := hΦ a (hA a (Finset.mem_insert_self a s))
+    have key := hind.measure_inter_preimage_eq_mul _ _ hAa hB
+    have e2 : (⋂ b ∈ s, (fun ω => Φ b (fun i : T b => Y i ω)) ⁻¹' A b)
+        = (fun ω (i : ↥(Finset.biUnion s T)) => Y i ω) ⁻¹' B := by
+      ext ω; simp [B]
+    rw [Finset.set_biInter_insert, Finset.prod_insert ha, ← ih', e2]
+    exact key
 
 -- SKETCH: both sides are `mgf`'s: `∫ exp (t * X ω) ∂μ = mgf X μ t` by definition
 -- (`ProbabilityTheory.mgf`), and `∑ b, S (h' b) Y ω = (∑ b, S (h' b) Y) ω`

@@ -649,7 +649,58 @@ theorem bad_gibbs_bound (hN : 2 ≤ N) (hX_meas : ∀ i, Measurable (X i))
     ∫ ω, (badEvent X bx δ).indicator
         (fun ω => Real.exp ((β / 2) * W (fun x y => g (x - y)) X ω)) ω ∂μ
       ≤ (M : ℝ) ^ (1 / s') * Real.exp (N * (Real.log A / s - relEnt δ (1 / M) / s')) := by
-  sorry
+  have hs0 : 0 < s := hs.pos
+  have hs'0 : 0 < s' := hs.symm.pos
+  have hγ0 : 0 ≤ s * β := by positivity
+  have hWm : Measurable (W (fun x y => g (x - y)) X) := by
+    unfold W
+    refine Measurable.const_mul (Finset.measurable_sum _ fun i _ => ?_) _
+    exact Finset.measurable_sum _ fun j _ => hg.comp ((hX_meas i).sub (hX_meas j))
+  have hint0 := integrable_exp_W μ ν hN hX_meas hX_indep hX_law g hg b A hA hK_int hKA
+  have hint : Integrable (fun ω => Real.exp (s * ((β / 2) * W (fun x y => g (x - y)) X ω))) μ := by
+    refine Integrable.mono' (hint0.add (integrable_const (1 : ℝ))) ?_ ?_
+    · exact (Real.measurable_exp.comp (hWm.const_mul _ |>.const_mul _)).aestronglyMeasurable
+    · refine Filter.Eventually.of_forall fun ω => ?_
+      rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+      show _ ≤ Real.exp _ + 1
+      rcases le_total 0 (W (fun x y => g (x - y)) X ω) with h | h
+      · have : s * ((β / 2) * W (fun x y => g (x - y)) X ω)
+            ≤ (b / 2) * W (fun x y => g (x - y)) X ω := by
+          nlinarith
+        linarith [Real.exp_le_exp.mpr this, Real.exp_pos ((b / 2) * W (fun x y => g (x - y)) X ω)]
+      · have : s * ((β / 2) * W (fun x y => g (x - y)) X ω) ≤ 0 := by nlinarith
+        linarith [Real.exp_le_one_iff.mpr this, Real.exp_pos ((b / 2) * W (fun x y => g (x - y)) X ω)]
+  have hH := holder_indicator μ (badEvent X bx δ) (measurableSet_badEvent X hX_meas bx δ)
+    (fun ω => (β / 2) * W (fun x y => g (x - y)) X ω) (hWm.const_mul _) s s' hs hint
+  have hZe : ∫ ω, Real.exp (s * ((β / 2) * W (fun x y => g (x - y)) X ω)) ∂μ
+      = Z μ (s * β) g X := by
+    unfold Z
+    congr 1; ext ω; congr 1; ring
+  rw [hZe] at hH
+  refine hH.trans ?_
+  have hZ := (Z_mono μ ν hN hX_meas hX_indep hX_law g hg b (s * β) hb hγ0 hβb A hA hK_int hKA)
+  have hZ' : Z μ (s * β) g X ≤ A ^ (N - 1) := hZ.1.trans hZ.2
+  have hZ0 : 0 ≤ Z μ (s * β) g X := integral_nonneg fun _ => (Real.exp_pos _).le
+  have hP := bad_probability μ ν hX_meas hX_indep hX_law bx hM δ hδM hδ1
+  have hA0 : 0 < A := by linarith
+  have hMpos : (0 : ℝ) < M := by exact_mod_cast hM
+  have h1 : (μ.real (badEvent X bx δ)) ^ (1 / s')
+      ≤ (M : ℝ) ^ (1 / s') * Real.exp (N * (-(relEnt δ (1 / M) / s'))) := by
+    refine (Real.rpow_le_rpow measureReal_nonneg hP (by positivity)).trans_eq ?_
+    rw [Real.mul_rpow hMpos.le (Real.exp_pos _).le, ← Real.exp_mul]
+    congr 2; ring
+  have h2 : (Z μ (s * β) g X) ^ (1 / s) ≤ Real.exp (N * (Real.log A / s)) := by
+    have : A ^ (N - 1) ≤ A ^ N := pow_le_pow_right₀ hA (Nat.sub_le _ _)
+    calc (Z μ (s * β) g X) ^ (1 / s) ≤ (A ^ N) ^ (1 / s) :=
+          Real.rpow_le_rpow hZ0 (hZ'.trans this) (by positivity)
+      _ = Real.exp (N * (Real.log A / s)) := by
+          rw [← Real.rpow_natCast, ← Real.rpow_mul hA0.le, Real.rpow_def_of_pos hA0]
+          congr 1; ring
+  calc _ ≤ ((M : ℝ) ^ (1 / s') * Real.exp (N * (-(relEnt δ (1 / M) / s'))))
+        * Real.exp (N * (Real.log A / s)) :=
+        mul_le_mul h1 h2 (Real.rpow_nonneg hZ0 _) (by positivity)
+    _ = _ := by
+        rw [mul_assoc, ← Real.exp_add]; congr 2; ring
 
 end Gibbs
 

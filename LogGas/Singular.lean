@@ -150,7 +150,17 @@ theorem measurable_QJx (bx : Boxes μE M) (K : E → E → ℝ) (hK : Measurable
 /-- Measurability of `Q_{J,y} K` as a function of both variables. -/
 theorem measurable_QJy (bx : Boxes μE M) (K : E → E → ℝ) (hK : Measurable (uncurry K)) :
     Measurable (uncurry (QJy bx K)) := by
-  sorry
+  unfold QJy QJ
+  have : (uncurry fun x y => ∑ a, (bx.A a).indicator
+      (fun _ => ∫ y', K x y' ∂(boxMeasure bx a)) y) = fun p => ∑ a, (Prod.snd ⁻¹' bx.A a).indicator
+      (fun p : E × E => ∫ y', K p.1 y' ∂(boxMeasure bx a)) p := by
+    ext ⟨x, y⟩
+    simp only [uncurry_apply_pair, Set.indicator, Set.mem_preimage]
+    rfl
+  rw [this]
+  refine Finset.measurable_sum _ fun a _ => ?_
+  have h := (hK.stronglyMeasurable.integral_prod_right' (ν := boxMeasure bx a)).measurable
+  exact Measurable.indicator (h.comp measurable_fst) (measurable_snd (bx.meas a))
 
 -- SKETCH: `QJ bx f = fun _ => ∫ f ∂ν_a` on `A a` (`QJ_apply_of_mem`), and `ν_a`-a.e. `x ∈ A a`
 -- (`ae_mem_boxMeasure`); so `integral_congr_ae` turns the left side into `∫ (∫ f ∂ν_a) ∂ν_a`,

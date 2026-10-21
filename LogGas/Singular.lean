@@ -143,7 +143,13 @@ theorem measurable_QJ (bx : Boxes μE M) (f : E → ℝ) : Measurable (QJ bx f) 
 /-- Measurability of `Q_{J,x} K` as a function of both variables. -/
 theorem measurable_QJx (bx : Boxes μE M) (K : E → E → ℝ) (hK : Measurable (uncurry K)) :
     Measurable (uncurry (QJx bx K)) := by
-  sorry
+  unfold QJx QJ
+  simp only [uncurry]
+  refine Finset.measurable_sum _ fun a _ => ?_
+  have h1 : Measurable fun y : E => ∫ x', K x' y ∂(boxMeasure bx a) :=
+    (StronglyMeasurable.integral_prod_right (f := fun y x' => K x' y) (ν := boxMeasure bx a)
+      (hK.comp measurable_swap).stronglyMeasurable).measurable
+  exact Measurable.indicator (h1.comp measurable_snd) (measurable_fst (bx.meas a))
 
 -- SKETCH: as `measurable_QJx` with `StronglyMeasurable.integral_prod_right` and the roles
 -- of `measurable_fst`/`measurable_snd` exchanged.

@@ -120,6 +120,21 @@ def retry_delay(attempts):
     return min(86400, 60 * 2 ** min(max(attempts-1, 0), 11))
 
 
+AXIOM_WAIT_ERRORS = ('Candidate failed axiom check%', 'Integration build/axiom check failed%')
+
+
+def rearm_after_close(db):
+    """A newly closed lemma may be the missing prerequisite of a waiting proof.
+
+    Tasks whose candidate only failed the axiom audit are retried at once instead of
+    sitting out an exponential backoff that predates the closure. Call inside a
+    transaction. Returns the number of tasks re-armed.
+    """
+    clause = ' OR '.join('error LIKE ?' for _ in AXIOM_WAIT_ERRORS)
+    return db.execute(f"UPDATE tasks SET not_before=0 WHERE state='pending' AND not_before>0 AND ({clause})",
+                      AXIOM_WAIT_ERRORS).rowcount
+
+
 class Runner:
     def __init__(self):
         self.db = connect()
@@ -154,6 +169,7 @@ class Runner:
         # One Lean startup imports all needed modules and audits all targets. Do not hold
         # a SQLite write transaction while Lean runs (monitoring must remain available).
         audits = self.axioms_many(ROOT, candidates) if candidates else {}
+        newly_closed = False
         with self.db:
             for task in tasks:
                 decl = seen.get(task['id'])
@@ -163,9 +179,12 @@ class Runner:
                     self.db.execute("UPDATE tasks SET state='pending',not_before=0,error='Source proof reopened' WHERE id=?", (task['id'],))
                 elif task['name'] in audits:
                     verified = audits[task['name']]
+                    newly_closed = newly_closed or (verified and task['state'] != 'closed')
                     self.db.execute("UPDATE tasks SET state=?,error=? WHERE id=?",
                         ('closed' if verified else 'waiting_dependencies',
                          '' if verified else 'Proof present; awaiting prerequisite proofs and a clean axiom audit', task['id']))
+            if newly_closed and (n := rearm_after_close(self.db)):
+                self.log(f'Discovery closed a target; re-armed {n} waiting task(s)')
         self._source_fingerprint = fingerprint
 
     def build(self, cwd, module=None, tag='build'):
@@ -378,7 +397,9 @@ class Runner:
             self.db.execute('UPDATE tasks SET state=?,not_before=?,error=? WHERE id=?',
                             (state, time.time() + retry_delay(attempts), error, task['id']))
             self.db.execute('UPDATE jobs SET proof_result=? WHERE id=?', (state, job['id']))
+            rearmed = rearm_after_close(self.db) if state == 'closed' else 0
         self.log(f'Job {job["id"]}: {task["name"]}: {state} ({outcome}) {error}')
+        if rearmed: self.log(f'Re-armed {rearmed} task(s) waiting on the axiom audit')
         if state == 'closed' and worktree:
             # Proof is committed in main; removing this service-owned worktree is safe.
             cmd(['git', 'worktree', 'remove', '--force', str(worktree)])

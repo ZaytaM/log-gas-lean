@@ -276,7 +276,7 @@ theorem Sub.trunc (K : SingularKernel μE bx G d Cc V) {R : ℝ} (hR : 0 ≤ R) 
 -- SKETCH: `K.c_def ▸ integral_nonneg K.s_nonneg`.
 /-- `0 ≤ c_r`. -/
 theorem c_nonneg (K : SingularKernel μE bx G d Cc V) : 0 ≤ K.c := by
-  sorry
+  exact K.c_def ▸ MeasureTheory.integral_nonneg K.s_nonneg
 
 -- SKETCH: `0 ≤ c ≤ Cc * r^d` with `r^d > 0` (`pow_pos K.r_pos`), so `0 ≤ Cc`
 -- (`nonneg_of_mul_nonneg_left` / `pos_of_mul_pos`-style, or `by_contra` + `nlinarith`).

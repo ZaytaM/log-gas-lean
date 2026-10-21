@@ -493,7 +493,15 @@ theorem aker_symm (K : SingularKernel μE bx G d Cc V) (x y : E) :
 /-- `h_r` is a symmetric kernel (for every sub-kernel `s'`). -/
 theorem hker_symm (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s') (x y : E) :
     hker bx s' x y = hker bx s' y x := by
-  sorry
+  have h1 := QJx_ker_swap K hs' x y
+  have h2 := QJx_ker_swap K hs' y x
+  have h3 := QJxQJy_ker_swap K hs' x y
+  unfold hker
+  have h0 : ker s' y x = ker s' x y := by
+    simp only [ker]; rw [← neg_sub, hs'.even]
+  rw [h0, h3, ← h1]
+  rw [QJx_ker_swap K hs' y x] at *
+  linarith
 
 -- SKETCH: `hker = (ker - QJx ker) - (QJy ker - QJx (QJy ker))` and
 -- `QJx bx K' x y = QJ bx (K' · y) x`; by `integral_sub` and `integral_QJ_box` both brackets

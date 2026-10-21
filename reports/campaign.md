@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-21T23:27:46+00:00. State: running.
+Updated: 2026-10-21T23:28:56+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -20,13 +20,13 @@ Pause until (Unix UTC): 0; reason: none.
 | bulk-coarse | done | 1 | Reviewed, rebuilt and merged at acafdc6733e11e02779f2f3c7c1bc4b731d5a6fc |
 | torus-grid | done | 1 | Reviewed, rebuilt and merged at d959746a9f0c1c3e4543f32d5740d024d92ca5db |
 | fourier-unique | done | 1 | Reviewed, rebuilt and merged at 47f37c66bc31047f4801a4b13aa1f3268ca4ced6 |
-| fourier-form | running | 2 | Interrupted; inspect preserved checkout before retry |
-| kernel-exists | running | 2 | Interrupted; inspect preserved checkout before retry |
+| fourier-form | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| kernel-exists | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
 | cutoff-fourier | done | 1 | Reviewed, rebuilt and merged at 69e2a6e55a28452629fa2c73cf15b4fb996776c8 |
-| torus-adj | running | 2 | Interrupted; inspect preserved checkout before retry |
-| periodize | running | 2 | Interrupted; inspect preserved checkout before retry |
-| spec-ae | running | 2 | Interrupted; inspect preserved checkout before retry |
-| physical-exp | running | 2 | Interrupted; inspect preserved checkout before retry |
+| torus-adj | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| periodize | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| spec-ae | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| physical-exp | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
 | fourier-series | pending | 1 | Interrupted; inspect preserved checkout before retry |
 | cutoff-radial | pending | 0 |  |
 | cutoff-sr | pending | 0 |  |

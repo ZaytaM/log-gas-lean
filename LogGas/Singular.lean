@@ -167,7 +167,19 @@ theorem QJ_nonneg (bx : Boxes μE M) (f : E → ℝ) (hf : ∀ x, 0 ≤ f x) (x 
 `Q_J f ≤ M ∫ f dμ` for `f ≥ 0`. -/
 theorem QJ_le (bx : Boxes μE M) (f : E → ℝ) (hf : ∀ x, 0 ≤ f x) (hf_int : Integrable f μE)
     (x : E) : QJ bx f x ≤ M * ∫ y, f y ∂μE := by
-  sorry
+  obtain ⟨a, ha⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ x)
+  have hQ : QJ bx f x = ∫ y, f y ∂(boxMeasure bx a) := by
+    unfold QJ
+    rw [Finset.sum_eq_single a]
+    · simp [Set.indicator_of_mem ha]
+    · intro b _ hb
+      exact Set.indicator_of_notMem
+        (fun hxb => Set.disjoint_left.1 (bx.disj hb) hxb ha) _
+    · simp
+  rw [hQ, boxMeasure, ENNReal.smul_def, integral_smul_measure]
+  simp only [ENNReal.coe_natCast, ENNReal.toReal_natCast, smul_eq_mul]
+  exact mul_le_mul_of_nonneg_left
+    (setIntegral_le_integral hf_int (Filter.Eventually.of_forall hf)) (Nat.cast_nonneg M)
 
 end Boxes
 

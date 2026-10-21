@@ -293,7 +293,12 @@ theorem Cc_nonneg (K : SingularKernel μE bx G d Cc V) : 0 ≤ Cc := by
 -- (`mul_le_mul_of_nonneg_left`, `nlinarith`).
 /-- "`M c_r ≤ C`": the bound on box averages of `s_r` is uniform in `J`. -/
 theorem Mc_le (K : SingularKernel μE bx G d Cc V) : (M : ℝ) * K.c ≤ Cc := by
-  sorry
+  have h0 : (0:ℝ) ≤ (M:ℝ) := Nat.cast_nonneg M
+  have hC := Cc_nonneg K
+  calc (M : ℝ) * K.c ≤ M * (Cc * K.r ^ d) := mul_le_mul_of_nonneg_left K.c_le h0
+    _ = Cc * (M * K.r ^ d) := by ring
+    _ ≤ Cc * 1 := mul_le_mul_of_nonneg_left K.Mr hC
+    _ = Cc := mul_one _
 
 -- SKETCH: `Integrable.mono' K.s_int` with `‖s' z‖ = s' z ≤ K.s z` (`Real.norm_of_nonneg`),
 -- measurability from `hs'.meas`.

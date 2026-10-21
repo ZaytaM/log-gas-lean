@@ -830,7 +830,9 @@ theorem kappa_le_of_le (Cc : ℝ) (hCc : 0 ≤ Cc) {ε r : ℝ} (hε : 0 < ε) (
 -- (`tendsto_inv_nhdsGT_zero`), then `Tendsto.div_atTop tendsto_const_nhds`.
 /-- `κ(r) → 0` as `r ↓ 0` (eq. (5.6)). -/
 theorem kappa_tendsto_zero (Cc : ℝ) : Tendsto (fun r => kappa Cc r) (𝓝[>] 0) (𝓝 0) := by
-  sorry
+  have h : Tendsto (fun r : ℝ => Real.log (1 / r)) (𝓝[>] 0) atTop :=
+    Real.tendsto_log_atTop.comp ((tendsto_inv_nhdsGT_zero (𝕜 := ℝ)).congr (fun x => (one_div x).symm))
+  exact Tendsto.div_atTop tendsto_const_nhds h
 
 -- SKETCH: `moment_of_exp` with `C = 4 Cc` (`aker_abs_le`), `ε = 4 c` (`aker_integral_le_*`),
 -- `κ = kappa Cc r`, measurability from `measurable_aker`.  Smallness: with `L = log (1/r) > 0`,

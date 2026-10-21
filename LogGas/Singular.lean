@@ -99,7 +99,23 @@ theorem ae_mem_boxMeasure (bx : Boxes μE M) (a : Fin M) : ∀ᵐ x ∂(boxMeasu
 /-- `μ = M⁻¹ ∑_a ν_a`: the uniform measure is the average of the box measures. -/
 theorem μE_eq_sum_boxMeasure (bx : Boxes μE M) :
     μE = (M : ℝ≥0∞)⁻¹ • ∑ a, boxMeasure bx a := by
-  sorry
+  have h : μE = ∑ a, μE.restrict (bx.A a) := by
+    have := Measure.restrict_iUnion (μ := μE) bx.disj bx.meas
+    rw [bx.cover, Measure.restrict_univ] at this
+    rw [Measure.sum_fintype] at this
+    exact this
+  have hM : (M : ℝ≥0∞) ≠ 0 := by
+    rintro h0
+    have hM0 : M = 0 := by exact_mod_cast h0
+    subst hM0
+    simp at h
+    exact (IsProbabilityMeasure.ne_zero μE) h
+  have hb : ∀ a, boxMeasure bx a = (M : ℝ≥0∞) • μE.restrict (bx.A a) := by
+    intro a
+    simp only [boxMeasure, ENNReal.smul_def, ENNReal.coe_natCast]
+  simp only [hb, ← Finset.smul_sum, smul_smul, ENNReal.inv_mul_cancel hM (ENNReal.natCast_ne_top M),
+    one_smul]
+  exact h
 
 /-- Box averaging `Q_J`: `(Q_J u)|_{A_a} = ∫ u dν_a`
 (`notes/sec1-setting.tex`, after eq. `eq:common-box-partition`). -/

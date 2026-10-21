@@ -15,3 +15,10 @@ The direct bridge is `Singular.hyp_hker_labels`, via `hker_boxKernel` and the fi
 nonnegative moment estimate `hker_moment`. These bridge proofs may still depend on
 pre-existing unproved Section 5 lemmas; a successful build alone is not a completed
 axiom audit of the singular application. Remaining obligations stay in the worker queue.
+
+Resolved 2026-10-21: the seven remaining saved Grouped/Singular proof bodies were
+refreshed against current main, with statements and all other material unchanged.
+The full project build passed, and all 189 declarations passed a transitive axiom
+audit using only propext, Classical.choice, and Quot.sound. No admitted proof
+bodies remain. This includes the direct untruncated singular-kernel interface
+`Singular.hyp_hker_labels` and the Section 5 result `Singular.lemma51`.

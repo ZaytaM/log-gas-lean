@@ -1183,7 +1183,38 @@ occupancies: the i.i.d. law `μ^{⊗N}` is the average over all label vectors of
 `μ^{⊗N} = M^{-N} ∑_L ⨂_i ν_{L_i}`. -/
 theorem pi_eq_sum_labels (bx : Boxes μE M) :
     (Measure.pi (fun _ : Fin N => μE)) = ((M : ℝ≥0∞) ^ N)⁻¹ • ∑ L : Fin N → Fin M, labelMeasure bx L := by
-  sorry
+  classical
+  have h1 : ∀ s : Set E, MeasurableSet s → μE s = (M : ℝ≥0∞)⁻¹ * ∑ a, boxMeasure bx a s := by
+    intro s hs
+    have hM : (M : ℝ≥0∞) ≠ 0 := by
+      have : 0 < M := by
+        by_contra h0
+        have h0' : M = 0 := by omega
+        subst h0'
+        have := bx.cover
+        have hx : (Classical.arbitrary E) ∈ ⋃ a, bx.A a := by rw [this]; trivial
+        obtain ⟨a, _⟩ := Set.mem_iUnion.1 hx
+        exact a.elim0
+      exact_mod_cast this.ne'
+    have hMt : (M : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top M
+    have : ∀ a, boxMeasure bx a s = (M : ℝ≥0∞) * μE (s ∩ bx.A a) := by
+      intro a
+      simp [boxMeasure, Measure.restrict_apply hs, ENNReal.smul_def]
+    simp_rw [this]
+    rw [← Finset.mul_sum, ← mul_assoc, ENNReal.inv_mul_cancel hM hMt, one_mul]
+    have hU : μE (⋃ a, s ∩ bx.A a) = ∑ a, μE (s ∩ bx.A a) :=
+      (measure_iUnion
+        (fun i j hij => (bx.disj hij).mono Set.inter_subset_right Set.inter_subset_right)
+        (fun a => hs.inter (bx.meas a))).trans (tsum_fintype _)
+    rw [← hU, ← Set.inter_iUnion, bx.cover, Set.inter_univ]
+  refine Measure.pi_eq (fun s hs => ?_)
+  rw [Measure.smul_apply, Measure.finsetSum_apply]
+  simp only [labelMeasure, Measure.pi_pi]
+  rw [← Fintype.piFinset_univ, ← Finset.prod_univ_sum (fun _ : Fin N => (Finset.univ : Finset (Fin M)))
+    (fun i a => boxMeasure bx a (s i))]
+  simp_rw [h1 _ (hs _)]
+  rw [Finset.prod_mul_distrib]
+  simp [ENNReal.inv_pow, smul_eq_mul]
 
 -- SKETCH: `Measure.ae_pi_le_pi` (`Filter.pi`, `Filter.mem_pi`): a.e. for `Measure.pi` is implied
 -- by a.e. in each coordinate (`ae_all_iff` over the finite index set), and `ae_mem_boxMeasure`

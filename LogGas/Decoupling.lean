@@ -1295,6 +1295,107 @@ eq. `eq:array-exponential-series` (6.13): `𝔼 e^{θ S/m} ≤ 2/(1-(C_u κ |θ|
 `C_u κ |θ| < 1`. -/
 theorem exp_bound (H : Hyp μ ν Y h κ) (hm : 1 ≤ m) (θ : ℝ) (hθ : Cu * κ * |θ| < 1) :
     ∫ ω, Real.exp (θ * S h Y ω / m) ∂μ ≤ 2 / (1 - (Cu * κ * |θ|) ^ 2) := by
-  sorry
+  classical
+  have hκ := H.κ_pos
+  have hmpos : (0:ℝ) < m := by exact_mod_cast hm
+  have hCu : Cu = 16 := rfl
+  set r : ℝ := Cu * κ * |θ| with hr
+  have hr0 : 0 ≤ r := by rw [hr, hCu]; positivity
+  have hr2 : r ^ 2 < 1 := by nlinarith
+  -- S is measurable
+  have hSmeas : Measurable (S h Y) := by
+    unfold S
+    refine Finset.measurable_sum _ (fun i _ => Finset.measurable_sum _ (fun j _ => ?_))
+    exact (H.h_meas i j).comp ((H.Y_meas i).prodMk (H.Y_meas j))
+  set G : Ω → ℝ := fun ω => θ * S h Y ω / m with hG
+  have hGmeas : Measurable G := (hSmeas.const_mul θ).div_const _
+  set F : ℕ → Ω → ℝ := fun k ω => G ω ^ (2 * k) / ((2 * k).factorial : ℝ) with hF
+  have hFint : ∀ k, Integrable (F k) μ := by
+    intro k
+    have h1 : F k = fun ω => (|θ| / m) ^ (2 * k) / ((2 * k).factorial : ℝ) * |S h Y ω| ^ (2 * k) := by
+      funext ω
+      simp only [hF, hG, abs_div, abs_mul, abs_of_pos hmpos, Nat.abs_cast]
+      rw [← Even.pow_abs ⟨k, by ring⟩ (θ * S h Y ω / m)]
+      simp only [abs_div, abs_mul, abs_of_pos hmpos, mul_pow, div_pow]
+      ring
+    rw [h1]
+    exact (integrable_S_pow H (2 * k)).const_mul _
+  have hFint_le : ∀ k, ∫ ω, ‖F k ω‖ ∂μ ≤ r ^ (2 * k) := by
+    intro k
+    have hfac : (0:ℝ) < ((2 * k).factorial : ℝ) := by exact_mod_cast Nat.factorial_pos _
+    have h1 : ∀ ω, ‖F k ω‖ = (|θ| / m) ^ (2 * k) / ((2 * k).factorial : ℝ) * |S h Y ω| ^ (2 * k) := by
+      intro ω
+      simp only [hF, hG, Real.norm_eq_abs, abs_div, abs_pow, abs_mul, abs_of_pos hmpos,
+        Nat.abs_cast]
+      rw [mul_div_assoc, mul_pow, div_pow]
+      ring
+    simp_rw [h1]
+    rw [integral_const_mul]
+    have hmb : ∫ ω, |S h Y ω| ^ (2 * k) ∂μ ≤ (Cu * κ * m) ^ (2 * k) * ((2 * k).factorial : ℝ) := by
+      rcases Nat.eq_zero_or_pos k with rfl | hk
+      · simp
+      · exact moment_bound H k hk
+    calc (|θ| / m) ^ (2 * k) / ((2 * k).factorial : ℝ) * ∫ ω, |S h Y ω| ^ (2 * k) ∂μ
+        ≤ (|θ| / m) ^ (2 * k) / ((2 * k).factorial : ℝ) *
+            ((Cu * κ * m) ^ (2 * k) * ((2 * k).factorial : ℝ)) := by gcongr
+      _ = r ^ (2 * k) := by
+        have e : (|θ| / m) * (Cu * κ * m) = r := by rw [hr]; field_simp
+        rw [div_mul_eq_mul_div, div_eq_iff hfac.ne', ← e, mul_pow]; ring
+  have hgeom : Summable (fun k : ℕ => r ^ (2 * k)) := by
+    simp_rw [pow_mul]
+    exact summable_geometric_of_lt_one (by positivity) hr2
+  have hsum : Summable fun k => ∫ ω, ‖F k ω‖ ∂μ :=
+    Summable.of_nonneg_of_le (fun k => integral_nonneg fun ω => norm_nonneg _) hFint_le hgeom
+  have htsum := integral_tsum_of_summable_integral_norm hFint hsum
+  have hcosh : ∀ ω, ∑' k, F k ω = Real.cosh (G ω) := fun ω =>
+    ((Real.hasSum_cosh (G ω))).tsum_eq
+  have hFnn : ∀ k ω, 0 ≤ F k ω := fun k ω => by
+    simp only [hF, pow_mul]
+    positivity
+  have hcint : Integrable (fun ω => Real.cosh (G ω)) μ := by
+    refine ⟨(Real.continuous_cosh.measurable.comp hGmeas).aestronglyMeasurable, ?_⟩
+    rw [hasFiniteIntegral_iff_ofReal (Filter.Eventually.of_forall fun ω => (Real.cosh_pos _).le)]
+    have e1 : ∀ ω, ENNReal.ofReal (Real.cosh (G ω)) = ∑' k, ENNReal.ofReal (F k ω) := fun ω => by
+      rw [← hcosh ω, ENNReal.ofReal_tsum_of_nonneg (fun k => hFnn k ω)
+        ((Real.hasSum_cosh (G ω)).summable)]
+    simp_rw [e1]
+    rw [lintegral_tsum (fun k => (hFint k).1.aemeasurable.ennreal_ofReal)]
+    have e2 : ∀ k, ∫⁻ ω, ENNReal.ofReal (F k ω) ∂μ = ENNReal.ofReal (∫ ω, F k ω ∂μ) := fun k =>
+      (ofReal_integral_eq_lintegral_ofReal (hFint k) (Filter.Eventually.of_forall (hFnn k))).symm
+    simp_rw [e2]
+    have hs : Summable fun k => ∫ ω, F k ω ∂μ :=
+      hgeom.of_norm_bounded fun k =>
+        (norm_integral_le_integral_norm _).trans (hFint_le k)
+    rw [← ENNReal.ofReal_tsum_of_nonneg (fun k => integral_nonneg (hFnn k)) hs]
+    exact ENNReal.ofReal_lt_top
+  have hexpint : Integrable (fun ω => Real.exp (G ω)) μ := by
+    refine Integrable.mono' (hcint.const_mul 2)
+      (Real.continuous_exp.measurable.comp hGmeas).aestronglyMeasurable
+      (Filter.Eventually.of_forall fun ω => ?_)
+    rw [Real.norm_eq_abs, abs_of_pos (Real.exp_pos _), Real.cosh_eq]
+    have := Real.exp_pos (-G ω)
+    linarith
+  have hle : ∫ ω, Real.exp (G ω) ∂μ ≤ ∫ ω, 2 * Real.cosh (G ω) ∂μ := by
+    refine integral_mono hexpint (hcint.const_mul 2) fun ω => ?_
+    simp only [Real.cosh_eq]
+    have := Real.exp_pos (-G ω)
+    linarith
+  rw [integral_const_mul] at hle
+  have hcs : ∫ ω, Real.cosh (G ω) ∂μ = ∑' k, ∫ ω, F k ω ∂μ := by
+    rw [htsum]; exact integral_congr_ae (Filter.Eventually.of_forall fun ω => (hcosh ω).symm)
+  have hser : ∑' k, ∫ ω, F k ω ∂μ ≤ ∑' k : ℕ, r ^ (2 * k) := by
+    have hs : Summable fun k => ∫ ω, F k ω ∂μ :=
+      hgeom.of_norm_bounded fun k =>
+        (norm_integral_le_integral_norm _).trans (hFint_le k)
+    exact hs.tsum_le_tsum (fun k => (le_abs_self _).trans
+      ((abs_integral_le_integral_abs).trans (by simpa using hFint_le k))) hgeom
+  have hgs : ∑' k : ℕ, r ^ (2 * k) = (1 - r ^ 2)⁻¹ := by
+    simp_rw [pow_mul]
+    exact tsum_geometric_of_lt_one (by positivity) hr2
+  have hpos : 0 < 1 - r ^ 2 := by linarith
+  calc ∫ ω, Real.exp (θ * S h Y ω / m) ∂μ = ∫ ω, Real.exp (G ω) ∂μ := rfl
+    _ ≤ 2 * ∫ ω, Real.cosh (G ω) ∂μ := hle
+    _ ≤ 2 * (1 - r ^ 2)⁻¹ := by rw [hcs]; gcongr; exact hser.trans_eq hgs
+    _ = 2 / (1 - r ^ 2) := by rw [div_eq_mul_inv]
 
 end LogGas.Decoupling

@@ -816,7 +816,51 @@ theorem moment_of_exp {α : Type*} [MeasurableSpace α] (ν : Measure α) [IsFin
     (f : α → ℝ) (hf : Measurable f) (C κ ε : ℝ) (hκ : 0 < κ) (hC : ∀ x, |f x| ≤ C)
     (hε : ∫ x, |f x| ∂ν ≤ ε) (hsmall : ε * Real.exp (C / κ) ≤ κ) (p : ℕ) (hp : 1 ≤ p) :
     ∫ x, |f x| ^ p ∂ν ≤ κ ^ p * p.factorial := by
-  sorry
+  have hpt : ∀ x, |f x| ^ p ≤ (κ ^ p * p.factorial * (Real.exp (C / κ) / κ)) * |f x| := by
+    intro x
+    set u := |f x| / κ with hu
+    have hu0 : 0 ≤ u := div_nonneg (abs_nonneg _) hκ.le
+    have hfx : |f x| = κ * u := by rw [hu]; field_simp
+    have h1 : u ^ (p - 1) / (p - 1).factorial ≤ Real.exp u := Real.pow_div_factorial_le_exp u hu0 (p - 1)
+    have h2 : Real.exp u ≤ Real.exp (C / κ) :=
+      Real.exp_le_exp.2 (div_le_div_of_nonneg_right (hC x) hκ.le)
+    have hfac : (p.factorial : ℝ) = p * (p - 1).factorial := by
+      obtain ⟨q, rfl⟩ : ∃ q, p = q + 1 := ⟨p - 1, by omega⟩
+      simp [Nat.factorial_succ]
+    have hf1 : (1 : ℝ) ≤ p := by exact_mod_cast hp
+    have hfpos : (0 : ℝ) < (p - 1).factorial := by exact_mod_cast Nat.factorial_pos _
+    have h3 : u ^ (p - 1) ≤ p.factorial * Real.exp (C / κ) := by
+      rw [div_le_iff₀ hfpos] at h1
+      rw [hfac]
+      have := mul_le_mul_of_nonneg_right h2 hfpos.le
+      nlinarith [mul_le_mul_of_nonneg_right hf1 (mul_nonneg (Real.exp_pos (C / κ)).le hfpos.le)]
+    have hup : u ^ p = u * u ^ (p - 1) := by
+      rw [← pow_succ']; congr 1; omega
+    have hκp : 0 < κ ^ p := pow_pos hκ p
+    have : (κ * u) ^ p = κ ^ p * (u * u ^ (p - 1)) := by rw [mul_pow, hup]
+    rw [hfx, this]
+    have e : κ ^ p * p.factorial * (Real.exp (C / κ) / κ) * (κ * u)
+        = κ ^ p * (u * (p.factorial * Real.exp (C / κ))) := by field_simp
+    rw [e]
+    exact mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_left h3 hu0) hκp.le
+  have hC0 : ∀ x, 0 ≤ C := fun x => (abs_nonneg _).trans (hC x)
+  have hint1 : Integrable (fun x => |f x|) ν :=
+    Integrable.of_bound (hf.abs.aestronglyMeasurable) C (Filter.Eventually.of_forall fun x => by simpa using hC x)
+  have hint : Integrable (fun x => |f x| ^ p) ν :=
+    Integrable.of_bound (hf.abs.pow_const p).aestronglyMeasurable (C ^ p)
+      (Filter.Eventually.of_forall fun x => by
+        simpa using pow_le_pow_left₀ (abs_nonneg _) (hC x) p)
+  calc ∫ x, |f x| ^ p ∂ν ≤ ∫ x, (κ ^ p * p.factorial * (Real.exp (C / κ) / κ)) * |f x| ∂ν :=
+        integral_mono hint (hint1.const_mul _) hpt
+    _ = (κ ^ p * p.factorial * (Real.exp (C / κ) / κ)) * ∫ x, |f x| ∂ν := integral_const_mul _ _
+    _ ≤ (κ ^ p * p.factorial * (Real.exp (C / κ) / κ)) * ε := by
+        apply mul_le_mul_of_nonneg_left hε
+        positivity
+    _ = κ ^ p * p.factorial * (ε * Real.exp (C / κ) / κ) := by ring
+    _ ≤ κ ^ p * p.factorial * 1 := by
+        apply mul_le_mul_of_nonneg_left _ (by positivity)
+        rw [div_le_one hκ]; exact hsmall
+    _ = _ := mul_one _
 
 /-- The decay rate `κ(r) = C'/log(1/r)` of eq. `eq:physical-average-factorial` (5.6), with
 `C' = 8 C + 1`. -/

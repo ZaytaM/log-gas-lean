@@ -813,7 +813,17 @@ theorem kappa_pos (Cc : ℝ) (hCc : 0 ≤ Cc) {r : ℝ} (hr : 0 < r) (hr1 : r < 
 /-- `κ(r) ≤ ε` as soon as `r ≤ exp(-(8C+1)/ε)`. -/
 theorem kappa_le_of_le (Cc : ℝ) (hCc : 0 ≤ Cc) {ε r : ℝ} (hε : 0 < ε) (hr : 0 < r)
     (hr' : r ≤ Real.exp (-((8 * Cc + 1) / ε))) : kappa Cc r ≤ ε := by
-  sorry
+  have hC : 0 < 8 * Cc + 1 := by linarith
+  have h1 : Real.log r ≤ -((8 * Cc + 1) / ε) := by
+    have := Real.log_le_log hr hr'
+    rwa [Real.log_exp] at this
+  have h2 : (8 * Cc + 1) / ε ≤ Real.log (1 / r) := by
+    rw [one_div, Real.log_inv]; linarith
+  have h3 : 0 < Real.log (1 / r) := lt_of_lt_of_le (div_pos hC hε) h2
+  unfold kappa
+  rw [div_le_iff₀ h3]
+  rw [div_le_iff₀ hε] at h2
+  linarith
 
 -- SKETCH: `Real.tendsto_log_atTop.comp` with `tendsto_one_div_nhdsWithin_Ioi`-style
 -- (`tendsto_inv_nhdsGT_zero`), then `Tendsto.div_atTop tendsto_const_nhds`.

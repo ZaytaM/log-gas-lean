@@ -679,7 +679,74 @@ theorem hker_centered_left (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ}
 /-- Eq. (5.2), centering of `h_r` under `μ` in the second variable. -/
 theorem hker_centered_right (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (x : E) : ∫ y, hker bx s' x y ∂μE = 0 := by
-  sorry
+  have hi : Integrable s' μE :=
+    K.s_int.mono' hs'.meas.aestronglyMeasurable
+      (Filter.Eventually.of_forall fun z => by
+        rw [Real.norm_of_nonneg (hs'.nonneg z)]; exact hs'.le z)
+  have hkm : Measurable (uncurry (ker s')) :=
+    hs'.meas.comp (measurable_fst.sub measurable_snd)
+  have hkn : ∀ x y, 0 ≤ ker s' x y := fun x y => hs'.nonneg _
+  set C := (M : ℝ) * ∫ z, s' z ∂μE with hC
+  -- `QJx (ker s') x ·` bounded
+  have hQx : ∀ x y, 0 ≤ QJx bx (ker s') x y ∧ QJx bx (ker s') x y ≤ C := by
+    intro x y
+    refine ⟨QJ_nonneg bx _ (fun x' => hkn x' y) x, ?_⟩
+    have := QJ_le bx (fun x' => ker s' x' y) (fun x' => hkn x' y)
+      (hi.comp_sub_right y) x
+    have e : ∫ x', ker s' x' y ∂μE = ∫ z, s' z ∂μE :=
+      integral_sub_right_eq_self s' y
+    simpa [QJx, hC, e] using this
+  have hQy : ∀ x y, 0 ≤ QJy bx (ker s') x y ∧ QJy bx (ker s') x y ≤ C := by
+    intro x y
+    refine ⟨QJ_nonneg bx _ (fun y' => hkn x y') y, ?_⟩
+    have := QJ_le bx (fun y' => ker s' x y') (fun y' => hkn x y')
+      (hi.comp_sub_left x) y
+    have e : ∫ y', ker s' x y' ∂μE = ∫ z, s' z ∂μE :=
+      integral_sub_left_eq_self s' μE x
+    simpa [QJy, hC, e] using this
+  have hQxm := measurable_QJx bx _ hkm
+  have hQym := measurable_QJy bx _ hkm
+  have hQxym := measurable_QJx bx _ hQym
+  have hC0 : 0 ≤ C := by
+    refine mul_nonneg (Nat.cast_nonneg _) (integral_nonneg fun z => hs'.nonneg z)
+  have hQxy : ∀ x y, 0 ≤ QJx bx (QJy bx (ker s')) x y ∧
+      QJx bx (QJy bx (ker s')) x y ≤ M * C := by
+    intro x y
+    refine ⟨QJ_nonneg bx _ (fun x' => (hQy x' y).1) x, ?_⟩
+    have hint : Integrable (fun x' => QJy bx (ker s') x' y) μE :=
+      Integrable.of_bound (C := C)
+        (hQym.comp (measurable_id.prodMk measurable_const)).aestronglyMeasurable
+        (ae_of_all _ fun x' => by
+          rw [Real.norm_of_nonneg (hQy x' y).1]; exact (hQy x' y).2)
+    have := QJ_le bx (fun x' => QJy bx (ker s') x' y) (fun x' => (hQy x' y).1) hint x
+    refine this.trans (mul_le_mul_of_nonneg_left ?_ (Nat.cast_nonneg _))
+    calc ∫ x', QJy bx (ker s') x' y ∂μE ≤ ∫ _x', C ∂μE :=
+          integral_mono hint (integrable_const _) fun x' => (hQy x' y).2
+      _ = C := by simp
+  -- integrability on each box in `y`
+  have hint : ∀ b, Integrable (fun y => hker bx s' x y) (boxMeasure bx b) := by
+    intro b
+    have h1 := K.integrable_ker_box_right hs' b x
+    have h2 : Integrable (fun y => QJx bx (ker s') x y) (boxMeasure bx b) :=
+      Integrable.of_bound (C := C)
+        (hQxm.comp (measurable_const.prodMk measurable_id)).aestronglyMeasurable
+        (ae_of_all _ fun y => by
+          rw [Real.norm_of_nonneg (hQx x y).1]; exact (hQx x y).2)
+    have h3 : Integrable (fun y => QJy bx (ker s') x y) (boxMeasure bx b) :=
+      Integrable.of_bound (C := C)
+        (hQym.comp (measurable_const.prodMk measurable_id)).aestronglyMeasurable
+        (ae_of_all _ fun y => by
+          rw [Real.norm_of_nonneg (hQy x y).1]; exact (hQy x y).2)
+    have h4 : Integrable (fun y => QJx bx (QJy bx (ker s')) x y) (boxMeasure bx b) :=
+      Integrable.of_bound (C := M * C)
+        (hQxym.comp (measurable_const.prodMk measurable_id)).aestronglyMeasurable
+        (ae_of_all _ fun y => by
+          rw [Real.norm_of_nonneg (hQxy x y).1]; exact (hQxy x y).2)
+    exact ((h1.sub h2).sub h3).add h4
+  have hμ := congrArg (fun m : Measure E => ∫ y, hker bx s' x y ∂m) (μE_eq_sum_boxMeasure bx)
+  refine hμ.trans ?_
+  rw [integral_smul_measure, integral_finsetSum_measure (fun b _ => hint b)]
+  simp [hker_box_centered_right K hs']
 
 -- SKETCH: the four terms of `aker · y` integrate under `μE` to `c, c, c, c`:
 -- `∫ QJx (ker s) (·, y) dμE = ∫ s(x - y) dμE(x) = c` (`integral_QJ`, `integral_ker_left`,

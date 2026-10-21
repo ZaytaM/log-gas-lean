@@ -1046,7 +1046,17 @@ theorem count_large (m k : ℕ) (hmk : 2 * k ≤ m) :
 `m, k`. -/
 theorem count_bound (m k : ℕ) :
     ((A m k * B m k : ℕ) : ℝ) ≤ (4 * Real.exp 1 ^ 2) ^ k * (m : ℝ) ^ (2 * k) := by
-  sorry
+  rcases lt_or_ge m (2 * k) with h | h
+  · refine (count_small m k h).trans ?_
+    have h16 : (2 : ℝ) ^ (4 * k) = 16 ^ k := by
+      rw [pow_mul]; norm_num
+    rw [h16]
+    have : (16 : ℝ) ^ k ≤ (4 * Real.exp 1 ^ 2) ^ k := by
+      apply pow_le_pow_left₀ (by norm_num)
+      have := Real.exp_one_gt_d9
+      nlinarith
+    exact mul_le_mul_of_nonneg_right this (by positivity)
+  · exact count_large m k h
 
 -- SKETCH (D6): chain `random_split`, `count_reduction` (for every `I`; `Finset.sum_le_sum`,
 -- `Finset.sum_const`, `Fintype.card_finset`, `Finset.card_univ`, cancel `2^m`), and

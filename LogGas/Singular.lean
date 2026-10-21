@@ -282,7 +282,12 @@ theorem c_nonneg (K : SingularKernel μE bx G d Cc V) : 0 ≤ K.c := by
 -- (`nonneg_of_mul_nonneg_left` / `pos_of_mul_pos`-style, or `by_contra` + `nlinarith`).
 /-- `0 ≤ C` (the constant of `c_r ≤ C r^d`). -/
 theorem Cc_nonneg (K : SingularKernel μE bx G d Cc V) : 0 ≤ Cc := by
-  sorry
+  have hc : 0 ≤ K.c := K.c_def ▸ MeasureTheory.integral_nonneg K.s_nonneg
+  have hr : 0 < K.r ^ d := pow_pos K.r_pos d
+  have h := K.c_le
+  by_contra hneg
+  have hneg := not_le.mp hneg
+  nlinarith [mul_neg_of_neg_of_pos hneg hr]
 
 -- SKETCH: `M * c ≤ M * (Cc * r^d) = Cc * (M * r^d) ≤ Cc` by `K.c_le`, `K.Mr`, `Cc_nonneg`
 -- (`mul_le_mul_of_nonneg_left`, `nlinarith`).

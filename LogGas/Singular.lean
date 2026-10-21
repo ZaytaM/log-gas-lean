@@ -1292,7 +1292,12 @@ theorem pi_eq_sum_labels (bx : Boxes μE M) :
 /-- Under `𝔼_L`, almost surely particle `i` lies in the box `A_{L_i}`. -/
 theorem ae_labels_mem (bx : Boxes μE M) (L : Fin N → Fin M) :
     ∀ᵐ x ∂(labelMeasure bx L), ∀ i, x i ∈ bx.A (L i) := by
-  sorry
+  rw [ae_all_iff]
+  intro i
+  exact (MeasureTheory.Measure.quasiMeasurePreserving_eval (fun i => boxMeasure bx (L i)) i).ae
+    (by
+      unfold boxMeasure
+      exact Measure.ae_smul_measure (ae_restrict_mem (bx.meas (L i))) _)
 
 -- SKETCH: on the a.e. set of `ae_labels_mem`, `(bx.A a).indicator 1 (x i) = if L i = a then 1 else 0`
 -- (`bx.disj`, `Set.disjoint_left`, `Set.indicator_apply`), so `occupancy (coord N) (A a) x =

@@ -1,8 +1,8 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T00:57:19+00:00
+Updated: 2026-10-21T01:02:21+00:00
 
-State: running.
+State: waiting_quota.
 Workers configured: 6; active: 0.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 

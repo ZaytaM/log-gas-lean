@@ -1419,7 +1419,10 @@ theorem log_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) (p : ℕ)
 theorem s_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {s' : E → ℝ} (hs' : K.Sub s')
     (p : ℕ) (hp : 1 ≤ p) :
     ∫⁻ z, ENNReal.ofReal (s' z ^ p) ∂μE ≤ ENNReal.ofReal (V * K.r ^ d * p.factorial / d ^ p) := by
-  sorry
+  refine le_trans (lintegral_mono_ae ?_) (log_moment K hd p hp)
+  filter_upwards [K.s_log] with z hz
+  exact ENNReal.ofReal_le_ofReal
+    (pow_le_pow_left₀ (hs'.nonneg z) ((hs'.le z).trans hz) p)
 
 -- SKETCH: `lintegral_mono' (boxMeasure_le bx a)`, `lintegral_smul_measure`,
 -- `lintegral_sub_right_eq_self` (resp. `lintegral_sub_left_eq_self`), `s_moment`, and

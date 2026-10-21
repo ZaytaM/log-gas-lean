@@ -9,23 +9,32 @@ from zoneinfo import ZoneInfo
 
 
 def classify(data, stderr='', exit_code=0):
-    """A worker error is not, by itself, evidence of exhausted allowance."""
-    text = json.dumps(data or {}) + '\n' + stderr
-    if (data or {}).get('subtype') == 'error_max_turns' or (data or {}).get('terminal_reason') == 'max_turns':
+    """A worker error is not, by itself, evidence of exhausted allowance.
+
+    Only stderr and the text of a reported error are scanned: the result JSON also
+    carries telemetry (e.g. time_to_request_ms=401) and the worker's own prose,
+    which must never be read as an API failure.
+    """
+    data = data or {}
+    if data.get('subtype') == 'error_max_turns' or data.get('terminal_reason') == 'max_turns':
         return 'turn_limit'
     if exit_code in (124, 137, 143):
         return 'timeout'
+    if data and not data.get('is_error') and not exit_code:
+        return 'success'
+    status = data.get('api_error_status')
+    text = stderr
+    if data.get('is_error'):
+        text += '\n' + str(data.get('result') or '') + '\n' + json.dumps(data.get('errors') or [])
     if re.search(r'hit your .{0,30}limit|session.?limit|usage.?limit|quota|out of credits|insufficient.{0,20}credits', text, re.I):
         return 'quota'
-    if re.search(r'\b429\b|rate.?limit|overloaded', text, re.I):
+    if status == 429 or re.search(r'\b429\b|rate.?limit|overloaded', text, re.I):
         return 'rate_limit'
-    if re.search(r'not logged in|authentication|invalid.api.key|unauthorized|\b401\b', text, re.I):
+    if status == 401 or re.search(r'not logged in|authentication|invalid.api.key|unauthorized|\b401\b', text, re.I):
         return 'authentication'
     if not data:
         return 'invalid_output'
-    if data.get('is_error') or exit_code:
-        return 'error'
-    return 'success'
+    return 'error'
 
 
 def reset_time(text, now, fallback_seconds=300):

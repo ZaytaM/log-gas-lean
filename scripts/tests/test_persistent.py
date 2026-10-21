@@ -27,6 +27,12 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(classify(None), 'invalid_output')
         self.assertEqual(classify(None, 'HTTP 429'), 'rate_limit')
         self.assertEqual(classify(None, exit_code=124), 'timeout')
+        # Telemetry and worker prose must not look like API failures.
+        self.assertEqual(classify({'is_error':False,'subtype':'success','time_to_request_ms':401,'api_error_status':None}), 'success')
+        self.assertEqual(classify({'is_error':False,'subtype':'success','result':'no quota or rate limit issue; not a 429'}), 'success')
+        self.assertEqual(classify({'is_error':True,'api_error_status':401,'result':'Invalid API key'}), 'authentication')
+        self.assertEqual(classify({'is_error':True,'result':'API Error: 429 overloaded'}), 'rate_limit')
+        self.assertEqual(classify({'is_error':False,'subtype':'success'}, exit_code=1), 'error')
 
     def test_timezone_and_fallback(self):
         zone = ZoneInfo('America/Chicago')

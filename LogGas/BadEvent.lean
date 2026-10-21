@@ -584,7 +584,19 @@ theorem bad_probability (hX_meas : ∀ i, Measurable (X i)) (hX_indep : iIndepFu
     (hX_law : ∀ i, μ.map (X i) = ν) {M : ℕ} (bx : Boxes ν M) (hM : 1 ≤ M) (δ : ℝ)
     (hδM : 1 / (M : ℝ) < δ) (hδ1 : δ < 1) :
     μ.real (badEvent X bx δ) ≤ M * Real.exp (-(N : ℝ) * relEnt δ (1 / M)) := by
-  sorry
+  have hMpos : (0 : ℝ) < M := by exact_mod_cast hM
+  have hset : badEvent X bx δ = ⋃ a, {ω | δ * N < (occupancy X (bx.A a) ω : ℝ)} := by
+    ext ω; simp [badEvent]
+  rw [hset]
+  refine (measureReal_iUnion_fintype_le _).trans ?_
+  have h : ∀ a : Fin M, μ.real {ω | δ * N < (occupancy X (bx.A a) ω : ℝ)} ≤
+      Real.exp (-(N : ℝ) * relEnt δ (1 / M)) := fun a =>
+    (measureReal_mono (show {ω | δ * N < (occupancy X (bx.A a) ω : ℝ)} ⊆
+        {ω | δ * N ≤ (occupancy X (bx.A a) ω : ℝ)} from fun ω hω => Set.mem_setOf_eq ▸ le_of_lt hω)).trans
+      (chernoff_binomial μ ν hX_meas hX_indep hX_law (bx.A a) (bx.meas a) (1 / M)
+        (bx.real_vol a) (by positivity) δ hδM hδ1)
+  refine (Finset.sum_le_sum fun a _ => h a).trans ?_
+  simp
 
 end Chernoff
 

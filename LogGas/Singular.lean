@@ -877,7 +877,59 @@ theorem box_ker_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {s' :
 /-- `|h_r(x, y)| ≤ s_r(x - y) + 3C`: the averaged terms are bounded by `M c_r ≤ C`. -/
 theorem hker_abs_le (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s') (x y : E) :
     |hker bx s' x y| ≤ s' (x - y) + 3 * Cc := by
-  sorry
+  classical
+  have hC := SingularKernel.Cc_nonneg K
+  have hMc := SingularKernel.Mc_le K
+  have hint := SingularKernel.Sub.integrable K hs'
+  have hcc : ∫ z, s' z ∂μE ≤ K.c := by
+    rw [← K.c_def]
+    exact integral_mono hint K.s_int hs'.le
+  have hM0 : (0:ℝ) ≤ M := Nat.cast_nonneg M
+  have hMc' : (M : ℝ) * ∫ z, s' z ∂μE ≤ Cc :=
+    (mul_le_mul_of_nonneg_left hcc hM0).trans hMc
+  -- a bounded nonnegative function has box averages in `[0, Cc]`
+  have key : ∀ g : E → ℝ, (∀ z, 0 ≤ g z) → (∀ z, g z ≤ Cc) → ∀ x, QJ bx g x ≤ Cc := by
+    intro g hg0 hgC x
+    obtain ⟨a, ha⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ x)
+    have hMpos : (0:ℝ) < M := Nat.cast_pos.2 (Fin.pos a)
+    rw [QJ_apply_of_mem bx g ha, boxMeasure, ENNReal.smul_def, integral_smul_measure]
+    simp only [ENNReal.coe_natCast, ENNReal.toReal_natCast, smul_eq_mul]
+    have hvol : (μE.restrict (bx.A a)).real Set.univ = 1 / M := by
+      rw [Measure.real, Measure.restrict_apply_univ, bx.vol]
+      simp
+    have h1 : ∫ z in bx.A a, g z ∂μE ≤ ∫ _ in bx.A a, Cc ∂μE :=
+      integral_mono_of_nonneg (Filter.Eventually.of_forall hg0) (integrable_const _)
+        (Filter.Eventually.of_forall hgC)
+    rw [integral_const, smul_eq_mul, hvol] at h1
+    calc (M : ℝ) * ∫ z in bx.A a, g z ∂μE ≤ M * (1 / M * Cc) :=
+          mul_le_mul_of_nonneg_left h1 hM0
+      _ = Cc := by field_simp
+  have hT1 : ∀ x y, QJx bx (ker s') x y ≤ Cc := fun x y => by
+    unfold QJx
+    refine (QJ_le bx _ (fun z => hs'.nonneg _) (hint.comp_sub_right y) x).trans ?_
+    simpa [ker, SingularKernel.integral_ker_left] using hMc'
+  have hT2 : ∀ x y, QJy bx (ker s') x y ≤ Cc := fun x y => by
+    unfold QJy
+    refine (QJ_le bx _ (fun z => hs'.nonneg _) (hint.comp_sub_left x) y).trans ?_
+    simpa [ker, SingularKernel.integral_ker_right] using hMc'
+  have n1 : ∀ x y, 0 ≤ QJx bx (ker s') x y := fun x y =>
+    QJ_nonneg bx _ (fun z => hs'.nonneg _) x
+  have n2 : ∀ x y, 0 ≤ QJy bx (ker s') x y := fun x y =>
+    QJ_nonneg bx _ (fun z => hs'.nonneg _) y
+  have hT3 : QJx bx (QJy bx (ker s')) x y ≤ Cc := by
+    unfold QJx
+    exact key _ (fun z => n2 z y) (fun z => hT2 z y) x
+  have n3 : 0 ≤ QJx bx (QJy bx (ker s')) x y :=
+    QJ_nonneg bx _ (fun z => n2 z y) x
+  have hs0 := hs'.nonneg (x - y)
+  have a1 := hT1 x y
+  have a2 := hT2 x y
+  have a3 := n1 x y
+  have a4 := n2 x y
+  unfold hker
+  rw [abs_le]
+  have : ker s' x y = s' (x - y) := rfl
+  constructor <;> linarith
 
 /-- The universal constant `κ_*` of eq. `eq:physical-singular-factorial` (5.8), depending only
 on `d`-independent data `C`, `V`: `κ_* = 2 max(V,1) max(3C,1)`. -/

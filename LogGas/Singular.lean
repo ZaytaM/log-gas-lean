@@ -806,7 +806,8 @@ noncomputable def kappa (Cc r : ℝ) : ℝ := (8 * Cc + 1) / Real.log (1 / r)
 -- SKETCH: `div_pos` with `Real.log_pos` (`one_lt_one_div hr hr1`).
 /-- `κ(r) > 0` for `0 < r < 1`. -/
 theorem kappa_pos (Cc : ℝ) (hCc : 0 ≤ Cc) {r : ℝ} (hr : 0 < r) (hr1 : r < 1) : 0 < kappa Cc r := by
-  sorry
+  unfold kappa
+  exact div_pos (by linarith) (Real.log_pos (one_lt_one_div hr hr1))
 
 -- SKETCH: `Real.log (1/r) ≥ (8 Cc + 1)/ε` from `hr'` (`Real.log_le_log`, `Real.log_exp`,
 -- `one_div`, `Real.log_inv`), then `div_le_iff₀` and `div_le_iff₀` again.

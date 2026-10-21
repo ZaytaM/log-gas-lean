@@ -1,8 +1,8 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T14:17:03+00:00
+Updated: 2026-10-21T14:17:36+00:00
 
-State: running.
+State: stopped.
 Workers configured: 6; active: 0.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 

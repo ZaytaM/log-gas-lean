@@ -121,7 +121,29 @@ theorem square_completion {q : ℕ} (A : Matrix (Fin q) (Fin q) ℝ) (hA : A.Pos
     (ε : ℝ) (hε : 0 < ε) (ℓ c : Fin q → ℝ) :
     2 * (c ⬝ᵥ ℓ) - c ⬝ᵥ A *ᵥ c
       ≤ ℓ ⬝ᵥ (A + ε • (1 : Matrix (Fin q) (Fin q) ℝ))⁻¹ *ᵥ ℓ + ε * (c ⬝ᵥ c) := by
-  sorry
+  classical
+  have hBpd : (A + ε • (1 : Matrix (Fin q) (Fin q) ℝ)).PosDef := by
+    have h1 : (ε • (1 : Matrix (Fin q) (Fin q) ℝ)).PosDef :=
+      (Matrix.PosDef.one (n := Fin q) (R := ℝ)).smul hε
+    exact Matrix.PosDef.posSemidef_add hA h1
+  set B : Matrix (Fin q) (Fin q) ℝ := A + ε • (1 : Matrix (Fin q) (Fin q) ℝ) with hB
+  have hBu : IsUnit B.det := (Matrix.isUnit_iff_isUnit_det _).mp hBpd.isUnit
+  have hx : B *ᵥ (B⁻¹ *ᵥ ℓ) = ℓ := by
+    rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hBu, Matrix.one_mulVec]
+  set x := B⁻¹ *ᵥ ℓ with hxdef
+  have hnn := hBpd.posSemidef.dotProduct_mulVec_nonneg (c - x)
+  have hBT : Bᵀ = B := by
+    simpa [Matrix.conjTranspose_eq_transpose_of_trivial] using hBpd.isHermitian.eq
+  have hsym : ∀ u v : Fin q → ℝ, u ⬝ᵥ B *ᵥ v = v ⬝ᵥ B *ᵥ u := by
+    intro u v
+    rw [Matrix.dotProduct_mulVec, ← Matrix.mulVec_transpose, hBT, dotProduct_comm]
+  have hBc : c ⬝ᵥ B *ᵥ c = c ⬝ᵥ A *ᵥ c + ε * (c ⬝ᵥ c) := by
+    simp [hB, Matrix.add_mulVec, dotProduct_add, Matrix.smul_mulVec]
+  simp only [star_trivial, Matrix.mulVec_sub, dotProduct_sub, sub_dotProduct] at hnn
+  rw [hx] at hnn
+  have h2 := hsym x c
+  rw [hx] at h2
+  linarith [dotProduct_comm x ℓ]
 
 -- SKETCH: `L := CFC.sqrt A⁻¹` (`open scoped MatrixOrder`; `Matrix.PosDef.inv`,
 -- `Matrix.nonneg_iff_posSemidef`, `CFC.sqrt_mul_sqrt_self`, `Matrix.PosDef.inv_sqrt`).

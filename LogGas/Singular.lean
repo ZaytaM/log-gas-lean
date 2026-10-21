@@ -132,7 +132,8 @@ theorem QJ_apply_of_mem (bx : Boxes μE M) (f : E → ℝ) {a : Fin M} {x : E} (
 -- SKETCH: `Finset.measurable_sum`, each summand `measurable_const.indicator (bx.meas a)`.
 /-- `Q_J f` is measurable (it is a finite sum of indicators of boxes times constants). -/
 theorem measurable_QJ (bx : Boxes μE M) (f : E → ℝ) : Measurable (QJ bx f) := by
-  sorry
+  unfold QJ
+  exact Finset.measurable_sum _ fun a _ => measurable_const.indicator (bx.meas a)
 
 -- SKETCH: `QJx bx K x y = ∑ a, (A a).indicator 1 x * ∫ x', K x' y ∂ν_a`; the map
 -- `y ↦ ∫ x', K x' y ∂ν_a` is measurable by `StronglyMeasurable.integral_prod_left`

@@ -1,18 +1,18 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T02:56:43+00:00
+Updated: 2026-10-21T02:56:44+00:00
 
 State: running.
-Workers configured: 6; active: 3.
+Workers configured: 6; active: 2.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 
-- blocked: 3
+- blocked: 4
 - closed: 46
 - pending: 53
-- running: 3
+- running: 2
 - waiting_dependencies: 2
 
-Attempts: 130; reported cost: $19.2745; attempts with unknown/incomplete usage: 3.
+Attempts: 130; reported cost: $19.4846; attempts with unknown/incomplete usage: 2.
 Queue is eligible to dispatch work.
 
 Costs are client estimates and do not measure subscription allowance precisely.
@@ -23,4 +23,5 @@ Waiting_dependencies means a proof is present but its transitive axiom audit is 
 
 - LogGas.Decoupling.vanishing_word: Worker changed a statement or material outside its target proof
 - LogGas.Singular.integral_QJ: Worker changed a statement or material outside its target proof
+- LogGas.Singular.label_decomposition: Worker changed a statement or material outside its target proof
 - LogGas.Singular.hker_trunc_tendsto: Worker changed a statement or material outside its target proof

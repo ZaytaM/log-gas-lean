@@ -1394,7 +1394,20 @@ theorem hyp_aker (μ : Measure Ω) [IsProbabilityMeasure μ] (K : SingularKernel
       (∀ x, ∫ y, |aker bx K.s K.c x y| ^ p ∂μE ≤ 2 * κ ^ p * p.factorial) ∧
       (∀ y, ∫ x, |aker bx K.s K.c x y| ^ p ∂μE ≤ 2 * κ ^ p * p.factorial)) :
     Hyp μ (fun _ => μE) X (fun _ _ => aker bx K.s K.c) κ := by
-  sorry
+  have hm := measurable_aker (bx := bx) K.s K.s_meas K.c
+  refine { κ_pos := hκ, Y_meas := hX_meas, Y_indep := hX_indep, Y_law := hX_law,
+           h_meas := fun _ _ => hm, h_int := ?_,
+           centered_left := fun _ _ _ => ae_of_all _ (fun y => aker_centered_left K y),
+           centered_right := fun _ _ _ => ae_of_all _ (fun x => aker_centered_right K x),
+           moment_left := fun _ _ _ p hp => ae_of_all _ (fun y => (hmom p hp).2 y),
+           moment_right := fun _ _ _ p hp => ae_of_all _ (fun x => (hmom p hp).1 x) }
+  intro i j p hp
+  refine Integrable.of_bound (C := (4 * Cc) ^ p)
+    ((hm.norm.pow_const p).aestronglyMeasurable) (ae_of_all _ fun z => ?_)
+  have h0 := aker_abs_le K z.1 z.2
+  have : 0 ≤ |aker bx K.s K.c z.1 z.2| := abs_nonneg _
+  rw [Real.norm_eq_abs, abs_of_nonneg (by positivity)]
+  exact pow_le_pow_left₀ this h0 p
 
 -- SKETCH: take `r1 := Real.exp (-((8 * Cc + 1) * (4 * t0 * Cu)))` (so `kappa_le_of_le` gives
 -- `κ(r) ≤ 1 / (4 t0 Cu)` for `r ≤ r1`, hence `2 t Cu κ(r) ≤ 1/2`; this is the choice of `J_0`).

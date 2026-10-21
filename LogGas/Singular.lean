@@ -572,7 +572,84 @@ theorem hker_box_centered_left (K : SingularKernel μE bx G d Cc V) {s' : E → 
 /-- Eq. (5.2), box centering in the second variable: `∫ h_r(x, y) dν_b(y) = 0`. -/
 theorem hker_box_centered_right (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (b : Fin M) (x : E) : ∫ y, hker bx s' x y ∂(boxMeasure bx b) = 0 := by
-  sorry
+  classical
+  have hQB : ∀ (f : E → ℝ) (c : Fin M),
+      ∫ z, QJ bx f z ∂(boxMeasure bx c) = ∫ z, f z ∂(boxMeasure bx c) := by
+    intro f c
+    have : ∀ᵐ z ∂(boxMeasure bx c), QJ bx f z = ∫ y, f y ∂(boxMeasure bx c) := by
+      filter_upwards [ae_mem_boxMeasure bx c] with z hz
+      exact QJ_apply_of_mem bx f hz
+    rw [integral_congr_ae this]
+    simp
+  set F : E → E → ℝ := fun x' y => s' (x' - y) with hFdef
+  have hFm : Measurable (uncurry F) := hs'.meas.comp measurable_sub
+  have hFker : ker s' = F := rfl
+  obtain ⟨a, ha⟩ := Set.mem_iUnion.1 (bx.cover ▸ Set.mem_univ x)
+  have hsi : Integrable s' μE := hs'.integrable K
+  have hbox : ∀ (f : E → ℝ), (∀ z, 0 ≤ f z) → Integrable f μE → ∀ c : Fin M,
+      ∫ z, f z ∂(boxMeasure bx c) ≤ M * ∫ z, f z ∂μE := by
+    intro f hf hfi c
+    rw [boxMeasure, ENNReal.smul_def, integral_smul_measure]
+    simp only [ENNReal.coe_natCast, ENNReal.toReal_natCast, smul_eq_mul]
+    exact mul_le_mul_of_nonneg_left
+      (setIntegral_le_integral hfi (Filter.Eventually.of_forall hf)) (Nat.cast_nonneg M)
+  have hFint : ∀ x', Integrable (fun y => F x' y) μE := fun x' => by
+    simpa [hFdef] using (hsi.comp_sub_left x')
+  have hHm : Measurable (uncurry (QJy bx F)) := measurable_QJy bx F hFm
+  have hHb : ∀ x' y, ‖QJy bx F x' y‖ ≤ M * ∫ z, s' z ∂μE := fun x' y => by
+    have h0 : 0 ≤ QJy bx F x' y := QJ_nonneg bx _ (fun z => hs'.nonneg _) y
+    rw [Real.norm_of_nonneg h0]
+    have := QJ_le bx (fun y' => F x' y') (fun z => hs'.nonneg _) (hFint x') y
+    have h2 : ∫ z, F x' z ∂μE = ∫ z, s' z ∂μE := SingularKernel.integral_ker_right s' x'
+    unfold QJy
+    exact this.trans (le_of_eq (by rw [← h2]))
+  have hHint : Integrable (uncurry (QJy bx F)) ((boxMeasure bx a).prod (boxMeasure bx b)) :=
+    Integrable.of_bound hHm.aestronglyMeasurable _ (Filter.Eventually.of_forall fun p => hHb p.1 p.2)
+  have hFint2 : Integrable (uncurry F) ((boxMeasure bx a).prod (boxMeasure bx b)) := by
+    rw [integrable_prod_iff hFm.aestronglyMeasurable]
+    refine ⟨Filter.Eventually.of_forall fun x' => SingularKernel.integrable_ker_box_right K hs' b x', ?_⟩
+    have hm : Measurable fun x' => ∫ y, ‖F x' y‖ ∂(boxMeasure bx b) := by
+      have h : StronglyMeasurable (uncurry fun x' y => ‖F x' y‖) := hFm.norm.stronglyMeasurable
+      exact (h.integral_prod_right (ν := boxMeasure bx b)).measurable
+    refine Integrable.of_bound hm.aestronglyMeasurable (M * ∫ z, s' z ∂μE)
+      (Filter.Eventually.of_forall fun x' => ?_)
+    have h0 : 0 ≤ ∫ y, ‖F x' y‖ ∂(boxMeasure bx b) := integral_nonneg fun _ => norm_nonneg _
+    simp only [Function.uncurry_apply_pair]
+    rw [Real.norm_of_nonneg h0]
+    have := hbox (fun y => F x' y) (fun z => hs'.nonneg _) (hFint x') b
+    have h2 : ∫ z, F x' z ∂μE = ∫ z, s' z ∂μE := SingularKernel.integral_ker_right s' x'
+    simp only [hFdef] at this ⊢
+    simp only [Real.norm_of_nonneg (hs'.nonneg _)]
+    exact this.trans (le_of_eq (by rw [SingularKernel.integral_ker_right s' x']))
+  have hQx : ∀ (g : E → E → ℝ) y, QJx bx g x y = ∫ x', g x' y ∂(boxMeasure bx a) :=
+    fun g y => QJ_apply_of_mem bx _ ha
+  have hform : ∀ y, hker bx s' x y = F x y - (∫ x', F x' y ∂(boxMeasure bx a))
+      - QJy bx F x y + ∫ x', QJy bx F x' y ∂(boxMeasure bx a) := by
+    intro y
+    unfold hker
+    rw [hFker, hQx F y, hQx (QJy bx F) y]
+  simp_rw [hform]
+  have i1 : Integrable (fun y => F x y) (boxMeasure bx b) := SingularKernel.integrable_ker_box_right K hs' b x
+  have i2 : Integrable (fun y => ∫ x', F x' y ∂(boxMeasure bx a)) (boxMeasure bx b) :=
+    hFint2.integral_prod_right
+  have i3 : Integrable (fun y => QJy bx F x y) (boxMeasure bx b) :=
+    Integrable.of_bound (hHm.comp (measurable_const.prodMk measurable_id)).aestronglyMeasurable _
+      (Filter.Eventually.of_forall fun y => hHb x y)
+  have i4 : Integrable (fun y => ∫ x', QJy bx F x' y ∂(boxMeasure bx a)) (boxMeasure bx b) :=
+    hHint.integral_prod_right
+  have i12 : Integrable (fun y => F x y - ∫ x', F x' y ∂(boxMeasure bx a)) (boxMeasure bx b) :=
+    i1.sub i2
+  have i123 : Integrable (fun y => F x y - (∫ x', F x' y ∂(boxMeasure bx a)) - QJy bx F x y)
+      (boxMeasure bx b) := i12.sub i3
+  rw [integral_add i123 i4, integral_sub i12 i3, integral_sub i1 i2]
+  have e3 : ∫ y, QJy bx F x y ∂(boxMeasure bx b) = ∫ y, F x y ∂(boxMeasure bx b) :=
+    hQB (fun y' => F x y') b
+  have e4 : ∫ y, ∫ x', QJy bx F x' y ∂(boxMeasure bx a) ∂(boxMeasure bx b)
+      = ∫ y, ∫ x', F x' y ∂(boxMeasure bx a) ∂(boxMeasure bx b) := by
+    rw [← integral_integral_swap hHint, ← integral_integral_swap hFint2]
+    refine integral_congr_ae (Filter.Eventually.of_forall fun x' => ?_)
+    exact hQB (fun y' => F x' y') b
+  rw [e3, e4]; ring
 
 -- SKETCH: `μE_eq_sum_boxMeasure`, `integral_smul_measure`, `integral_finset_sum_measure`
 -- (integrability of `hker · y` on each `ν_a` from `integrable_ker_box_left` and boundedness of

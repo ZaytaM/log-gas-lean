@@ -907,7 +907,81 @@ theorem sum_factorial_mult (m k : ℕ) :
 theorem count_reduction (H : Hyp μ ν Y h κ) (k : ℕ) (I : Finset (Fin m)) :
     ∫ ω, |D h Y I ω| ^ (2 * k) ∂μ
       ≤ 2 ^ k * κ ^ (2 * k) * ((2 * k).factorial : ℝ) * (A m k * B m k : ℕ) := by
-  sorry
+  classical
+  set P : Finset (Fin (2 * k) → Fin m × Fin m) := Fintype.piFinset (fun _ => I ×ˢ Iᶜ) with hP
+  have hD : ∀ ω, |D h Y I ω| ^ (2 * k) =
+      ∑ p ∈ P, word h Y (fun v => (p v).1) (fun v => (p v).2) ω := by
+    intro ω
+    rw [(even_two_mul k).pow_abs]
+    have : D h Y I ω = ∑ q ∈ I ×ˢ Iᶜ, ext h q.1 q.2 (Y q.1 ω) (Y q.2 ω) := by
+      unfold D; rw [Finset.sum_product]
+    have hpow : ∀ x : ℝ, x ^ (2 * k) = ∏ _v : Fin (2 * k), x := by
+      intro x; simp
+    rw [this, hpow, Finset.prod_univ_sum]
+    rfl
+  have hint : ∀ row col : Fin (2 * k) → Fin m, Integrable (word h Y row col) μ :=
+    fun row col => integrable_word H row col
+  set c : ℝ := 2 ^ k * κ ^ (2 * k) with hc
+  have hc0 : 0 ≤ c := by have := H.κ_pos; positivity
+  set F : (Fin (2 * k) → Fin m) × (Fin (2 * k) → Fin m) → ℝ := fun rc =>
+    if (∀ ℓ, mult rc.1 ℓ ≠ 1) ∧ (∀ ℓ, mult rc.2 ℓ ≠ 1)
+      then c * ∏ ℓ, ((mult rc.1 ℓ).factorial : ℝ) else 0 with hF
+  have hF0 : ∀ rc, 0 ≤ F rc := by
+    intro rc; simp only [hF]; split_ifs
+    · exact mul_nonneg hc0 (Finset.prod_nonneg (fun _ _ => by positivity))
+    · exact le_rfl
+  have hterm : ∀ p ∈ P, |∫ ω, word h Y (fun v => (p v).1) (fun v => (p v).2) ω ∂μ|
+      ≤ F (fun v => (p v).1, fun v => (p v).2) := by
+    intro p hp
+    have hp' : ∀ v, (p v).1 ∈ I ∧ (p v).2 ∉ I := by
+      intro v
+      have := (Fintype.mem_piFinset.1 hp) v
+      simpa using this
+    simp only [hF]
+    split_ifs with hs
+    · exact word_moment H k I _ _ (fun v => (hp' v).1) (fun v => (hp' v).2) hs.1
+    · rw [vanishing_word H I _ _ (fun v => (hp' v).1) (fun v => (hp' v).2)]
+      · simp
+      · by_contra hn
+        push Not at hn
+        exact hs ⟨fun ℓ => hn.1 ℓ, fun ℓ => hn.2 ℓ⟩
+  have h1 : ∫ ω, |D h Y I ω| ^ (2 * k) ∂μ ≤ ∑ rc, F rc := by
+    simp_rw [hD]
+    rw [integral_finsetSum _ (fun p _ => hint _ _)]
+    calc ∑ p ∈ P, ∫ ω, word h Y (fun v => (p v).1) (fun v => (p v).2) ω ∂μ
+        ≤ |∑ p ∈ P, ∫ ω, word h Y (fun v => (p v).1) (fun v => (p v).2) ω ∂μ| := le_abs_self _
+      _ ≤ ∑ p ∈ P, |∫ ω, word h Y (fun v => (p v).1) (fun v => (p v).2) ω ∂μ| :=
+          Finset.abs_sum_le_sum_abs _ _
+      _ ≤ ∑ p ∈ P, F (fun v => (p v).1, fun v => (p v).2) := Finset.sum_le_sum hterm
+      _ ≤ ∑ p : Fin (2 * k) → Fin m × Fin m, F (fun v => (p v).1, fun v => (p v).2) :=
+          Finset.sum_le_sum_of_subset_of_nonneg (Finset.subset_univ _) (fun _ _ _ => hF0 _)
+      _ = ∑ rc, F rc :=
+          Fintype.sum_equiv (Equiv.arrowProdEquivProdArrow _ _ _)
+            _ _ (fun p => rfl)
+  refine h1.trans ?_
+  have h2 : ∀ row : Fin (2 * k) → Fin m, ∑ col, F (row, col) =
+      if (∀ ℓ, mult row ℓ ≠ 1) then (B m k : ℝ) * (c * ∏ ℓ, ((mult row ℓ).factorial : ℝ)) else 0 := by
+    intro row
+    by_cases hr : ∀ ℓ, mult row ℓ ≠ 1
+    · rw [if_pos hr]
+      have : ∀ col, F (row, col) = if (∀ ℓ, mult col ℓ ≠ 1) then
+          c * ∏ ℓ, ((mult row ℓ).factorial : ℝ) else 0 := by
+        intro col; simp only [hF]; simp [hr]
+      simp_rw [this]
+      rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const, nsmul_eq_mul]
+      rfl
+    · rw [if_neg hr]
+      simp [hF, hr]
+  rw [Fintype.sum_prod_type]
+  simp_rw [h2]
+  rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, ← Finset.mul_sum, ← Finset.mul_sum]
+  have h3 := sum_factorial_mult m k
+  have hB : (0 : ℝ) ≤ (B m k : ℝ) := Nat.cast_nonneg _
+  push_cast
+  calc (B m k : ℝ) * (c * ∑ x ∈ Finset.filter (fun row => ∀ ℓ, mult row ℓ ≠ 1) Finset.univ,
+        ∏ ℓ, ((mult x ℓ).factorial : ℝ))
+      ≤ (B m k : ℝ) * (c * (((2 * k).factorial : ℝ) * A m k)) := by gcongr
+    _ = _ := by ring
 
 -- SKETCH (D5, case m < 2k): `A ≤ #{weak compositions of 2k into m parts}
 -- = (2k+m-1).choose (m-1) ≤ 2^(2k+m-1) ≤ 2^(4k)` (`Nat.choose_le_two_pow`,

@@ -1,8 +1,8 @@
 # Main theorem campaign
 
-Updated: 2026-10-21T22:06:22+00:00. State: running.
+Updated: 2026-10-21T22:11:24+00:00. State: running.
 
-Coordinator: unconfirmed; up to 6 Sonnet workers.
+Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
 Pause until (Unix UTC): 0; reason: none.
 

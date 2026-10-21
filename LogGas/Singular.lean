@@ -1494,7 +1494,47 @@ theorem aker_exp_bound (d : ℕ) (hd : 1 ≤ d) (Cc V : ℝ) (t0 : ℝ) (ht0 : 0
           1 ≤ N → ∀ (X : Fin N → Ω → E), (∀ i, Measurable (X i)) → iIndepFun X μ →
           (∀ i, μ.map (X i) = μE) → ∀ t : ℝ, 0 ≤ t → t ≤ t0 →
           ∫ ω, Real.exp (t * W (aker bx K.s K.c) X ω) ∂μ ≤ 8 / 3 := by
-  sorry
+  refine ⟨Real.exp (-((8 * max Cc 0 + 1) * (4 * t0 * Cu))), Real.exp_pos _, ?_⟩
+  intro M bx G K hr Ω _ μ _ N hN X hXm hXi hXl t ht ht0'
+  have hCu : (0 : ℝ) < Cu := by unfold Cu; norm_num
+  have hc0 : 0 ≤ K.c := by rw [← K.c_def]; exact integral_nonneg K.s_nonneg
+  have hCc : 0 ≤ Cc := by
+    have h1 := K.c_le
+    have h2 : 0 < K.r ^ d := pow_pos K.r_pos d
+    by_contra h
+    push_neg at h
+    nlinarith [mul_neg_of_neg_of_pos h h2]
+  have hε : 0 < 1 / (4 * t0 * Cu) := by positivity
+  have hκle : kappa Cc K.r ≤ 1 / (4 * t0 * Cu) := by
+    apply kappa_le_of_le Cc hCc hε K.r_pos
+    refine hr.trans (Real.exp_le_exp.2 ?_)
+    have : (8 * Cc + 1) / (1 / (4 * t0 * Cu)) = (8 * Cc + 1) * (4 * t0 * Cu) := by
+      field_simp
+    rw [this, neg_le_neg_iff]
+    have := max_cases Cc 0
+    have h4 : 0 < 4 * t0 * Cu := by positivity
+    have : Cc ≤ max Cc 0 := le_max_left _ _
+    nlinarith
+  have hκ : 0 < kappa Cc K.r := kappa_pos Cc hCc K.r_pos K.r_lt_one
+  have H := hyp_aker μ K X hXm hXi hXl (kappa Cc K.r) hκ (fun p hp => aker_moment K hd p hp)
+  have hθ : Cu * kappa Cc K.r * |2 * t| ≤ 1 / 2 := by
+    rw [abs_of_nonneg (by linarith)]
+    have h4 : 0 < 4 * t0 * Cu := by positivity
+    have h1 : kappa Cc K.r * (4 * t0 * Cu) ≤ 1 := by
+      rwa [le_div_iff₀ h4] at hκle
+    nlinarith [mul_nonneg hκ.le hCu.le, mul_nonneg (mul_nonneg hκ.le hCu.le) (sub_nonneg.2 ht0')]
+  have hint := LogGas.Decoupling.exp_bound H hN (2 * t) (by linarith)
+  have heq : ∀ ω, t * W (aker bx K.s K.c) X ω
+      = 2 * t * S (fun _ _ => aker bx K.s K.c) X ω / N := by
+    intro ω
+    rw [W_eq_S _ (aker_symm K) X ω]; ring
+  simp_rw [heq]
+  refine hint.trans ?_
+  set x := Cu * kappa Cc K.r * |2 * t| with hx
+  have hx0 : 0 ≤ x := by positivity
+  have : 1 - x ^ 2 ≥ 3 / 4 := by nlinarith
+  calc 2 / (1 - x ^ 2) ≤ 2 / (3 / 4) := div_le_div_of_nonneg_left (by norm_num) (by norm_num) this
+    _ = 8 / 3 := by norm_num
 
 end AveragingExp
 

@@ -434,7 +434,49 @@ theorem QJx_ker_swap (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' 
 /-- `(Q_{J,x}Q_{J,y} s_r)(y, x) = (Q_{J,x}Q_{J,y} s_r)(x, y)` for even `s_r`. -/
 theorem QJxQJy_ker_swap (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (x y : E) : QJx bx (QJy bx (ker s')) y x = QJx bx (QJy bx (ker s')) x y := by
-  sorry
+  have hI : Integrable s' μE :=
+    K.s_int.mono' hs'.meas.aestronglyMeasurable (ae_of_all _ (fun z => by
+      rw [Real.norm_of_nonneg (hs'.nonneg z)]; exact hs'.le z))
+  have hP : Integrable (fun p : E × E => s' (p.1 - p.2)) (μE.prod μE) := by
+    have h1 : Integrable (fun q : E × E => s' q.1) (μE.prod μE) := hI.comp_fst μE
+    exact ((measurePreserving_sub_prod μE μE).integrable_comp
+      (g := fun q : E × E => s' q.1) h1.aestronglyMeasurable).2 h1
+  have hFub : ∀ a b : Fin M, Integrable (fun p : E × E => s' (p.1 - p.2))
+      ((boxMeasure bx a).prod (boxMeasure bx b)) := by
+    intro a b
+    have hle : (boxMeasure bx a).prod (boxMeasure bx b) ≤
+        ((M : ℝ≥0∞) * M) • μE.prod μE := by
+      calc (boxMeasure bx a).prod (boxMeasure bx b)
+          ≤ ((M : ℝ≥0∞) • μE).prod ((M : ℝ≥0∞) • μE) :=
+            Measure.prod_mono (boxMeasure_le bx a) (boxMeasure_le bx b)
+        _ = ((M : ℝ≥0∞) * M) • μE.prod μE := by
+            rw [Measure.prod_smul_left, Measure.prod_smul_right, smul_smul]
+    exact (hP.smul_measure (by simp [ENNReal.mul_eq_top])).mono_measure hle
+  obtain ⟨a, ha⟩ : ∃ a, x ∈ bx.A a := by
+    have := bx.cover ▸ Set.mem_univ x
+    simpa using this
+  obtain ⟨b, hb⟩ : ∃ b, y ∈ bx.A b := by
+    have := bx.cover ▸ Set.mem_univ y
+    simpa using this
+  have e1 : QJx bx (QJy bx (ker s')) y x
+      = ∫ x', ∫ y', s' (x' - y') ∂(boxMeasure bx a) ∂(boxMeasure bx b) := by
+    unfold QJx
+    rw [QJ_apply_of_mem bx _ hb]
+    refine integral_congr_ae (ae_of_all _ (fun x' => ?_))
+    simp only [QJy]
+    rw [QJ_apply_of_mem bx _ ha]; rfl
+  have e2 : QJx bx (QJy bx (ker s')) x y
+      = ∫ x', ∫ y', s' (x' - y') ∂(boxMeasure bx b) ∂(boxMeasure bx a) := by
+    unfold QJx
+    rw [QJ_apply_of_mem bx _ ha]
+    refine integral_congr_ae (ae_of_all _ (fun x' => ?_))
+    simp only [QJy]
+    rw [QJ_apply_of_mem bx _ hb]; rfl
+  rw [e1, e2]
+  rw [integral_integral_swap (f := fun x' y' => s' (x' - y')) (hFub b a)]
+  refine integral_congr_ae (ae_of_all _ (fun y' => integral_congr_ae (ae_of_all _ (fun x' => ?_))))
+  simp only
+  rw [← hs'.even (x' - y'), neg_sub]
 
 -- SKETCH: unfold `aker`; `QJx_ker_swap`, `QJxQJy_ker_swap` and `add_comm`.
 /-- `a_r` is a symmetric kernel. -/

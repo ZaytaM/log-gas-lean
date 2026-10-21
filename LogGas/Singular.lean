@@ -320,7 +320,12 @@ theorem integral_ker_right (s' : E → ℝ) (x : E) : ∫ y, s' (x - y) ∂μE =
 /-- `x ↦ s'(x - y)` is `ν_a`-integrable. -/
 theorem integrable_ker_box_left (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s')
     (a : Fin M) (y : E) : Integrable (fun x => s' (x - y)) (boxMeasure bx a) := by
-  sorry
+  have hi : Integrable s' μE :=
+    K.s_int.mono' hs'.meas.aestronglyMeasurable
+      (Filter.Eventually.of_forall fun z => by
+        rw [Real.norm_of_nonneg (hs'.nonneg z)]; exact hs'.le z)
+  unfold boxMeasure
+  exact ((hi.comp_sub_right y).integrableOn (s := bx.A a)).smul_measure ENNReal.coe_ne_top
 
 -- SKETCH: as `integrable_ker_box_left` with `Integrable.comp_sub_left`.
 /-- `y ↦ s'(x - y)` is `ν_b`-integrable. -/

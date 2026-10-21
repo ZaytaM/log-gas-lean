@@ -431,7 +431,10 @@ theorem class_mgf (hY_meas : ∀ i, Measurable (Y i)) (hY_indep : iIndepFun Y μ
     (hvan : ∀ b i j, (i ∉ T b ∨ j ∉ T b) → ∀ x y, h' b i j x y = 0) (t : ℝ) :
     ∫ ω, Real.exp (t * ∑ b, S (h' b) Y ω) ∂μ
       = ∏ b, ∫ ω, Real.exp (t * S (h' b) Y ω) ∂μ := by
-  sorry
+  have hind := blocks_indep hY_meas hY_indep T hT h' hmeas hvan
+  have hm' : ∀ b, Measurable (S (h' b) Y) := fun b => measurable_S hY_meas (hmeas b)
+  have := hind.mgf_sum (fun b => hm' b) (Finset.univ) (t := t)
+  simpa [mgf, Finset.sum_apply] using this
 
 -- SKETCH: if `M = 0` both sides are `1` (`Fintype.sum_empty`, `integral_const`,
 -- `pow_zero`).  Otherwise rewrite `t * (∑ b, S_b) / m = (t/m) * ∑ b, S_b` and factor with

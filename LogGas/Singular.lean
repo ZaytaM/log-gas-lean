@@ -1456,7 +1456,36 @@ theorem box_ker_moment (K : SingularKernel μE bx G d Cc V) (hd : 1 ≤ d) {s' :
         ≤ ENNReal.ofReal (V * p.factorial / d ^ p)) ∧
     (∀ x, ∫⁻ y, ENNReal.ofReal (s' (x - y) ^ p) ∂(boxMeasure bx a)
         ≤ ENNReal.ofReal (V * p.factorial / d ^ p)) := by
-  sorry
+  have hf : Measurable fun z => ENNReal.ofReal (s' z ^ p) :=
+    (hs'.meas.pow_const p).ennreal_ofReal
+  have hM : (M : ℝ≥0∞) * ENNReal.ofReal (V * K.r ^ d * p.factorial / d ^ p)
+      ≤ ENNReal.ofReal (V * p.factorial / d ^ p) := by
+    have h1 : (M : ℝ≥0∞) = ENNReal.ofReal (M : ℝ) := (ENNReal.ofReal_natCast M).symm
+    rw [h1, ← ENNReal.ofReal_mul (Nat.cast_nonneg M)]
+    apply ENNReal.ofReal_le_ofReal
+    have hq : 0 ≤ V * (p.factorial : ℝ) / d ^ p := by
+      have := K.V_nonneg; positivity
+    have : (M : ℝ) * (V * K.r ^ d * p.factorial / d ^ p)
+        = ((M : ℝ) * K.r ^ d) * (V * p.factorial / d ^ p) := by ring
+    rw [this]
+    exact mul_le_of_le_one_left hq K.Mr
+  constructor
+  · intro y
+    calc ∫⁻ x, ENNReal.ofReal (s' (x - y) ^ p) ∂(boxMeasure bx a)
+        ≤ ∫⁻ x, ENNReal.ofReal (s' (x - y) ^ p) ∂((M : ℝ≥0∞) • μE) :=
+          lintegral_mono' (boxMeasure_le bx a) le_rfl
+      _ = (M : ℝ≥0∞) * ∫⁻ x, ENNReal.ofReal (s' x ^ p) ∂μE := by
+          rw [lintegral_smul_measure, smul_eq_mul,
+            lintegral_sub_right_eq_self (fun z => ENNReal.ofReal (s' z ^ p)) y]
+      _ ≤ _ := le_trans (by gcongr; exact s_moment K hd hs' p hp) hM
+  · intro x
+    calc ∫⁻ y, ENNReal.ofReal (s' (x - y) ^ p) ∂(boxMeasure bx a)
+        ≤ ∫⁻ y, ENNReal.ofReal (s' (x - y) ^ p) ∂((M : ℝ≥0∞) • μE) :=
+          lintegral_mono' (boxMeasure_le bx a) le_rfl
+      _ = (M : ℝ≥0∞) * ∫⁻ x, ENNReal.ofReal (s' x ^ p) ∂μE := by
+          rw [lintegral_smul_measure, smul_eq_mul,
+            lintegral_sub_left_eq_self (fun z => ENNReal.ofReal (s' z ^ p)) x]
+      _ ≤ _ := le_trans (by gcongr; exact s_moment K hd hs' p hp) hM
 
 -- SKETCH: "the averages subtracted to form `h_r` are bounded by `M c_r ≤ C`": each of
 -- `QJx (ker s')`, `QJy (ker s')`, `QJx (QJy (ker s'))` lies in `[0, M c]` (`QJ_nonneg`, `QJ_le`

@@ -305,7 +305,9 @@ theorem Mc_le (K : SingularKernel μE bx G d Cc V) : (M : ℝ) * K.c ≤ Cc := b
 /-- Sub-kernels are integrable. -/
 theorem Sub.integrable (K : SingularKernel μE bx G d Cc V) {s' : E → ℝ} (hs' : K.Sub s') :
     Integrable s' μE := by
-  sorry
+  refine K.s_int.mono' hs'.meas.aestronglyMeasurable (Filter.Eventually.of_forall fun z => ?_)
+  rw [Real.norm_of_nonneg (hs'.nonneg z)]
+  exact hs'.le z
 
 -- SKETCH: `integral_sub_right_eq_self`.
 omit [PseudoMetricSpace E] [OpensMeasurableSpace E] [μE.IsNegInvariant] in

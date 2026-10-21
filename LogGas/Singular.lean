@@ -83,7 +83,8 @@ theorem boxMeasure_le (bx : Boxes μE M) (a : Fin M) : boxMeasure bx a ≤ (M : 
 -- SKETCH: `ae_smul_measure` (the `ℝ≥0`-smul is `ENNReal.smul_def`) and `ae_restrict_mem (bx.meas a)`.
 /-- `ν_a`-almost every point lies in `A_a`. -/
 theorem ae_mem_boxMeasure (bx : Boxes μE M) (a : Fin M) : ∀ᵐ x ∂(boxMeasure bx a), x ∈ bx.A a := by
-  sorry
+  unfold boxMeasure
+  exact Measure.ae_smul_measure (ae_restrict_mem (bx.meas a)) _
 
 -- SKETCH: `μE = μE.restrict univ = μE.restrict (⋃ a, A a)` (`bx.cover`,
 -- `Measure.restrict_univ`), then `Measure.restrict_iUnion bx.disj bx.meas` and

@@ -1,18 +1,19 @@
 # Persistent Lean verification
 
-Updated: 2026-10-21T02:41:11+00:00
+Updated: 2026-10-21T02:42:53+00:00
 
-State: waiting_quota.
-Workers configured: 6; active: 0.
+State: running.
+Workers configured: 6; active: 5.
 Task and estimated-dollar caps: disabled; subscription limits trigger automatic waiting.
 
 - blocked: 3
 - closed: 43
-- pending: 59
+- pending: 54
+- running: 5
 - waiting_dependencies: 2
 
-Attempts: 117; reported cost: $18.4135; attempts with unknown/incomplete usage: 0.
-Automatic retry: 2026-10-21T02:41:38+00:00 (authentication)
+Attempts: 123; reported cost: $18.4867; attempts with unknown/incomplete usage: 5.
+Queue is eligible to dispatch work.
 
 Costs are client estimates and do not measure subscription allowance precisely.
 Closed means the target proof passed source, build and axiom checks on main.

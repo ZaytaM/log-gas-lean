@@ -399,7 +399,11 @@ variable {bx : Boxes μE M} {G : SimpleGraph (Fin M)} {d : ℕ} {Cc V : ℝ}
 /-- `a_r` is measurable in both variables. -/
 theorem measurable_aker (s : E → ℝ) (hs : Measurable s) (c : ℝ) :
     Measurable (uncurry (aker bx s c)) := by
-  sorry
+  have hk : Measurable (uncurry (ker s)) := hs.comp measurable_sub
+  have h1 := measurable_QJx bx (ker s) hk
+  have h2 := measurable_QJy bx (ker s) hk
+  have h3 := measurable_QJx bx (QJy bx (ker s)) h2
+  exact (h1.add h2).sub h3 |>.sub_const c
 
 -- SKETCH: as `measurable_aker`.
 /-- `h_r` is measurable in both variables. -/

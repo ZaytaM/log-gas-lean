@@ -2094,7 +2094,103 @@ theorem occupancy_decomposition (μ : Measure Ω) [IsProbabilityMeasure μ] (bx 
     ∫⁻ ω, (goodEvent X bx δ).indicator (fun ω => F (fun i => X i ω)) ω ∂μ
       = ∑ n ∈ (Finset.Nat.antidiagonalTuple M N).filter (fun n => ∀ a, (n a : ℝ) ≤ δ * N),
           piN M N n * ∫⁻ x, F x ∂(labelMeasure bx (retag n)) := by
-  sorry
+  classical
+  rw [label_decomposition μ bx δ X hX_meas hX_indep hX_law F hF]
+  -- permutation lemma
+  have hperm : ∀ L L' : Fin N → Fin M, (∀ a, labelCount L a = labelCount L' a) →
+      ∃ σ : Equiv.Perm (Fin N), ∀ i, L' (σ i) = L i := by
+    intro L L' h
+    have e : ∀ a, {i // L i = a} ≃ {i // L' i = a} := fun a =>
+      Fintype.equivOfCardEq (by
+        have := h a
+        simpa [labelCount, Fintype.card_subtype] using this)
+    refine ⟨(Equiv.sigmaFiberEquiv L).symm.trans
+      ((Equiv.sigmaCongrRight e).trans (Equiv.sigmaFiberEquiv L')), fun i => ?_⟩
+    simp only [Equiv.trans_apply]
+    exact (e (L i) ⟨i, rfl⟩).2
+  have hint : ∀ L L' : Fin N → Fin M, (∀ a, labelCount L a = labelCount L' a) →
+      ∫⁻ x, F x ∂(labelMeasure bx L) = ∫⁻ x, F x ∂(labelMeasure bx L') := by
+    intro L L' h
+    obtain ⟨σ, hσ⟩ := hperm L L' h
+    have hL : L = L' ∘ σ := funext fun i => (hσ i).symm
+    have hmap : (labelMeasure bx L').map (fun x => x ∘ σ) = labelMeasure bx L := by
+      refine (Measure.pi_eq fun s hs => ?_).symm
+      rw [Measure.map_apply (by fun_prop) (MeasurableSet.univ_pi hs)]
+      have hpre : (fun x : Fin N → E => x ∘ σ) ⁻¹' (Set.univ.pi s)
+          = Set.univ.pi (fun j => s (σ.symm j)) := by
+        ext x; simp only [Set.mem_preimage, Set.mem_pi, Set.mem_univ, true_implies, comp_apply]
+        exact ⟨fun h j => by simpa using h (σ.symm j), fun h i => by simpa using h (σ i)⟩
+      rw [hpre, labelMeasure, Measure.pi_pi]
+      rw [← Equiv.prod_comp σ]
+      refine Finset.prod_congr rfl fun j _ => ?_
+      simp [hσ]
+    rw [← hmap, lintegral_map hF (by fun_prop)]
+    simp [hsymm]
+  have fib : ∀ n ∈ Finset.Nat.antidiagonalTuple M N,
+      ((univ : Finset (Fin N → Fin M)).filter (fun L => ∀ a, labelCount L a = n a)).card
+        = Nat.multinomial univ n := by
+    intro a ha
+    have ha : ∑ ℓ, a ℓ = N := by simpa [Finset.Nat.mem_antidiagonalTuple] using ha
+    have h := MvPolynomial.coeff_sum_X_pow_of_fintype (R := ℕ) (σ := Fin M)
+      (Finsupp.equivFunOnFinite.symm a) N
+    have hs : (Finsupp.equivFunOnFinite.symm a).sum (fun _ m => m) = N := by
+      rw [Finsupp.sum_fintype _ _ (by simp)]; simpa using ha
+    rw [if_pos hs] at h
+    have hm : (Finsupp.equivFunOnFinite.symm a).multinomial = Nat.multinomial univ a := by
+      rw [Finsupp.multinomial_eq_of_support_subset (s := univ) (by simp)]; rfl
+    rw [hm, Nat.cast_id] at h
+    rw [← h]
+    have e : (∑ i : Fin M, (MvPolynomial.X i : MvPolynomial (Fin M) ℕ)) ^ N
+        = ∑ w : Fin N → Fin M, ∏ v, MvPolynomial.X (w v) := by
+      have := Finset.prod_univ_sum (fun _ : Fin N => (univ : Finset (Fin M)))
+        (fun _ j => (MvPolynomial.X j : MvPolynomial (Fin M) ℕ))
+      simpa [Fintype.piFinset_univ] using this
+    rw [e, MvPolynomial.coeff_sum]
+    rw [Finset.card_filter]
+    refine Finset.sum_congr rfl fun w _ => ?_
+    have : ∏ v, (MvPolynomial.X (w v) : MvPolynomial (Fin M) ℕ)
+        = MvPolynomial.monomial (Finsupp.equivFunOnFinite.symm (fun ℓ => #{v | w v = ℓ})) 1 := by
+      rw [← Finset.prod_fiberwise_of_maps_to (s := univ) (t := univ) (g := w) (fun _ _ => mem_univ _),
+        MvPolynomial.monomial_eq, Finsupp.prod_fintype _ _ (by simp)]
+      simp only [map_one, one_mul]
+      refine Finset.prod_congr rfl fun ℓ _ => ?_
+      rw [Finset.prod_congr rfl (fun v hv => by rw [(Finset.mem_filter.1 hv).2]), Finset.prod_const]
+      rfl
+    rw [this, MvPolynomial.coeff_monomial]
+    simp [labelCount, funext_iff, eq_comm]
+  have hsum : ∀ L : Fin N → Fin M, (fun a => labelCount L a) ∈ Finset.Nat.antidiagonalTuple M N := by
+    intro L
+    rw [Finset.Nat.mem_antidiagonalTuple]
+    have := Finset.card_eq_sum_card_fiberwise (s := (univ : Finset (Fin N))) (t := (univ : Finset (Fin M)))
+      (f := L) (fun _ _ => mem_univ _)
+    simpa [labelCount] using this.symm
+  rw [← Finset.sum_filter]
+  rw [← Finset.sum_fiberwise_of_maps_to (s := univ.filter (fun L : Fin N → Fin M => GoodLabel L δ))
+    (t := (Finset.Nat.antidiagonalTuple M N).filter (fun n => ∀ a, (n a : ℝ) ≤ δ * N))
+    (g := fun L a => labelCount L a) ?maps]
+  case maps =>
+    intro L hL
+    rw [Finset.mem_filter] at hL ⊢
+    exact ⟨hsum L, hL.2⟩
+  refine Finset.sum_congr rfl fun n hn => ?_
+  rw [Finset.mem_filter] at hn
+  have hsub : (univ.filter (fun L : Fin N → Fin M => GoodLabel L δ)).filter
+      (fun L => (fun a => labelCount L a) = n)
+      = univ.filter (fun L => ∀ a, labelCount L a = n a) := by
+    ext L
+    simp only [Finset.mem_filter, mem_univ, true_and, funext_iff]
+    refine ⟨fun h => h.2, fun h => ⟨fun a => ?_, h⟩⟩
+    rw [h a]; exact hn.2 a
+  have hterm : ∀ L ∈ (univ.filter (fun L : Fin N → Fin M => GoodLabel L δ)).filter
+      (fun L => (fun a => labelCount L a) = n),
+      ((M : ℝ≥0∞) ^ N)⁻¹ * ∫⁻ x, F x ∂(labelMeasure bx L)
+        = ((M : ℝ≥0∞) ^ N)⁻¹ * ∫⁻ x, F x ∂(labelMeasure bx (retag n)) := by
+    intro L hL
+    rw [Finset.mem_filter] at hL
+    rw [hint L (retag n) (fun a => by rw [hretag n hn.1 a]; exact congrFun hL.2 a)]
+  rw [Finset.sum_congr rfl hterm, Finset.sum_const, hsub, fib n hn.1, nsmul_eq_mul, piN,
+    ENNReal.div_eq_inv_mul]
+  ring
 
 end Occupancy
 

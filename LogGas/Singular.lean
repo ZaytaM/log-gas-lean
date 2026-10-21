@@ -581,7 +581,9 @@ theorem particle_sum_splitting (K : SingularKernel μE bx G d Cc V) (X : Fin N �
     (ω : Ω) :
     (t / 2) * W (ker K.stilde) X ω
       = (t / 2) * W (aker bx K.s K.c) X ω + (t / 2) * W (hker bx K.s) X ω := by
-  sorry
+  have h : ker K.stilde = fun x y => aker bx K.s K.c x y + hker bx K.s x y := by
+    funext x y; exact stilde_split K x y
+  rw [h, W_add, mul_add]
 
 end W
 

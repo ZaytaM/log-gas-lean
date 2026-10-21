@@ -614,7 +614,15 @@ theorem aker_centered_left (K : SingularKernel μE bx G d Cc V) (y : E) :
 /-- Eq. (5.2), centering of `a_r` under `μ` in the second variable. -/
 theorem aker_centered_right (K : SingularKernel μE bx G d Cc V) (x : E) :
     ∫ y, aker bx K.s K.c x y ∂μE = 0 := by
-  sorry
+  have hsym : ∀ y, aker bx K.s K.c x y = aker bx K.s K.c y x := by
+    intro y
+    unfold aker
+    rw [QJx_ker_swap K (SingularKernel.Sub.self K) x y,
+      ← QJx_ker_swap K (SingularKernel.Sub.self K) y x,
+      QJxQJy_ker_swap K (SingularKernel.Sub.self K) y x]
+    ring
+  simp_rw [hsym]
+  exact aker_centered_left K x
 
 -- SKETCH: `s'(x - y) = 0` from `K.s_local` and `0 ≤ s' ≤ K.s` (`le_antisymm`).  The three
 -- averaged terms vanish because `ν_a`-a.e. `x' ∈ A a` (`ae_mem_boxMeasure`) and then

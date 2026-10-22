@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T01:14:55+00:00. State: running.
+Updated: 2026-10-22T01:20:32+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -20,25 +20,25 @@ Pause until (Unix UTC): 0; reason: none.
 | bulk-coarse | done | 1 | Reviewed, rebuilt and merged at acafdc6733e11e02779f2f3c7c1bc4b731d5a6fc |
 | torus-grid | done | 1 | Reviewed, rebuilt and merged at d959746a9f0c1c3e4543f32d5740d024d92ca5db |
 | fourier-unique | done | 1 | Reviewed, rebuilt and merged at 47f37c66bc31047f4801a4b13aa1f3268ca4ced6 |
-| fourier-form | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| kernel-exists | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| fourier-form | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| kernel-exists | awaiting_review | 3 | Build/target checks passed; Opus review required |
 | cutoff-fourier | done | 1 | Reviewed, rebuilt and merged at 69e2a6e55a28452629fa2c73cf15b4fb996776c8 |
-| torus-adj | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| periodize | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| spec-ae | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| physical-exp | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| fourier-series | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
-| cutoff-radial | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| cutoff-sr | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
-| bulk-lemma41 | needs_replan | 1 | Interrupted; inspect preserved checkout before retry |
+| torus-adj | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| periodize | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| spec-ae | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| physical-exp | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| fourier-series | running | 3 | Interrupted; inspect preserved checkout before retry |
+| cutoff-radial | running | 2 | Interrupted; inspect preserved checkout before retry |
+| cutoff-sr | running | 2 | Interrupted; inspect preserved checkout before retry |
+| bulk-lemma41 | running | 2 | Interrupted; inspect preserved checkout before retry |
 | bulk-torus | pending | 0 |  |
-| main-holder | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| main-holder | running | 3 | Interrupted; inspect preserved checkout before retry |
 | main-bulkhyp | pending | 0 |  |
 | physical-sing | pending | 0 |  |
 | cutoff-st | pending | 0 |  |
 | cutoff-bcoef | pending | 0 |  |
 | cutoff-main | pending | 0 |  |
-| main-param | needs_replan | 2 | Interrupted; inspect preserved checkout before retry |
+| main-param | running | 3 | Interrupted; inspect preserved checkout before retry |
 | main-ae | pending | 0 |  |
 | main-bad | pending | 0 |  |
 | main-good | pending | 0 |  |

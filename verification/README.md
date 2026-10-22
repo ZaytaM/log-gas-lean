@@ -1,103 +1,79 @@
-# Source coverage and final verification
+# Verification gate and its evidence
 
-The final mathematical proof is **incomplete**. The closed 107-task queue covered
-existing proof placeholders; it did not cover declarations never written.
-`LogGas/Bulk.lean` ends with the `KHyp` definition, and `LogGas/Main.lean` is absent.
-In particular neither `LogGas.Bulk.lemma41` nor `LogGas.Main.theorem11` exists.
+Status (2026-10-22): the paper theorem is **proved and machine-checked** in the sense below;
+the certification record that says what that means and what still rests on humans is in
+`Audit/` (start with `Audit/README.md`).
 
-## Independent target
+## Targets
 
-`Challenge.lean` imports only Mathlib and defines readable mathematical
-propositions `LogGasChallenge.principalStatement` and `bulkStatement`. These are
-specifications, not proved theorems. They contain no deliberate `sorry` holes.
-The principal target is the conditional H1/H2 version on the period-one torus,
-with normalized product Haar measure and the Euclidean product-circle radius.
-The log-HLS hypothesis explicitly requires finite joint energy on finite-entropy
-densities; totalized real integrals cannot silently supply that domain condition.
-The partition is an extended nonnegative integral, so divergence cannot count
-as zero. Its finite constant precedes all particle numbers and temperatures.
+* `PaperChallenge.lean` (imports only Mathlib) defines `LogGasPaper.PaperTheorem` and
+  `LogGasPaper.LogKernelExists`. `PaperSolution.lean` repeats those definitions verbatim, imports the
+  library `LogGas`, and provides `LogGasPaper.main : PaperTheorem` and
+  `LogGasPaper.kernel_exists : LogKernelExists`.
+* `Challenge.lean` / `Solution.lean` do the same for the earlier conditional H1/H2 target
+  (`LogGasChallenge.principalStatement`, `bulkStatement`; `principal`, `bulk`).
 
-The specification takes the kernel as supplied data; correspondence with the
-paper's particular Fourier-normalized logarithmic kernel remains a concrete
-application/review obligation. No claim of full paper correspondence is made.
-H1 and H2 are the authorized external inputs, and no output estimate is a model
-field. A.e. kernel identities are appropriate for independent Haar particles;
-bridges to pointwise abstract interfaces must justify their representatives.
+## The gate: `scripts/verify.py --fresh`
 
-`Solution.lean` independently repeats the explicit specification definitions and
-imports the checked proof library, never Challenge. It currently supplies no
-inhabitants. Future proofs must provide `LogGasChallenge.principal` and
-`LogGasChallenge.bulk` of exactly the corresponding proposition types. The
-verification gate fails until those actual bridge proofs exist. Copying a
-statement or compiling a proposition is never counted as solving it.
+Run from the project directory on a machine with the pinned toolchain. It creates an empty build
+directory, rebuilds everything against the pinned dependency artifacts, and records commands,
+exit codes, timings and hashes under `logs/verification/<timestamp>/` (`report.md`, `result.json`,
+`freeze.json`, environment exports, command logs). Checks, in order:
 
-## Dependencies and agent assignments
+1. `source-coverage`: every milestone declaration of `contracts.json` exists.
+2. `source-provenance`, `source-locators`: the challenge files and the `notes/` excerpts are
+   unchanged (hashes in `contracts.json`); every source locator resolves.
+3. `challenge-direct-imports`: `Challenge.lean` and `PaperChallenge.lean` import only `Mathlib`.
+4. `source-admissions`: no `sorry`, `admit`, `axiom`, `unsafe`, `native_decide`, `skipKernelTC` in
+   the comment-stripped proof text.
+5. `dependency-lock`, `installed-dependency-revisions`: `lake-manifest.json` equals
+   `dependency-lock.json`; every installed dependency is at the pinned Git revision.
+6. `fresh-directory`, `lean-version`, `project-build`, `fresh-lean-path`, `toolchain-prefix`,
+   `no-old-project-artifacts`, `fresh-project-artifacts`: the build is really fresh and really
+   the pinned toolchain.
+7. `*-environment`, `independent-definition-parity`, `paper-definition-parity`: definitions in
+   Challenge vs Solution (and PaperChallenge vs PaperSolution) are expression-identical (binder
+   display names and metadata ignored); `*-mathlib-closure`: the challenges' import closure is
+   inside Mathlib's.
+8. `target-proof-contracts`, `paper-proof-contracts`: `example : principalStatement := principal`
+   etc. elaborate, and `#print axioms` on the four targets is exactly `propext`, `Classical.choice`,
+   `Quot.sound`.
+9. `lean-kernel-replay`, `paper-kernel-replay`: `leanchecker` on `Solution` and `PaperSolution`
+   (Lean's own kernel, fresh process).
+10. `external-comparator`: an external checker supplied with `--comparator-argv`; otherwise
+    recorded **UNPERFORMED**, never passed. The independent-kernel replay lives in `Audit/Replay/`
+    and produces its own receipt; it is not run by this script.
+11. `review-mathematical-fidelity`, `review-lean-verification`, `distinct-reviewers`: receipts under
+    `verification/reviews/` from two distinct reviewers matching the current freeze.
+12. `frozen-inputs-unchanged`: the freeze re-hashed after everything ran is identical.
 
-`contracts.json` records source hashes, expected source milestones and prerequisite
-edges. It is a conservative milestone graph, not an exhaustive proof-term graph.
-Missing auxiliary identifiers are provisional interfaces; the principal and bulk
-names are explicitly required by the original phase notes. The initial
-`proof_files` snapshot records historical support provenance, not an immutable
-restriction preventing subsequent proofs. The final freeze binds actual files.
+`overall` is `passed` only if **every** check is `passed`; one `unperformed` check gives
+`incomplete` (exit 1). `--structural-only` skips Lean entirely and can never pass.
 
-Named milestone workers run only when their prerequisites are axiom-clean on
-main. Auxiliary workers receive source context but are not claimed to have a
-complete automatically extracted prerequisite graph. Worker packets name source
-passages, source hashes, scope and reusable prerequisite declarations. Physical
-grid, singular-kernel and logarithmic exponential-integrability instances are
-separate application nodes; abstract implications do not discharge them.
-The service exits with `needs_implementation` when its proof queue closes but
-required source declarations are absent. It does not manufacture placeholder
-proofs or launch unlimited agents to hide missing implementation.
+## Last run
 
-## Run on Dell3
+`logs/verification/20261022T042658Z/`: 31 passed, 1 unperformed (`external-comparator`) →
+`overall: incomplete`. The four targets depend only on `propext`, `Classical.choice`, `Quot.sound`;
+`leanchecker` accepted both solution modules; definition parity 14/14 with no differences.
 
-From the project directory:
+## What the gate does not establish
 
-```
-python3 scripts/verify.py --fresh
-python3 -m unittest discover -s scripts/tests -v
-```
+* That `PaperTheorem` is the paper's Theorem 1.1: see `Audit/SIGNOFF.md`, `Audit/statement_map.md`,
+  `Audit/reviews/`.
+* That the hypothesis `LogHLS g B` is satisfiable: not proved here (`Audit/README.md`, layer 4).
+* Independence from Lean's own kernel: `Audit/Replay/` (lean4export + Nanoda on fac5).
 
-`--fresh` creates a separate initially empty project build directory while using
-the already pinned installed dependency artifacts. It records the actual Lean
-path, commands, exit codes, timings and hashes. Existing deprecation/linter
-warnings are retained; a warning-free development is not claimed. The complete
-imported local declaration environment, including private/generated declarations,
-is scanned for unsafe definitions, local axioms and forbidden transitive axioms.
-Challenge's actual import closure must be a subset of Mathlib's independently
-observed import closure. Solution must not import Challenge. Separate environments
-export definition types/bodies for exact structural diagnostics. Actual proof
-inhabitants are checked by Lean against the independent proposition definitions.
-Expression parity ignores binder display names and metadata only. It is
-supplementary, not a substitute for semantic review or
-an external Comparator.
+## Contracts and dependencies
 
-The preserved `dependency-lock.json` is byte-for-byte Dell3's installed manifest.
-The gate checks the runtime manifest and every installed dependency Git revision.
-For a separate checkout, restore it as `lake-manifest.json` before materializing
-those exact dependencies. Do not run an unconstrained `lake update`.
+`contracts.json` records the SHA-256 of each `notes/` excerpt, the milestone declarations with their
+source labels, and a conservative prerequisite graph. The `module` field of each node is the module
+that *declares* the milestone at the freeze (several milestones were built in modules other than
+the one originally planned). `dependency-lock.json` is byte-for-byte dell3's installed manifest; for a
+separate checkout restore it as `lake-manifest.json` and never run an unconstrained `lake update`.
 
-An installed genuine Comparator runner may be supplied using `--comparator-argv`
-with a JSON argument array. Its actual command and exit status are retained;
-without it that check is **unperformed**, never passed. No external-kernel or
-Comparator success is currently claimed. Lean's own `leanchecker` replay, when
-available, is recorded separately. `--structural-only` always leaves Lean
-verification unperformed and can never produce overall success.
+## Reviews
 
-Evidence goes to `logs/verification/<timestamp>/`: report.md, result.json,
-freeze.json, separate environment exports and command logs. Exit 1 means
-incomplete/failed verification. Missing source milestones, missing proofs,
-missing/stale/unsuccessful independent reviews and unavailable required checks
-all prevent an overall pass.
-
-## Independent final reviews
-
-The user requested two actual independent roles: mathematical fidelity and Lean
-verification. Both inspect the same final source/configuration/harness freeze;
-reviews with findings remain findings. Their reports and machine receipts are
-under `verification/reviews/`. Each receipt records role, actual reviewer,
-verdict and all reviewed file hashes (excluding review reports/receipts to avoid
-self-reference). Distinct reviewer identities and matching hashes are required.
-A reviewer does not patch the candidate or certify unperformed checks. A later
-source or harness change invalidates the receipts and requires affected recheck.
+`reviews/` holds the campaign-internal receipts (`mathematical-fidelity`, `lean-verification`,
+2026-10-22, Sonnet workers of the same campaign) and will hold the fresh-context external reviews
+of `Audit/reviews/REVIEW_INSTRUCTIONS.md`. Each receipt records role, reviewer identity, verdict and
+the hashes of every reviewed file; a later source or harness change invalidates it.

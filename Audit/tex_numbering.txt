@@ -1,0 +1,38 @@
+# label | short draft line (manuscript/attractive_log_gas_short_draft.tex) | excerpt (notes/) | canonical line (manuscript/attractive_log_gas_I.tex)
+sec:setting | 133 | sec1-setting.tex:1 | -
+eq:kernel-normalization | 140 | sec1-setting.tex:9 | 1296
+eq:homogeneous-partition-function | 148 | sec1-setting.tex:17 | 174
+eq:strict-subcritical-macroscopic-inequality | 158 | sec1-setting.tex:27 | 1335
+thm:principal | 163 | sec1-setting.tex:32 | 448
+eq:principal-order-one | 167 | sec1-setting.tex:36 | 460
+eq:common-box-partition | 178 | sec1-setting.tex:47 | -
+eq:physical-neighbor-events | 190 | sec1-setting.tex | -
+sec:physical-cutoff-proof | 245 | sec2-cutoff.tex:1 | -
+eq:compact-positive-log-split | 254 | sec2-cutoff.tex:11 | -
+eq:compact-split-fourier-order | 262 | sec2-cutoff.tex | -
+eq:partition-occupancy-sum | 273 | sec2-cutoff.tex | -
+eq:physical-cutoff-holder | 287 | sec2-cutoff.tex:44 | -
+eq:rough-partition-bound | 305 | sec3-badevent.tex | -
+eq:physical-bad-probability | 319 | sec3-badevent.tex | -
+eq:physical-bad-gibbs-bound | 327 | sec3-badevent.tex:37 | -
+lem:continuous-entropy-partition | 336 | sec4-bulk.tex:6 | -
+eq:continuous-entropy-assumption | 342 | sec4-bulk.tex | -
+eq:continuous-partition-conclusion | 348 | sec4-bulk.tex | -
+lem:physical-local-count-bound | 366 | sec5-singular.tex:5 | -
+eq:physical-local-count-conclusion | 372 | sec5-singular.tex | -
+lem:canonical-array-exponential | 484 | sec6-lemma61.tex:6 | -
+eq:canonical-array-exponential | 504 | sec6-lemma61.tex | -
+eq:canonical-grouped-exponential | 511 | sec6-lemma61.tex:33 | -
+app:continuous-proof | 608 | appendixA.tex:3 | -
+eq:empirical-histogram-splitting | 617 | appendixA.tex | -
+eq:direct-square-completion | 706 | appendixA.tex | -
+eq:dual-log-hls | 719 | appendixA.tex:114 | -
+eq:coarse-partition-estimate | 741 | appendixA.tex | -
+eq:continuous-small-remainder | 755 | appendixA.tex | -
+eq:diagonal-correction-bound | 763 | appendixA.tex | -
+eq:continuous-proof-conclusion | 775 | appendixA.tex | -
+# canonical-only labels used by SIGNOFF.md
+eq:global-minimization-threshold | - | - | 418
+eq:threshold-hierarchy-intro | - | - | 442
+eq:energy-operator-form | - | - | ~1318
+thm:beckner-onofri-input | - | - | (see canonical)

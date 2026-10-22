@@ -5,8 +5,9 @@ import LogGas
 
 Independent paper target. `PaperTheorem` is a specification; its definition is not a proof.
 Promoted from the completed Opus paper audit without changing mathematical definitions.
-Only `Mathlib` is imported; there are no axioms, no `sorry`, no admitted definitions, and no
-conclusion is encoded as a hypothesis or structure field.
+This file imports `LogGas` (the proof library) and repeats the definitions of `PaperChallenge.lean`
+verbatim; `main` and `kernel_exists` are the only additions. There are no axioms, no `sorry`, no
+admitted definitions, and no conclusion is encoded as a hypothesis or structure field.
 
 Source: `notes/sec1-setting.tex`, eqs. (1.1) `eq:kernel-normalization`, (1.2)
 `eq:homogeneous-partition-function`, (1.3) `eq:strict-subcritical-macroscopic-inequality`,

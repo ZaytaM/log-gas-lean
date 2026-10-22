@@ -1,0 +1,13 @@
+{
+  "export_file_path": "EXPORT_FILE",
+  "use_stdin": false,
+  "permitted_axioms": ["propext", "Classical.choice", "Quot.sound"],
+  "unpermitted_axiom_hard_error": true,
+  "unsafe_permit_all_axioms": false,
+  "nat_extension": true,
+  "string_extension": true,
+  "pp_declars": ["LogGasPaper.main", "LogGasPaper.kernel_exists", "LogGasChallenge.principal", "LogGasChallenge.bulk"],
+  "pp_to_stdout": true,
+  "pp_options": {"all": null, "explicit": false, "universes": null, "notation": null, "proofs": false, "indent": 2, "width": 120, "declar_sep": "\n\n"},
+  "print_success_message": true
+}

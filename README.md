@@ -1,44 +1,53 @@
 # log-gas-lean
 
-Lean 4 formalization of “An entropy bound for the attractive logarithmic gas”
-(Delgadino–Gvalani–Rosenzweig), running continuously on Dell3.
+Lean 4 formalization of Theorem 1.1 of *An entropy bound for the attractive logarithmic gas*
+(Delgadino–Gvalani–Rosenzweig). Toolchain `leanprover/lean4:v4.36.0-rc1`, Mathlib
+`625d8914199bc567cca9b91f90e8e5afafa5ae51` (pinned in `verification/dependency-lock.json`).
 
-**Final theorem verification is incomplete.** All 107 previously queued proof
-placeholders were closed, but the source-coverage gate now detects that the
-bulk theorem `LogGas.Bulk.lemma41` and principal theorem
-`LogGas.Main.theorem11` were never implemented. The proof queue's old `complete`
-state did not certify those absent declarations. See
-[the independent specification, dependency contracts and final verification](verification/README.md).
+**Status (2026-10-22).** `PaperSolution.lean` proves `LogGasPaper.main : PaperTheorem` and
+`LogGasPaper.kernel_exists : LogKernelExists` against the frozen statement file `PaperChallenge.lean`
+(which imports only Mathlib). A fresh build, `#print axioms` (only `propext`, `Classical.choice`,
+`Quot.sound`), definition parity between challenge and solution, and a `leanchecker` replay all pass
+(`scripts/verify.py --fresh`, evidence under `logs/verification/`). No `sorry` remains anywhere.
 
-The construction campaign uses one Claude Opus 5.5 coordinator and up to six
-Sonnet workers. It creates missing modules/lemmas, reviews exact candidate patches,
-and integrates only rebuilt results. Start/manage it with:
+What that does and does not certify is recorded in **`Audit/`** (start at `Audit/README.md`):
+the statement layer is frozen but awaits the owner's sign-off (`Audit/SIGNOFF.md`); fresh-context
+fidelity reviews and an independent-kernel replay (lean4export + Nanoda on fac5, `Audit/Replay/`) are
+prepared but not yet run; the satisfiability of the log-HLS hypothesis (Beckner–Onofri input) is not
+proved here and is to be imported. The manuscript of record and the map from its statements to Lean
+are `Audit/MANUSCRIPT.md` and `Audit/statement_map.md`.
+
+The theorem was produced by two automated campaigns on Dell3 (a proof queue for the pre-written
+statements, then an Opus-coordinated construction campaign for the missing modules); both are
+complete and stopped. Their machinery (`scripts/`, `prompts/`, `reports/`, `state/`) is retained
+for provenance; nothing needs to run for the proofs to be checked.
+
+## Layout
+
+- `PaperChallenge.lean`, `PaperSolution.lean` — the paper theorem: frozen statement and its proof.
+- `Challenge.lean`, `Solution.lean` — the earlier conditional H1/H2 target and its proof.
+- `LogGas/` — the proof library (44 modules); `LogGas/PaperMain.lean` assembles the theorem.
+- `Audit/` — certification record (freeze, sign-off, statement map, reviews, replay).
+- `manuscript/` — manuscript of record (short draft followed by the formalization; canonical paper).
+- `verification/` — the gate (`scripts/verify.py`), contracts, dependency lock, review receipts.
+- `notes/` — TeX excerpts of the short draft used by the campaigns (hashes in `contracts.json`).
+
+## Checking the proofs yourself
 
 ```
-bash scripts/campaign.sh install  # reboot recovery + watchdog + start
-bash scripts/campaign.sh status
-bash scripts/campaign.sh stop
+lake exe cache get          # Mathlib oleans for the pinned revision
+lake build PaperChallenge PaperSolution Challenge Solution
+python3 scripts/verify.py --fresh
 ```
 
-The previous `service.sh` proof-only queue is retained for history and must remain
-stopped while the campaign owns main. Runtime state is in
-`state/runtime/campaign/`, preserved checkouts in `wt/campaign/`, progress in
-`reports/campaign.md`, and per-call usage in `state/campaign-usage.tsv`.
-Coordinator and worker costs are client estimates; missing usage is unknown.
-There is no routine total cost cap.
+The gate reports `incomplete` until an external-kernel check is supplied; see `verification/README.md`
+and `Audit/Replay/DESIGN.md`.
 
-`PaperChallenge.lean` independently specifies the full paper theorem and kernel
-existence. `PaperSolution.lean` must prove both; compiling their definitions is
-not completion. The older H1/H2 Challenge remains an intermediate milestone.
+## Campaign machinery (historical)
 
-The legacy controller kept six Sonnet workers busy across Claude allowance resets.
-It waits automatically when an actual session, weekly, or rate limit is reached,
-then retries after the advertised reset time. When no reset time is available,
-it backs off from five minutes to one hour. Turn limits and individual errors
-checkpoint and requeue that target; they do not stop unrelated work.
-There is no routine total-task or estimated-dollar stopping budget.
+The sections below describe the automated campaigns that produced the proofs; they are complete.
 
-## Operate on Dell3
+### Operate on Dell3
 
 From this repository on Dell3:
 

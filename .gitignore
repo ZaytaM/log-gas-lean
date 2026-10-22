@@ -13,3 +13,6 @@ lakefile.verification-*.toml
 state/runtime/
 __pycache__/
 *.pyc
+
+# certification record (receipts, configs)
+!Audit/**/*.json

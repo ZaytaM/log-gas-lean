@@ -1,0 +1,3 @@
+# Owner-approved statement changes after the freeze (none yet).
+# Format: the expected new `pp.all` block of each changed declaration, exactly as
+# `statement_types.lean` prints it, preceded by a comment line `# approved YYYY-MM-DD by <owner>: <reason>`.

@@ -164,3 +164,6 @@ job	task	role	started	ended	outcome	estimated_usd	usage_json
 163	physical-sing	worker	1792633947.8989427	unknown	unknown	unknown	unknown
 164	main-ae	worker	1792633948.5825622	unknown	unknown	unknown	unknown
 165	unknown	coordinator	1792633948.8625128	unknown	unknown	unknown	unknown
+166	bulk-torus	worker	1792635376.211387	unknown	unknown	unknown	unknown
+167	cutoff-st	worker	1792635376.941468	unknown	unknown	unknown	unknown
+168	main-bad	worker	1792635377.2565804	unknown	unknown	unknown	unknown

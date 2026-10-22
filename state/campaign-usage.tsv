@@ -135,3 +135,4 @@ job	task	role	started	ended	outcome	estimated_usd	usage_json
 134	unknown	coordinator	1792630485.6187751	1792630546.1432137	interrupted	unknown	unknown
 135	unknown	coordinator	1792630547.5027902	1792630608.025875	interrupted	unknown	unknown
 136	unknown	coordinator	1792630609.3585682	1792630669.8847797	interrupted	unknown	unknown
+137	unknown	coordinator	1792630671.2277575	1792630731.7637112	interrupted	unknown	unknown

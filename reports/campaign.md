@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T02:42:29+00:00. State: running.
+Updated: 2026-10-22T02:48:12+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -31,7 +31,7 @@ Pause until (Unix UTC): 0; reason: none.
 | cutoff-radial | done | 2 | Reviewed, rebuilt and merged at ec4c5237d9b6de2bd47bf5e8416757b0cbaaad10 |
 | cutoff-sr | done | 2 | Reviewed, rebuilt and merged at ce068b22c9e23f71cb3d45fa52633e21b6b670e3 |
 | bulk-lemma41 | done | 2 | Reviewed, rebuilt and merged at 8bd24bcb5dadc0e083ce1a5d18559f1ed5a7be7e |
-| bulk-torus | running | 1 |  |
+| bulk-torus | done | 1 | Reviewed, rebuilt and merged at b389c114e06653d3f2485523d3a09d1b5b16f280 |
 | main-holder | done | 3 | Reviewed, rebuilt and merged at e26fde5d01065d856eb35b7d8a409859f1b263d8 |
 | main-bulkhyp | done | 1 | Reviewed, rebuilt and merged at 2ceb0b1a02c62382b6f9e8836c5051ed4a073b3f |
 | physical-sing | done | 1 | Reviewed, rebuilt and merged at a6aa85c0b3d4313002cfeeb53db93c9ff36478e2 |
@@ -41,7 +41,9 @@ Pause until (Unix UTC): 0; reason: none.
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
 | main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
 | main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
-| main-good | pending | 0 |  |
+| main-good | running | 1 |  |
 | main-thm | pending | 0 |  |
 | paper-main | pending | 0 |  |
 | solutions | pending | 0 |  |
+| main-singfac | running | 1 |  |
+| main-bulkfac | running | 1 |  |

@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T04:15:42+00:00. State: running.
+Updated: 2026-10-22T04:21:25+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -49,5 +49,5 @@ Pause until (Unix UTC): 0; reason: none.
 | main-bulkfac | done | 1 | Reviewed, rebuilt and merged at baa64026f8db5be8d07e3d226b596728a644de8f |
 | fourier-lin | done | 1 | Reviewed, rebuilt and merged at 4f647643e6c245d030ccd5ad8ed9573d23f95293 |
 | milestones | done | 1 | Reviewed, rebuilt and merged at 2eb2034a6075d8edc712412d5de9582867aeebe8 |
-| review-math | running | 1 |  |
+| review-math | done | 1 | Reviewed, rebuilt and merged at 26723e6a56e6462a9b9876a32319312baf3273fa |
 | review-lean | running | 1 |  |

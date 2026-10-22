@@ -141,5 +141,3 @@ end
 
 end LogGas.Physical
 
-#print axioms LogGas.Physical.integrable_exp_log_sing
-#print axioms LogGas.Physical.lintegral_exp_log_sing_le

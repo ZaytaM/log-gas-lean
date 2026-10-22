@@ -82,4 +82,9 @@ def bulkStatement : Prop :=
       (∫⁻ x : Fin N → Torus d, ENNReal.ofReal (Real.exp ((β / 2) *
         ((1 / (N : ℝ)) * ∑ i, ∑ j ∈ Finset.univ.erase i, K (x i) (x j))))
           ∂Measure.pi (fun _ => uniform d)) ≤ (C : ℝ≥0∞)
+
+theorem principal : principalStatement := LogGas.Spec.principal
+
+theorem bulk : bulkStatement := LogGas.Spec.bulk
+
 end LogGasChallenge

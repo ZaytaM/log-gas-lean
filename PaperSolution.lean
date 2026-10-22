@@ -149,7 +149,10 @@ theorem PaperTheorem.perKernel (h : PaperTheorem) : PaperTheoremPerKernel := by
   obtain ⟨C, hC⟩ := h d hd B hB0 hB β₀ hβ0 hβB
   exact ⟨C, hC g hg hH⟩
 
+theorem main : PaperTheorem := LogGas.Paper.paper_main
+
+theorem kernel_exists : LogKernelExists := LogGas.Paper.kernel_exists
+
 end LogGasPaper
 
-/- The campaign must supply LogGasPaper.main : PaperTheorem and
-LogGasPaper.kernel_exists : LogKernelExists. Neither is proved yet. -/
+/- `main` and `kernel_exists` are the theorems from `LogGas.Paper` (definitional copies). -/

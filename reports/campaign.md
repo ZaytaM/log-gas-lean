@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T04:26:53+00:00. State: running.
+Updated: 2026-10-22T04:26:57+00:00. State: verifying.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 

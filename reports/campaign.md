@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T03:09:09+00:00. State: running.
+Updated: 2026-10-22T03:17:41+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -37,7 +37,7 @@ Pause until (Unix UTC): 0; reason: none.
 | physical-sing | done | 1 | Reviewed, rebuilt and merged at a6aa85c0b3d4313002cfeeb53db93c9ff36478e2 |
 | cutoff-st | done | 1 | Reviewed, rebuilt and merged at c193c311259bcf9815cfb9872b2c337587de4d05 |
 | cutoff-bcoef | done | 1 | Reviewed, rebuilt and merged at 5672ff72b7905f140a03f14b3304c725bed197fa |
-| cutoff-main | running | 1 |  |
+| cutoff-main | done | 1 | Reviewed, rebuilt and merged at c8127bef09508535dc04163e2b6eb42c85087934 |
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
 | main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
 | main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
@@ -47,7 +47,7 @@ Pause until (Unix UTC): 0; reason: none.
 | solutions | pending | 0 |  |
 | main-singfac | done | 1 | Reviewed, rebuilt and merged at 3b369c8312b18489c3c9d3148093650fb563bc48 |
 | main-bulkfac | done | 1 | Reviewed, rebuilt and merged at baa64026f8db5be8d07e3d226b596728a644de8f |
-| fourier-lin | approved | 1 | Build/target checks passed; Opus review required |
+| fourier-lin | done | 1 | Reviewed, rebuilt and merged at 4f647643e6c245d030ccd5ad8ed9573d23f95293 |
 | milestones | running | 1 |  |
 | review-math | pending | 0 |  |
 | review-lean | pending | 0 |  |

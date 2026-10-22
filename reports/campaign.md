@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T01:20:32+00:00. State: running.
+Updated: 2026-10-22T01:45:40+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -20,20 +20,20 @@ Pause until (Unix UTC): 0; reason: none.
 | bulk-coarse | done | 1 | Reviewed, rebuilt and merged at acafdc6733e11e02779f2f3c7c1bc4b731d5a6fc |
 | torus-grid | done | 1 | Reviewed, rebuilt and merged at d959746a9f0c1c3e4543f32d5740d024d92ca5db |
 | fourier-unique | done | 1 | Reviewed, rebuilt and merged at 47f37c66bc31047f4801a4b13aa1f3268ca4ced6 |
-| fourier-form | awaiting_review | 3 | Build/target checks passed; Opus review required |
-| kernel-exists | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| fourier-form | done | 3 | Reviewed, rebuilt and merged at 7732de29f8f9f2e89df3a055855364e268497a9c |
+| kernel-exists | done | 3 | Reviewed, rebuilt and merged at e3a16571a19d737a17f23db141f8724ed994ce9b |
 | cutoff-fourier | done | 1 | Reviewed, rebuilt and merged at 69e2a6e55a28452629fa2c73cf15b4fb996776c8 |
-| torus-adj | awaiting_review | 3 | Build/target checks passed; Opus review required |
-| periodize | awaiting_review | 3 | Build/target checks passed; Opus review required |
-| spec-ae | awaiting_review | 3 | Build/target checks passed; Opus review required |
-| physical-exp | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| torus-adj | done | 3 | Reviewed, rebuilt and merged at 4559ec5ca73c0bf19f32c3e37940238f0f079aa6 |
+| periodize | done | 3 | Reviewed, rebuilt and merged at 1bf41449fa9ed32d443a56166afd5d78d57e967b |
+| spec-ae | done | 3 | Reviewed, rebuilt and merged at 464378b2fb77d4bb5e7af91acf2edef763e7b7bd |
+| physical-exp | done | 3 | Reviewed, rebuilt and merged at f7da97984c756995bfbaf5505eb84c38c061cc36 |
 | fourier-series | running | 3 | Interrupted; inspect preserved checkout before retry |
 | cutoff-radial | running | 2 | Interrupted; inspect preserved checkout before retry |
 | cutoff-sr | running | 2 | Interrupted; inspect preserved checkout before retry |
 | bulk-lemma41 | running | 2 | Interrupted; inspect preserved checkout before retry |
 | bulk-torus | pending | 0 |  |
-| main-holder | running | 3 | Interrupted; inspect preserved checkout before retry |
-| main-bulkhyp | pending | 0 |  |
+| main-holder | approved | 3 | Build/target checks passed; Opus review required |
+| main-bulkhyp | running | 1 |  |
 | physical-sing | pending | 0 |  |
 | cutoff-st | pending | 0 |  |
 | cutoff-bcoef | pending | 0 |  |

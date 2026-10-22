@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T02:16:17+00:00. State: running.
+Updated: 2026-10-22T02:29:21+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -33,13 +33,13 @@ Pause until (Unix UTC): 0; reason: none.
 | bulk-lemma41 | done | 2 | Reviewed, rebuilt and merged at 8bd24bcb5dadc0e083ce1a5d18559f1ed5a7be7e |
 | bulk-torus | running | 1 |  |
 | main-holder | done | 3 | Reviewed, rebuilt and merged at e26fde5d01065d856eb35b7d8a409859f1b263d8 |
-| main-bulkhyp | running | 1 |  |
-| physical-sing | running | 1 |  |
+| main-bulkhyp | done | 1 | Reviewed, rebuilt and merged at 2ceb0b1a02c62382b6f9e8836c5051ed4a073b3f |
+| physical-sing | done | 1 | Reviewed, rebuilt and merged at a6aa85c0b3d4313002cfeeb53db93c9ff36478e2 |
 | cutoff-st | running | 1 |  |
 | cutoff-bcoef | pending | 0 |  |
 | cutoff-main | pending | 0 |  |
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
-| main-ae | running | 1 |  |
+| main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
 | main-bad | running | 1 |  |
 | main-good | pending | 0 |  |
 | main-thm | pending | 0 |  |

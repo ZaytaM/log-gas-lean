@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T01:45:40+00:00. State: running.
+Updated: 2026-10-22T01:52:29+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -27,19 +27,19 @@ Pause until (Unix UTC): 0; reason: none.
 | periodize | done | 3 | Reviewed, rebuilt and merged at 1bf41449fa9ed32d443a56166afd5d78d57e967b |
 | spec-ae | done | 3 | Reviewed, rebuilt and merged at 464378b2fb77d4bb5e7af91acf2edef763e7b7bd |
 | physical-exp | done | 3 | Reviewed, rebuilt and merged at f7da97984c756995bfbaf5505eb84c38c061cc36 |
-| fourier-series | running | 3 | Interrupted; inspect preserved checkout before retry |
-| cutoff-radial | running | 2 | Interrupted; inspect preserved checkout before retry |
-| cutoff-sr | running | 2 | Interrupted; inspect preserved checkout before retry |
-| bulk-lemma41 | running | 2 | Interrupted; inspect preserved checkout before retry |
+| fourier-series | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| cutoff-radial | awaiting_review | 2 | Build/target checks passed; Opus review required |
+| cutoff-sr | awaiting_review | 2 | Build/target checks passed; Opus review required |
+| bulk-lemma41 | awaiting_review | 2 | Build/target checks passed; Opus review required |
 | bulk-torus | pending | 0 |  |
-| main-holder | approved | 3 | Build/target checks passed; Opus review required |
+| main-holder | done | 3 | Reviewed, rebuilt and merged at e26fde5d01065d856eb35b7d8a409859f1b263d8 |
 | main-bulkhyp | running | 1 |  |
-| physical-sing | pending | 0 |  |
+| physical-sing | running | 1 |  |
 | cutoff-st | pending | 0 |  |
 | cutoff-bcoef | pending | 0 |  |
 | cutoff-main | pending | 0 |  |
-| main-param | running | 3 | Interrupted; inspect preserved checkout before retry |
-| main-ae | pending | 0 |  |
+| main-param | awaiting_review | 3 | Build/target checks passed; Opus review required |
+| main-ae | running | 1 |  |
 | main-bad | pending | 0 |  |
 | main-good | pending | 0 |  |
 | main-thm | pending | 0 |  |

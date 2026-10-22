@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T02:53:16+00:00. State: running.
+Updated: 2026-10-22T03:09:09+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -41,10 +41,13 @@ Pause until (Unix UTC): 0; reason: none.
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
 | main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
 | main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
-| main-good | running | 1 |  |
-| main-thm | pending | 0 |  |
+| main-good | done | 1 | Reviewed, rebuilt and merged at e0a22b2a8b6c20cb4161517c9ddc219eef423454 |
+| main-thm | running | 1 |  |
 | paper-main | pending | 0 |  |
 | solutions | pending | 0 |  |
-| main-singfac | awaiting_review | 1 | Build/target checks passed; Opus review required |
-| main-bulkfac | awaiting_review | 1 | Build/target checks passed; Opus review required |
-| fourier-lin | running | 1 |  |
+| main-singfac | done | 1 | Reviewed, rebuilt and merged at 3b369c8312b18489c3c9d3148093650fb563bc48 |
+| main-bulkfac | done | 1 | Reviewed, rebuilt and merged at baa64026f8db5be8d07e3d226b596728a644de8f |
+| fourier-lin | approved | 1 | Build/target checks passed; Opus review required |
+| milestones | running | 1 |  |
+| review-math | pending | 0 |  |
+| review-lean | pending | 0 |  |

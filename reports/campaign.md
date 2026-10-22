@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T02:48:12+00:00. State: running.
+Updated: 2026-10-22T02:53:16+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -36,8 +36,8 @@ Pause until (Unix UTC): 0; reason: none.
 | main-bulkhyp | done | 1 | Reviewed, rebuilt and merged at 2ceb0b1a02c62382b6f9e8836c5051ed4a073b3f |
 | physical-sing | done | 1 | Reviewed, rebuilt and merged at a6aa85c0b3d4313002cfeeb53db93c9ff36478e2 |
 | cutoff-st | done | 1 | Reviewed, rebuilt and merged at c193c311259bcf9815cfb9872b2c337587de4d05 |
-| cutoff-bcoef | running | 1 |  |
-| cutoff-main | pending | 0 |  |
+| cutoff-bcoef | done | 1 | Reviewed, rebuilt and merged at 5672ff72b7905f140a03f14b3304c725bed197fa |
+| cutoff-main | running | 1 |  |
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
 | main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
 | main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
@@ -45,5 +45,6 @@ Pause until (Unix UTC): 0; reason: none.
 | main-thm | pending | 0 |  |
 | paper-main | pending | 0 |  |
 | solutions | pending | 0 |  |
-| main-singfac | running | 1 |  |
-| main-bulkfac | running | 1 |  |
+| main-singfac | awaiting_review | 1 | Build/target checks passed; Opus review required |
+| main-bulkfac | awaiting_review | 1 | Build/target checks passed; Opus review required |
+| fourier-lin | running | 1 |  |

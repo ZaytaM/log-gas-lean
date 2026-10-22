@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T04:02:27+00:00. State: running.
+Updated: 2026-10-22T04:10:39+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -44,10 +44,10 @@ Pause until (Unix UTC): 0; reason: none.
 | main-good | done | 1 | Reviewed, rebuilt and merged at e0a22b2a8b6c20cb4161517c9ddc219eef423454 |
 | main-thm | done | 1 | Reviewed, rebuilt and merged at fc758163c35ddb68ea9c45b7f4948e1b88e4ecf6 |
 | paper-main | done | 1 | Reviewed, rebuilt and merged at 2ec9305656d486c6c5b9861910833379daf11d9d |
-| solutions | running | 1 |  |
+| solutions | done | 1 | Reviewed, rebuilt and merged at 0a8bc6cee5c257eeba0cde2d037a6827faedd16d |
 | main-singfac | done | 1 | Reviewed, rebuilt and merged at 3b369c8312b18489c3c9d3148093650fb563bc48 |
 | main-bulkfac | done | 1 | Reviewed, rebuilt and merged at baa64026f8db5be8d07e3d226b596728a644de8f |
 | fourier-lin | done | 1 | Reviewed, rebuilt and merged at 4f647643e6c245d030ccd5ad8ed9573d23f95293 |
 | milestones | done | 1 | Reviewed, rebuilt and merged at 2eb2034a6075d8edc712412d5de9582867aeebe8 |
-| review-math | pending | 0 |  |
-| review-lean | pending | 0 |  |
+| review-math | running | 1 |  |
+| review-lean | running | 1 |  |

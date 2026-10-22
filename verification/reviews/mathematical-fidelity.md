@@ -1,123 +1,29 @@
-# Independent mathematical fidelity review
+# Mathematical-fidelity review (reviewer: dell3-sonnet-job-190)
 
-Verdict: **findings — incomplete mathematical verification**.
+Verdict: **passed** (no blocking finding). Scope: statements, definitions and the dependency
+chain were read; proof bodies were not re-read line by line (accepted via Lean compilation and
+`#print axioms`). External Comparator: **unperformed** (not configured).
 
-Reviewer: `/root/fidelity_review`. This reviewer inspected the mathematical sources,
-independent specification, selected actual supporting proofs and the dependency
-contract. The reviewer did not implement or alter the candidate. Findings were
-reported to the implementer; the final frozen candidate incorporates the
-specification and dependency corrections described below. This is an independent
-agent review in the same overall project, not an external human referee review.
+## Commands actually run
+* `git log -- PaperChallenge.lean Challenge.lean`: only `e0c2f4d` (deployment) and `7116f64`; `git status` clean, no diff vs HEAD.
+* `diff PaperChallenge.lean PaperSolution.lean`: only (i) `import Mathlib` -> `import LogGas`, (ii) appended
+  `theorem main : PaperTheorem := LogGas.Paper.paper_main` and `theorem kernel_exists : LogKernelExists := LogGas.Paper.kernel_exists`, (iii) a trailing comment. All definitions are textually identical.
+* `lake build PaperSolution`: exit 0, 18202 jobs (an earlier overlapping run of mine raced and failed on a missing .olean; the sole rerun succeeded; only linter/deprecation warnings).
+* `#print axioms` (scratch files in /tmp): `LogGasPaper.main`, `LogGasPaper.kernel_exists`, `Main.theorem11`, `Cutoff.cutoff_of_isLogKernel`, `Fourier.ae_eq_of_coeff_eq`, `BadEvent.bad_gibbs_bound`, `Singular.lemma51`, and all 17 contract milestone declarations: only propext, Classical.choice, Quot.sound.
+* `grep` for sorry/axiom/native_decide/unsafe/admit/skipKernelTC in LogGas/, LogGas.lean, PaperSolution.lean: none (one docstring match "no `sorry`").
+* Freeze computed before and after (excluding verification/reviews/): identical.
 
-## Blocking findings
+## Findings by item
+1. **Statements.** `LogGasPaper.main : PaperTheorem` and `LogGasPaper.kernel_exists : LogKernelExists` exist and compile against the unchanged PaperChallenge definitions (defeq to the `LogGas.Paper.paperTheorem`, whose definitions in TorusBase/SpecAE are verbatim copies renamed T/unif/partition/paperLogHLS).
+2. **Chain.** `PaperMain.paper_main` -> case split on existence of an `IsLogKernel` `g0` satisfying `paperLogHLS`; `boundedH1_of_paperLogHLS` (uses `Integrable g0` from IsLogKernel) turns the stated premise into bounded-density H1; `Cutoff.cutoff_of_isLogKernel` PROVES H2 (`Spec.cutoff`, with Cc independent of J, explicit s, b from Fourier coefficients, g = b + (s - ∫s) a.e. by L1 Fourier uniqueness `ae_eq_of_coeff_eq`); `Main.theorem11` assembles good term (`MainGood`, `Singular.lemma51` via `PhysicalSing.singular_instance`, `Bulk.lemma41` via `bulk_hypothesis`/`MainBulkFac`), bad term (`BadEvent.bad_gibbs_bound`, `PhysicalExp.exp_slice_bound`) and parameter choice. The a.e. class is then transferred to arbitrary representatives by `ae_eq_of_coeff_eq` + `partition_congr_ae`. H1 is the only mathematical premise; H2 is not assumed anywhere in the final theorem. No structure field supplies a conclusion: `Bulk.KHyp` (bounded/continuous/symmetric/centered/PSD kernel + bounded-density entropy inequality) and `Singular.SingularKernel` (geometric/size data) are input data, and both are instantiated from the proved cutoff and torus grid, not assumed. Quantity bounded is the `lintegral` (ENNReal) partition function; `C` is `∃ C` after d, B, beta0 and before `g, N, beta` (matching `PaperTheorem`). If no admissible `g0` exists, `C = 0` is vacuous-correct (the premise is then unsatisfiable). `kernel_exists` is proved from the Fourier L2 basis (`KernelExists`), giving a measurable integrable real `g` with exact coefficients.
+3. **Audit items.** F1 (H1 transfer to b for non-L2 densities): avoided, since bulk only needs bounded densities and `hdom` is for bounded test functions, which the proved cutoff supplies (C8). F2/F3 (null directions, singular nu_N): avoided by the regularized Gram plan (A10); Bulk.lean docstring documents `Sigma + eps*1`, exponent M/2, extra additive M^2 — harmless, it does not change the theorem. F4 (domain of energy): the paper premise uses the totalized Bochner integral, which is weaker than the domain-explicit form, so the theorem is not weakened; for bounded rho integrability is proved (`integrable_logEnergy_integrand`). F5 (a.e. g = b + s~ at pair differences): handled by `ae_pair_sub` (X_i - X_j uniform for i != j) and `partition_congr_ae`. F6 (C depends on chi): chi fixed per d inside `Cutoff`. Sup vs Euclidean: radius in `cutoff` is Euclidean; `SingularKernel` uses the sup metric. Bridges are valid: `dist_zero_le_radius` (sup <= Euclid) gives support (r < dist => r < radius) and the log bound (log(r/radius) <= log(r/dist)) directions; `ball_vol` gives V = 2^d for sup balls; grid cells/adjacency are sup-metric cubes and non-adjacent cells have sup distance >= 1/J > r. Pointwise vs a.e.: `singular_instance` builds an everywhere-even, everywhere-supported symmetrized clamp of s that equals s a.e. (checked in source). Bulk uses the continuous b on the sup-metric grid (`rJ_small`).
+   Documented deviations (A1-A10, B1-B10, D1 of `reports/paper-audit/DEVIATIONS.md`) are representation/constant changes or stronger-than-needed intermediate interfaces; none changes the meaning of the final theorem. The E/C-class "absent/assumed" items of that (pre-construction) audit are now discharged by constructed declarations (grid, singular_instance, log_exp_integrable, bulk_hypothesis, lemma41, cutoff_of_isLogKernel, theorem11).
+4. **Contracts.** All 17 milestone declarations exist as real theorems/defs (`grid` is a def) in the namespaces claimed (several live in modules other than the `module` field of contracts.json, e.g. A1 in BulkHist, A2/A7 in BulkSplit, M1 in MainHolder; the `module` strings are stale metadata, non-blocking), with axiom lists clean.
 
-1. **The bulk and main theorems are absent.** `LogGas/Bulk.lean` ends with the
-   definition of `KHyp`; `LogGas.Bulk.lemma41` does not exist. There is no
-   `LogGas/Main.lean` and no `LogGas.Main.theorem11`. Several Appendix A and
-   assembly milestones are also absent. Neither `LogGasChallenge.principal`
-   nor `LogGasChallenge.bulk` inhabits the corresponding target proposition.
-   Existing Gaussian and square-completion lemmas are useful ingredients but do
-   not establish the missing continuous-kernel partition estimate.
-2. **Abstract implications have not been instantiated on the physical model.**
-   The concrete torus/grid construction, periodic adjacency/volume estimates,
-   H2-to-`SingularKernel` bridge and exponential slice integrability used by the
-   bad-event estimate remain unproved. In particular, a.e. cutoff hypotheses
-   must be transported to the pointwise abstract interfaces using justified
-   representatives; they cannot simply be supplied as further assumptions.
-3. **Full paper scope is broader than the conditional target.** The manuscript
-   fixes a Fourier-normalized periodic logarithmic kernel and presents H1 as
-   the macroscopic assumption. This project's authorized contract additionally
-   assumes H2 (`notes/hypotheses.md`). The new target honestly treats `g` as
-   supplied data satisfying H1/H2; it does not identify or construct the
-   manuscript's particular kernel or prove its cutoff decomposition. A proof
-   of this conditional target would therefore need a separate application
-   argument before it certifies the manuscript's H1-only theorem.
+## Non-blocking remarks
+* contracts.json `module` fields / the A5 "proved rather than assumed" wording are stale relative to file layout; the paper-audit DEVIATIONS.md predates construction.
+* Docstring in PaperSolution says "Only `Mathlib` is imported" (copied from PaperChallenge) although PaperSolution imports LogGas; cosmetic.
+* Proof bodies of the long Fourier/cutoff and bulk files were not manually audited; reliance is on Lean checking against fixed statements.
 
-## Specification checks
-
-The period-one torus and normalized product Haar measure match the source
-normalization. The radius is the Euclidean combination of coordinate circle
-distances. The energy uses `1/N` times the ordered off-diagonal pair sum; the
-Gibbs exponent is `beta/2` times that energy, with the source's positive sign.
-The finite constant is chosen before all particle numbers and temperatures.
-The principal target requires `N >= 2`; the bulk target requires `N >= 1`, as
-in the manuscript. Both include the endpoint `beta0 = 0`.
-
-The partition uses an extended nonnegative integral and a finite `NNReal`
-bound, preventing a divergent Gibbs expectation from becoming zero through
-Lean's totalized real integral. Finite-entropy densities explicitly include
-normalization, nonnegativity and entropy integrability. The repaired H1 also
-requires joint energy integrability, making its real quadratic expression
-meaningful rather than silently accepting undefined-integral zero values.
-For bounded continuous bulk kernels this energy domain is justified by
-boundedness and density integrability.
-
-H2 records the decomposition, support, logarithmic upper bound, mean bound,
-positive quadratic forms and domination by `g`. Its continuous bulk is bounded
-on the compact torus. Its a.e. conditions are suitable for independent Haar
-particles, subject to the still-missing bridges noted above. No requested
-partition bound is included as an input field. No obvious circular conclusion
-or contradictory premise was found; no Lean nonvacuity witness was constructed
-by this reviewer.
-
-## Supporting proof checks and dependencies
-
-The reviewer read the actual `Decoupling.exp_bound`, the integrability argument
-in `Grouped.grouped_exp_bound`, `BadEvent.bad_gibbs_bound`, the singular-kernel
-interface, its logarithmic moment argument and `Singular.lemma51`, together with
-related definitions. D7 derives exponential integrability from summable even
-moments; G3 supplies integrability before applying Holder; S8 bounds nonnegative
-extended integrals before deriving its final real-integral bound. These sampled
-paths do not reuse the invalid bounded-kernel premise. B6 explicitly requires
-exponential slice integrability; its proof does not establish that application
-premise on its own. This is a targeted source-level review, not a line-by-line
-independent reproving of every supporting lemma.
-
-The final contract tracks `PGRID`, `PSING` and `PEXP` separately. Refinement of
-physical grids is now an A6 prerequisite, and the main parameter/application
-path waits for the physical instances. PEXP explicitly requires deriving
-exponential integrability for the supplied H2 kernel, rather than silently
-specializing to an unidentified normalized kernel. The graph is a conservative
-milestone map; provisional auxiliary names are not independently certified
-mathematical statements. The actual final target types remain essential.
-
-The compiler expression comparison alpha-normalizes binder display names and
-removes elaborator metadata. These changes preserve the mathematical expression
-and are appropriate for the supplementary structural comparison. This review
-does not claim an external Comparator run. The separate Lean-verification
-review and actual run evidence must establish compilation and kernel audits;
-this reviewer did not run Lean locally or launch proof/model workers.
-
-## Reviewed source and freeze
-
-Read: `notes/sec1-setting.tex` through `sec6-lemma61.tex`, `notes/appendixA.tex`,
-`notes/00-preamble-macros.tex`, `notes/hypotheses.md`, relevant phase notes,
-`Challenge.lean`, `Solution.lean`, `verification/contracts.json`,
-`verification/README.md`, the supporting declarations listed above and the
-relevant harness code. The adjacent JSON receipt binds the complete candidate
-input freeze, excluding review reports/receipts to avoid self-reference.
-
-The earlier **107/107 closed queue entries certify existing proof obligations,
-not coverage of declarations never written**. The final mathematical verdict
-must remain incomplete until the bulk, main and concrete application obligations
-are implemented and checked. This receipt intentionally has `verdict=findings`
-and cannot satisfy the gate's required successful final mathematical review.
-
-## Receipt refresh for final harness revision
-
-The reviewer inspected the limited post-review changes in `scripts/verify.py`,
-`scripts/tests/test_contracts.py` and `verification/contracts.json`. Fresh Lean
-paths now allow only the fresh project path, resolved artifact directories of
-the individually locked dependencies and the actual toolchain library path;
-the test covers external package symlinks and rejection of old project paths.
-Current review identities are recorded even when the verdict is `findings`,
-while the separate successful-review gate still requires `passed`. These
-changes do not turn this mathematical review into a success.
-
-The physical obligations are now named `LogGas.Torus.grid`,
-`LogGas.Physical.singular_instance` and
-`LogGas.Physical.log_exp_integrable`. Moving these planned constructions below
-Main avoids the future Bulk-to-Main-to-Bulk import cycle and does not discharge
-the missing proofs. Challenge, Solution and the mathematical support sources
-are unchanged. The adjacent receipt and missing-declaration list were refreshed
-against the final input freeze; the verdict remains **findings**.
+## Unperformed
+External Comparator; leanchecker/fresh-build gate (`scripts/verify.py --fresh`) — not run by this reviewer.

@@ -278,12 +278,29 @@ class Campaign:
             prompt+='\nRead shared NOTES.md at '+str(STATE/'NOTES.md')+' if present. Save durable decisions there.'
             turns='60'
         model=WORKER if task else COORD
+        # The prompt embeds the whole campaign state and outgrows the kernel's
+        # 128 KiB limit on one argv entry (E2BIG), so it is streamed on stdin.
         argv=['claude','-p','--model',model,'--max-turns',turns,'--disallowedTools','Agent','Task',
-              '--dangerously-skip-permissions','--output-format','stream-json','--verbose',prompt]
+              '--dangerously-skip-permissions','--output-format','stream-json','--verbose']
+        prompt_file=LOGS/f'{j}.prompt.md'
+        prompt_file.write_text(prompt)
         log=(LOGS/f'{j}.jsonl').open('w')
         err=(LOGS/f'{j}.stderr').open('w')
-        p=subprocess.Popen(argv,cwd=path,stdout=log,stderr=err,start_new_session=True)
-        log.close();err.close()
+        try:
+            with prompt_file.open('rb') as stdin:
+                p=subprocess.Popen(argv,cwd=path,stdin=stdin,stdout=log,stderr=err,start_new_session=True)
+        except OSError as e:
+            # A launch that never produced a process must not look like an
+            # interrupted job to recover(), nor leave a disposable checkout behind.
+            with self.c:
+                self.c.execute("UPDATE jobs SET ended=?,result='launch_failed' WHERE id=?",(time.time(),j))
+                if task:
+                    self.c.execute("UPDATE tasks SET state='needs_replan',error=? WHERE id=?",('launch_failed: '+str(e),task['id']))
+            if not task:
+                run(['git','worktree','remove','--force',str(path)],ROOT,120,False)
+            raise
+        finally:
+            log.close();err.close()
         with self.c:
             self.c.execute('UPDATE jobs SET pid=?,start_id=?,worktree=?,base=? WHERE id=?',
                            (p.pid,start_id(p.pid),str(path),base,j))

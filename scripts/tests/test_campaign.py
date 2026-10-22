@@ -138,6 +138,48 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(self.row()['state'],'awaiting_review')
         self.assertEqual(self.c.execute('SELECT cost FROM jobs').fetchone()[0],0)
 
+    def test_prompt_is_streamed_on_stdin_not_argv(self):
+        # A goal this large made the old argv launch fail with E2BIG on Linux.
+        m.submit(self.c,self.spec)
+        big=dict(self.spec,goal='x'*140000)
+        with self.c:self.c.execute('UPDATE tasks SET spec=? WHERE id=?',(json.dumps(big),'task-a'))
+        (self.root/'prompts').mkdir()
+        (self.root/'prompts/campaign-worker.md').write_text('Fake worker test')
+        binpath=Path(self.tmp.name)/'bin';binpath.mkdir()
+        cli=binpath/'claude'
+        cli.write_text('#!/usr/bin/env python3\nimport json,sys\nn=len(sys.stdin.read())\n'+
+            'print(json.dumps({"type":"system","model":"claude-sonnet-test","session_id":"fake-session"}))\n'+
+            'print(json.dumps({"type":"result","subtype":"success","total_cost_usd":0,"result":"len=%d"%n}))\n')
+        cli.chmod(0o755)
+        with patch.dict(os.environ,PATH=str(binpath)+os.pathsep+os.environ['PATH']):
+            self.runner.launch(self.row())
+            j,(process,_,_)=next(iter(self.runner.active.items()))
+            process.wait(timeout=10)
+        events=[json.loads(l) for l in (self.logs/f'{j}.jsonl').read_text().splitlines()]
+        n=int(next(e for e in events if e['type']=='result')['result'].split('=')[1])
+        self.assertGreater(n,131072)
+        self.assertEqual(n,len((self.logs/f'{j}.prompt.md').read_text()))
+
+    def test_failed_launch_leaves_no_phantom_job_or_checkout(self):
+        (self.root/'prompts').mkdir()
+        (self.root/'prompts/campaign-coordinator.md').write_text('Fake coordinator test')
+        real=m.subprocess.Popen
+        def popen(argv,*args,**kwargs):
+            # Only the model launch fails; git (also run through Popen) keeps working.
+            if argv[0]=='claude':raise OSError(7,'Argument list too long')
+            return real(argv,*args,**kwargs)
+        with patch.object(m.subprocess,'Popen',popen):
+            with self.assertRaises(OSError):
+                self.runner.launch()
+        job=self.c.execute('SELECT * FROM jobs').fetchone()
+        self.assertEqual(job['result'],'launch_failed')
+        self.assertIsNotNone(job['ended'])
+        self.assertFalse((self.root/'wt/campaign'/f'coordinator-{job["id"]}').exists())
+        self.assertEqual(self.runner.active,{})
+        # recover() must not reinterpret it as an interrupted job.
+        self.runner.recover()
+        self.assertEqual(self.c.execute('SELECT result FROM jobs').fetchone()[0],'launch_failed')
+
     def test_crash_recovery_retains_partial_checkout(self):
         path=self.prepare()
         self.c.execute("INSERT INTO jobs(task,role,started,pid,start_id) VALUES('task-a','worker',0,999999999,'gone')")

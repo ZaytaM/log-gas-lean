@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T03:45:54+00:00. State: running.
+Updated: 2026-10-22T03:51:39+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -43,7 +43,7 @@ Pause until (Unix UTC): 0; reason: none.
 | main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
 | main-good | done | 1 | Reviewed, rebuilt and merged at e0a22b2a8b6c20cb4161517c9ddc219eef423454 |
 | main-thm | done | 1 | Reviewed, rebuilt and merged at fc758163c35ddb68ea9c45b7f4948e1b88e4ecf6 |
-| paper-main | running | 1 |  |
+| paper-main | awaiting_review | 1 | Build/target checks passed; Opus review required |
 | solutions | pending | 0 |  |
 | main-singfac | done | 1 | Reviewed, rebuilt and merged at 3b369c8312b18489c3c9d3148093650fb563bc48 |
 | main-bulkfac | done | 1 | Reviewed, rebuilt and merged at baa64026f8db5be8d07e3d226b596728a644de8f |

@@ -1,6 +1,6 @@
 # Main theorem campaign
 
-Updated: 2026-10-22T02:29:21+00:00. State: running.
+Updated: 2026-10-22T02:42:29+00:00. State: running.
 
 Coordinator: claude-opus-5-5; up to 6 Sonnet workers.
 
@@ -35,12 +35,12 @@ Pause until (Unix UTC): 0; reason: none.
 | main-holder | done | 3 | Reviewed, rebuilt and merged at e26fde5d01065d856eb35b7d8a409859f1b263d8 |
 | main-bulkhyp | done | 1 | Reviewed, rebuilt and merged at 2ceb0b1a02c62382b6f9e8836c5051ed4a073b3f |
 | physical-sing | done | 1 | Reviewed, rebuilt and merged at a6aa85c0b3d4313002cfeeb53db93c9ff36478e2 |
-| cutoff-st | running | 1 |  |
-| cutoff-bcoef | pending | 0 |  |
+| cutoff-st | done | 1 | Reviewed, rebuilt and merged at c193c311259bcf9815cfb9872b2c337587de4d05 |
+| cutoff-bcoef | running | 1 |  |
 | cutoff-main | pending | 0 |  |
 | main-param | done | 3 | Reviewed, rebuilt and merged at 5e6096523138ba05bc6b02d0dc41f6d83ddec222 |
 | main-ae | done | 1 | Reviewed, rebuilt and merged at 3aa29c29be0186bde4175142586e3daa3de8f160 |
-| main-bad | running | 1 |  |
+| main-bad | done | 1 | Reviewed, rebuilt and merged at 7f9d4832d77f731cfa12ebcac1710a1f7b127d66 |
 | main-good | pending | 0 |  |
 | main-thm | pending | 0 |  |
 | paper-main | pending | 0 |  |
